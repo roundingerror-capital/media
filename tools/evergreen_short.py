@@ -68,6 +68,21 @@ SPECS = {
    (18.6, 22.0, "THEN", [("Same rules", INK), ("tomorrow.", LIME)], ["Follow for the receipts."],
     [(19.0, 21.8, "theo", "Carry on.")], ["penny", "theo", "ada"], -1),
   ]),
+ "daily-close-2026-10-19": dict(label="DAILY CLOSE · MON 10/19", end=22.0, bpm=100, mel=[493.9, 587.3, 659.3, 587.3, 493.9, 440.0, 493.9, 0],
+  foot="REAL TRADES · REAL MONEY · NOT ADVICE", scenes=[
+   (0.0, 5.2, "HOOD AT TODAY'S CLOSE", [("HOOD", INK), ("-2.4%", LIME)], ["$98.87 to $96.53."],
+    [(0.6, 2.6, "penny", "Is this bad?"), (2.8, 5.0, "theo", "It's Monday.")], ["penny", "theo"], -1),
+   (5.4, 11.0, "OUR TWO HOOD PUTS", [("Deeper in", INK), ("the money.", LIME)],
+    ["$100 put and $99 put.", "11 days left. Expiry 10/30.", "In the money is not assigned.", "That's decided at expiry."],
+    [(5.8, 7.8, "penny", "Deeper in? Oh my."), (8.0, 10.8, "theo", "Holding to expiry.")], ["penny", "theo"], 1),
+   (11.2, 16.6, "OUR TWO UBER PUTS", [("Still out of", INK), ("the money.", LIME)],
+    ["$66 and $67.50 puts.", "UBER closed at $69.97.", "Expiries Nov 6 and Nov 20."],
+    [(11.6, 13.8, "ada", "All green!"), (14.0, 16.4, "theo", "Mostly.")], ["theo", "ada"], -1),
+   (16.8, 22.0, "THE RECEIPT", [("No trades", INK), ("today.", LIME)],
+    ["Open puts: -$959 on paper.", "HOOD reports 10/27, after the close.", "No rolls. Same plan."],
+    [(17.2, 19.4, "penny", "Receipts, besties."), (19.6, 21.8, "theo", "Carry on.")], ["penny", "theo", "ada"], 0),
+  ]),
+
 }
 
 def bubble(d, xc, y, txt):
