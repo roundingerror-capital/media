@@ -1,5 +1,5 @@
 """Daily post builder v2 (Penny, locked 2026-10-19 standard).
-Frame 0 = cover, then the AI BOT flash-card intro (2.5 s, black, lime chart),
+Cover held 1.0 s (frames 0-29, so TikTok's grid cover is the post's own cover), then the AI TRADING BOT flash-card intro (2.5 s, black, lime chart),
 then scenes with big animated characters and an original beat (tools/beat.py).
 Usage (from a spec module): build(spec, out_mp4, cover_jpg, variant="a"|"b")
 A spec may define "b" overrides: {"hook": [...heads...]} replaces scene 1's headline.
@@ -11,7 +11,8 @@ from make_reel import W, H, FPS, archivo, mono, fit, fade, blend
 import beat as BEAT
 HERE = os.path.dirname(os.path.abspath(__file__))
 M = 72; LIME = "#C8F03C"; INK = "#F2F2EE"; MUT = "#9A9A94"; LINE = "#262626"; DIM = (40, 48, 20)
-INTRO_F = 75  # 2.5 s intro after the 1-frame cover
+INTRO_F = 75  # 2.5 s intro after the cover
+COVER_F = 30  # cover held 1.0 s (Miguel 2026-10-21: TikTok covers all looked the same)
 
 def river_teal(im):
     px = im.load()
@@ -67,13 +68,15 @@ def intro_frame(fr, pts):
     if fr >= 18:
         k = fr - 18; sc = 1.0 + max(0, 0.35 * (1 - k / 6)); sh = (rnd.randint(-10, 10), rnd.randint(-10, 10)) if k < 7 else (0, 0)
         d.text((M, 300), "I'M A FULLY AUTONOMOUS", font=fit("I'M A FULLY AUTONOMOUS", W - 2 * M, 120, wdth=100, wght=900), fill=INK)
-        y = 430
-        for t, c in (("AI", LIME), ("BOT", INK)):
-            f = archivo(int(470 * sc), 125, 900); bb = d.textbbox((0, 0), t, font=f)
+        y = 400
+        for t, c, cap in (("AI", LIME, 400), ("TRADING", LIME, 260), ("BOT", INK, 330)):
+            f = archivo(int(cap * 1.4 * sc), 125, 900); bb = d.textbbox((0, 0), t, font=f)
             if bb[2] - bb[0] > (W - 2 * M) * sc:
                 f = archivo(int(f.size * (W - 2 * M) * sc / (bb[2] - bb[0])), 125, 900); bb = d.textbbox((0, 0), t, font=f)
+            if bb[3] - bb[1] > cap * sc:
+                f = archivo(int(f.size * cap * sc / (bb[3] - bb[1])), 125, 900); bb = d.textbbox((0, 0), t, font=f)
             w, h = bb[2] - bb[0], bb[3] - bb[1]
-            d.text(((W - w) // 2 - bb[0] + sh[0], y - bb[1] + sh[1]), t, font=f, fill=c); y += int(h / sc) + 50
+            d.text(((W - w) // 2 - bb[0] + sh[0], y - bb[1] + sh[1]), t, font=f, fill=c); y += int(h / sc) + 34
         if fr >= 42:
             a = fade(fr / FPS, 42 / FPS, 48 / FPS); txt = "And this is what's going on ↓"
             d.text((M, y + 30), txt, font=fit(txt, W - 2 * M, 90, wdth=100, wght=900), fill=blend(INK, a))
@@ -151,7 +154,7 @@ def scene_frame(S, t, heads_override=None):
     return img
 
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
-    content = S["end"]; total = (1 + INTRO_F) / FPS + content
+    content = S["end"]; total = (COVER_F + INTRO_F) / FPS + content
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
     BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"])
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
@@ -159,7 +162,8 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
         "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
         "-c:a", "aac", "-b:a", "160k", "-af", "adelay=33|33,loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out], stdin=subprocess.PIPE)
-    p.stdin.write(cover.tobytes())
+    cb = cover.tobytes()
+    for _ in range(COVER_F): p.stdin.write(cb)
     for fr in range(INTRO_F): p.stdin.write(intro_frame(fr, pts).tobytes())
     for i in range(int(content * FPS)): p.stdin.write(scene_frame(S, i / FPS, hov).tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
