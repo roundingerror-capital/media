@@ -153,8 +153,42 @@ def scene_frame(S, t, heads_override=None):
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     return img
 
+OUTRO_S = 3.5  # end card (Miguel 2026-10-21): "like and follow for more updates" + our open positions
+def outro_frame(S, t):
+    """End card. Positions come ONLY from the spec's "positions" list, copied from a Theo fact sheet's
+    open_legs: [(ticker, "$100 put", "exp 10/30", "out of the money"), ...]. Never account value, cash,
+    account numbers or a broker screenshot (Rules: no fund size or personal data in public)."""
+    img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
+    d.text((M, 120), "\u2248 Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
+    d.line([(M, 150), (W - M, 150)], fill=LINE, width=2)
+    pos = S.get("positions") or []; y = 260
+    if pos:
+        d.text((M, y), "OUR OPEN POSITIONS" + (" \u00b7 " + S["positions_asof"] if S.get("positions_asof") else ""), font=mono(30, True), fill=LIME, anchor="ls"); y += 30
+        for i, row in enumerate(pos[:5]):
+            a = fade(t, 0.1 + i * 0.12, 0.35 + i * 0.12)
+            d.rectangle([M, y, W - M, y + 92], outline=blend(LINE, a), width=3)
+            d.text((M + 24, y + 62), row[0], font=archivo(48, 110, 900), fill=blend(INK, a), anchor="ls")
+            d.text((M + 230, y + 42), row[1] + "  " + row[2], font=mono(30, True), fill=blend(INK, a), anchor="ls")
+            col = LIME if "out of" in row[3] or "worthless" in row[3] else "#FF8A5B"
+            d.text((M + 230, y + 78), row[3].upper(), font=mono(24, True), fill=blend(col, a), anchor="ls")
+            y += 110
+        y += 40
+    else:
+        y = 520
+    k = max(0.0, t - 0.3); sc = 1.0 + max(0, 0.3 * (1 - k / 0.25)) if t > 0.3 else 0
+    if t > 0.3:
+        for txt, c in (("LIKE + FOLLOW", LIME), ("FOR MORE UPDATES", INK)):
+            f = fit(txt, int((W - 2 * M) * min(sc, 1.3)), 170, wdth=125, wght=900)
+            bb = d.textbbox((0, 0), txt, font=f)
+            d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
+    char_layer(img, d, S, 30 + t, ["penny"], [(30.0, 40.0, "penny", "", "point")] if t > 0.3 else [], 10**6)
+    d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
+    d.text((M, 1780), "REAL TRADES \u00b7 REAL MONEY \u00b7 NOT ADVICE", font=mono(22), fill=MUT, anchor="ls")
+    d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
+    return img
+
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
-    content = S["end"]; total = (COVER_F + INTRO_F) / FPS + content
+    content = S["end"]; total = (COVER_F + INTRO_F) / FPS + content + OUTRO_S
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
     BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"])
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
@@ -166,6 +200,7 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     for _ in range(COVER_F): p.stdin.write(cb)
     for fr in range(INTRO_F): p.stdin.write(intro_frame(fr, pts).tobytes())
     for i in range(int(content * FPS)): p.stdin.write(scene_frame(S, i / FPS, hov).tobytes())
+    for i in range(int(OUTRO_S * FPS)): p.stdin.write(outro_frame(S, i / FPS).tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
 
 if __name__ == "__main__":
