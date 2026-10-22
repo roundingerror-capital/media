@@ -153,6 +153,7 @@ def scene_frame(S, t, heads_override=None):
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     return img
 
+LOOP_F = 12  # 0.4 s crossfade to the cover in the loop variant
 OUTRO_S = 3.5  # end card (Miguel 2026-10-21): "like and follow for more updates" + our open positions
 def outro_frame(S, t):
     """End card. Positions come ONLY from the spec's "positions" list, copied from a Theo fact sheet's
@@ -188,7 +189,7 @@ def outro_frame(S, t):
     return img
 
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
-    content = S["end"]; total = (COVER_F + INTRO_F) / FPS + content + OUTRO_S
+    content = S["end"]; total = (COVER_F + INTRO_F) / FPS + content + (LOOP_F / FPS if S.get("loop") else OUTRO_S)
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
     BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"])
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
@@ -200,7 +201,13 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     for _ in range(COVER_F): p.stdin.write(cb)
     for fr in range(INTRO_F): p.stdin.write(intro_frame(fr, pts).tobytes())
     for i in range(int(content * FPS)): p.stdin.write(scene_frame(S, i / FPS, hov).tobytes())
-    for i in range(int(OUTRO_S * FPS)): p.stdin.write(outro_frame(S, i / FPS).tobytes())
+    if S.get("loop"):
+        # LOOP variant (A/B "loop", 2026-10-22): no end card; the last 0.4 s crossfades back into the cover,
+        # so the replay starts on the exact frame the viewer just saw.
+        last = scene_frame(S, content - 1 / FPS, hov)
+        for i in range(LOOP_F): p.stdin.write(Image.blend(last, cover, (i + 1) / LOOP_F).tobytes())
+    else:
+        for i in range(int(OUTRO_S * FPS)): p.stdin.write(outro_frame(S, i / FPS).tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
 
 if __name__ == "__main__":
