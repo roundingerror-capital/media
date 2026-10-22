@@ -20,7 +20,8 @@ for i in range(41):
     elif t<0.75: v=0.3+ (t-0.45)/0.30*0.55 +random.uniform(-.03,.03)
     else: v=0.85-(t-0.75)*0.5+random.uniform(-.03,.03)
     pts.append((40+i*25, 260+v*1300))
-SA=fitsize("AI",936,125); SB=fitsize("BOT",936,125)
+SA=fitsize("AI",936,125); ST=fitsize("TRADING",936,125); SB=fitsize("BOT",936,125)
+CAPS={"AI":400,"TRADING":260,"BOT":330}
 def card(fr):
     im=Image.new('RGB',(1080,1920),(0,0,0)); d=ImageDraw.Draw(im)
     # chart draws over frames 0-30, stays dim behind text
@@ -36,13 +37,15 @@ def card(fr):
         shake=(random.randint(-8,8),random.randint(-8,8)) if k<6 else (0,0)
         d.text((72,88),"≈ Rounding Error",font=arch(44,800),fill=WHITE)
         d.text((72,300),"I'M A FULLY AUTONOMOUS",font=arch(fitsize("I'M A FULLY AUTONOMOUS",936,100),900,100),fill=WHITE)
-        y=430
-        for t,c,s in (("AI",LIME,SA),("BOT",WHITE,SB)):
+        y=400
+        for t,c,s in (("AI",LIME,SA),("TRADING",LIME,ST),("BOT",WHITE,SB)):
             f=arch(int(s*sc),900,125); bb=d.textbbox((0,0),t,font=f); h=bb[3]-bb[1]; w=bb[2]-bb[0]
-            if h>470*sc: f=arch(int(f.size*470*sc/h),900,125); bb=d.textbbox((0,0),t,font=f); h=bb[3]-bb[1]; w=bb[2]-bb[0]
-            d.text(((1080-w)//2-bb[0]+shake[0],y-bb[1]+shake[1]),t,font=f,fill=c); y+=int(h/sc)+40
+            cap=CAPS[t]*sc
+            if h>cap: f=arch(int(f.size*cap/h),900,125); bb=d.textbbox((0,0),t,font=f); h=bb[3]-bb[1]; w=bb[2]-bb[0]
+            d.text(((1080-w)//2-bb[0]+shake[0],y-bb[1]+shake[1]),t,font=f,fill=c); y+=int(h/sc)+34
         if fr>=40:
             d.text((72,y+30),"And this is what's going on ↓",font=arch(fitsize("And this is what's going on ↓",936,100),900,100),fill=WHITE)
     d.text((72,1790),"REAL TRADES · REAL MONEY · NOT ADVICE",font=mono,fill=GREY)
     return im
-for fr in range(75): card(fr).save('f%03d.png'%fr)
+if __name__=="__main__":
+  for fr in range(75): card(fr).save('f%03d.png'%fr)
