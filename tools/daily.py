@@ -11,8 +11,9 @@ from make_reel import W, H, FPS, archivo, mono, fit, fade, blend
 import beat as BEAT
 HERE = os.path.dirname(os.path.abspath(__file__))
 M = 72; LIME = "#C8F03C"; INK = "#F2F2EE"; MUT = "#9A9A94"; LINE = "#262626"; DIM = (40, 48, 20)
-INTRO_F = 75  # 2.5 s intro after the cover
-COVER_F = 30  # cover held 1.0 s (Miguel 2026-10-21: TikTok covers all looked the same)
+INTRO_F = 36  # 1.2 s intro after the cover (Miguel 2026-10-22: "Go" on a faster start; was 2.5 s)
+INTRO_SRC = 60  # the intro animation is designed on 60 frames and played back compressed into INTRO_F
+COVER_F = 18  # cover held 0.6 s (2026-10-21 TikTok grid fix; trimmed from 1.0 s on 2026-10-22 for a faster start)
 
 def river_teal(im):
     px = im.load()
@@ -57,6 +58,18 @@ def chart_pts(shape, seed):
         else: v = 0.85 - 0.6 * t + 0.06 * math.sin(t * 14) + rnd.uniform(-.03, .03)  # climb
         pts.append((40 + i * 25, 260 + v * 1300))
     return pts
+
+def hook_text(S):
+    """The post's own hook, on screen from the first intro frame: spec["hook"], else scene 1's headline words."""
+    if S.get("hook"): return S["hook"]
+    return " ".join(h for h, _ in S["scenes"][0][3])
+
+def intro_hook_frame(S, fr, pts):
+    im = intro_frame(int(fr * INTRO_SRC / INTRO_F), pts); d = ImageDraw.Draw(im); txt = hook_text(S)
+    f = fit(txt, W - 2 * M, 96, wdth=110, wght=900); bb = d.textbbox((0, 0), txt, font=f)
+    y = 1560 - (bb[3] - bb[1]); d.rectangle([0, y - 40, W, 1600], fill="#000000")
+    d.text((M - bb[0], y - bb[1]), txt, font=f, fill=LIME)
+    return im
 
 def intro_frame(fr, pts):
     im = Image.new("RGB", (W, H), (0, 0, 0)); d = ImageDraw.Draw(im); rnd = random.Random(fr)
@@ -199,7 +212,7 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
         "-c:a", "aac", "-b:a", "160k", "-af", "adelay=33|33,loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out], stdin=subprocess.PIPE)
     cb = cover.tobytes()
     for _ in range(COVER_F): p.stdin.write(cb)
-    for fr in range(INTRO_F): p.stdin.write(intro_frame(fr, pts).tobytes())
+    for fr in range(INTRO_F): p.stdin.write(intro_hook_frame(S, fr, pts).tobytes())
     for i in range(int(content * FPS)): p.stdin.write(scene_frame(S, i / FPS, hov).tobytes())
     if S.get("loop"):
         # LOOP variant (A/B "loop", 2026-10-22): no end card; the last 0.4 s crossfades back into the cover,
