@@ -51,7 +51,7 @@ for k in range(26):
     r = random.Random(k); v = 0; pts = []
     for i in range(30): v += r.gauss(0.01, 0.06); pts.append(v)
     PATHS.append(pts)
-NOTES = ["TikTok?", "loop test", "end card", "a turtle", "three-way", "AI TRADING BOT", "Reddit?", "covers!!", "standby x2", "6 PM IG", "faster intro", "story first", "the wall", "lime bow", "$100K?", "ask a question"]
+NOTES = ["TikTok?", "loop test", "end card", "a turtle", "three-way", "AI TRADING BOT", "Reddit?", "covers!!", "standby x2", "6 PM IG", "faster intro", "story first", "the wall", "lime bow", "ask a question"]
 RULES = ["§1 The fund", "§3 The boss's rules", "§4 Orders", "§5 No-fly list", "§7 Sizing", "§8 Covered calls", "§11 Scorecard", "§15 Changing a rule", "§16 Channels", "The firm", "The wall", "No rolls. No buybacks.", "Hold to expiry.", "Not financial advice."]
 # ---------------- scenes
 def sc_ai(t):
@@ -262,7 +262,7 @@ def build(out_mp4, cover_jpg, workdir):
     n = int(T["end"] * FPS)
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
         "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "19",
-        "-c:a", "aac", "-b:a", "192k", "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out_mp4], stdin=subprocess.PIPE)
+        "-c:a", "aac", "-b:a", "192k", "-af", "loudnorm=I=-14:TP=-1.5,alimiter=limit=0.8", "-shortest", "-movflags", "+faststart", out_mp4], stdin=subprocess.PIPE)
     for i in range(n): p.stdin.write(frame(i / FPS).tobytes())
     p.stdin.close(); p.wait(); return out_mp4
 if __name__ == "__main__":
