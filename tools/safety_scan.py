@@ -31,7 +31,7 @@ def check(chunks, allow):
         for b in BANNED:
             for m in re.finditer(b, low): hits.append((where, "BANNED", m.group(0)))
         for m in MONEY.finditer(txt):
-            v = m.group(0).replace(" ", "").lower()
+            v = m.group(0).replace(" ", "").lower().rstrip(",")
             if v not in norm_allow: hits.append((where, "NUMBER not on --allow", m.group(0)))
     return hits
 if __name__ == "__main__":
