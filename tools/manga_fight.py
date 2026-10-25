@@ -201,7 +201,7 @@ COVER = None
 def frame(t):
     if t < T["cover"]: return COVER
     if t < T["page1"]: return daily.intro_hook_frame(S, int((t - T["cover"]) * FPS), PTS)
-    if t < T["villain"]: return page1(t)
+    if t < T["villain"]: return daily.cta_pill(page1(t), t - T["page1"], y=1770)  # small CTA under the panels; big one on the end card
     if t < T["clash"]: return villain_page(t)
     if t < T["lesson"]: return clash(t)
     if t < T["standoff"]: return lesson(t)

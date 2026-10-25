@@ -245,7 +245,7 @@ def sc_team(t):
 def frame(t):
     if t < T["punch"]: return COVER_IMG
     if t < T["ai0"]: return daily.intro_hook_frame(S, int((t - T["punch"]) * FPS), PTS)
-    if t < T["but"]: return sc_ai(t)
+    if t < T["but"]: return daily.cta_pill(sc_ai(t), t - T["ai0"])  # small CTA as the story starts; big one on the end card
     if t < T["cnt0"]: return sc_but(t)
     if t < T["no0"]: return sc_counter(t)
     if t < T["dark"]: return sc_no(t)

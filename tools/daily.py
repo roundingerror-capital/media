@@ -141,6 +141,27 @@ def char_layer(img, d, S, t, cast, lines, text_bottom):
             y = max(text_bottom + 24, BASE - hpx - 150)
             bubble(d, xc, y, ln)
 
+CTA_S = 3.5  # small CTA at the start of the story (the boss 2026-10-25: "cta at the beginning small and end big")
+def _heart(d, x, y, r, col):
+    d.ellipse([x - r, y - r, x, y], fill=col); d.ellipse([x, y - r, x + r, y], fill=col)
+    d.polygon([(x - r, y - r * 0.45), (x + r, y - r * 0.45), (x, y + r * 0.9)], fill=col)
+def cta_pill(img, u, text="LIKE + FOLLOW", scale=1.0, hold=False, y=None, dur=CTA_S):
+    """Small call to action: a lime pill top-right, in the free band between the header rule (y 150) and the kicker (y ~262).
+    Slides in, pulses twice, slides out after `dur` s (stays if hold). u = seconds since it appeared."""
+    if u < 0 or (not hold and u > dur): return img
+    d = ImageDraw.Draw(img); f = archivo(int(40 * scale), 110, 900)
+    tw = d.textlength(text, font=f); r = int(14 * scale); pad = int(22 * scale); h = int(64 * scale)
+    w = int(tw + pad * 3 + r * 2)
+    k_in = min(1, u / 0.25); k_out = 0 if hold else max(0, (u - (dur - 0.3)) / 0.3)
+    off = int((1 - (1 - (1 - k_in) ** 3)) * (w + M)) + int(k_out ** 2 * (w + M))
+    pulse = 1 + 0.06 * max(0, math.sin(math.pi * min(1, max(0, (u - 0.6) / 0.3)))) + 0.06 * max(0, math.sin(math.pi * min(1, max(0, (u - 1.6) / 0.3))))
+    w2, h2 = int(w * pulse), int(h * pulse)
+    x1 = W - M + off; x0 = x1 - w2; y0 = (y if y is not None else 176) - (h2 - h) // 2; y1 = y0 + h2
+    d.rounded_rectangle([x0, y0, x1, y1], radius=h2 // 2, fill=LIME)
+    _heart(d, x0 + pad + r, (y0 + y1) // 2 - r // 4, r, "#000000")
+    d.text((x0 + pad * 2 + r * 2, (y0 + y1) // 2), text, font=f, fill="#000000", anchor="lm")
+    return img
+
 def scene_frame(S, t, heads_override=None):
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     d.text((M, 120), "≈ Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
@@ -164,6 +185,9 @@ def scene_frame(S, t, heads_override=None):
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
     d.text((M, 1780), S["foot"], font=mono(22), fill=MUT, anchor="ls")
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
+    cta_pill(img, t)  # small CTA as the story starts (every video)
+    if S.get("loop") and S.get("end") and t > S["end"] - 2.5:  # loops have no end card: a bigger CTA holds through the last 2.5 s
+        cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.15, hold=True)
     return img
 
 LOOP_F = 12  # 0.4 s crossfade to the cover in the loop variant
