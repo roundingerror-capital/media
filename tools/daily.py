@@ -162,6 +162,52 @@ def cta_pill(img, u, text="LIKE + FOLLOW", scale=1.0, hold=False, y=None, dur=CT
     d.text((x0 + pad * 2 + r * 2, (y0 + y1) // 2), text, font=f, fill="#000000", anchor="lm")
     return img
 
+# COLD OPEN (the boss 2026-10-25: viral Reels open on the climax, then rewind to how it happened).
+# spec["cold_open"] = {"big": "-219%", "line": "ONE PUT.", "shout": "WAIT, WHAT?!"}; spec["hook"] then reads like a rewind ("<< HOW DID WE GET HERE?").
+# Timeline: 0-1.8 s cold open (frame 0-2 = the cover, then it explodes), 1.8-3.0 s the standard AI TRADING BOT intro, story from 3.0 s.
+COLD_F = 54
+RED = (235, 38, 38)
+_VIG = None
+def _vignette():
+    global _VIG
+    if _VIG is None:
+        import numpy as np
+        yy, xx = np.mgrid[0:H, 0:W]; r = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2)
+        _VIG = Image.fromarray((np.clip((r - 0.35) / 0.9, 0, 1) * 255).astype("uint8"), "L")
+    return _VIG
+def cold_open_frame(S, fr, cover, pts):
+    if fr < 3: return cover
+    co = S["cold_open"]; u = fr / FPS
+    pulse = 0.5 + 0.5 * math.sin(u * 2 * math.pi * 3)
+    img = Image.composite(Image.new("RGB", (W, H), (120, 8, 8)), Image.new("RGB", (W, H), (0, 0, 0)), _vignette().point(lambda v: int(v * (0.45 + 0.55 * pulse))))
+    d = ImageDraw.Draw(img)
+    n = max(2, int(len(pts) * min(1, (u - 0.1) / 0.6)))  # red crash line draws itself (falls left to right)
+    crash = [(x, 1300 + (y - 260) * 0.35) for x, y in pts[:n]]
+    if len(crash) > 1: d.line(crash, fill=RED, width=14)
+    sc = 1 + 0.6 * max(0, 1 - (u - 0.1) / 0.18)
+    big = co["big"]; f = fit(big, int((W - 2 * M) * min(1.0, sc / 1.6 + 0.4)), 420, wdth=125, wght=900)
+    d.text((W // 2, 1000), big, font=f, fill=RED, anchor="ms", stroke_width=10, stroke_fill="#FFFFFF")
+    if co.get("line"): d.text((W // 2, 560), co["line"], font=archivo(96, 125, 900), fill=INK, anchor="ms")
+    if u > 0.8:
+        sh = co.get("shout", "WAIT, WHAT?!"); f2 = archivo(int(110 * (1 + max(0, .3 - (u - .8)))), 125, 900)
+        d.text((W // 2, 1180), sh, font=f2, fill=INK, anchor="ms", stroke_width=6, stroke_fill="#000000")
+    s = sprite_state("penny", False, u); h = 380; s = s.resize((int(s.width * h / s.height), h), Image.NEAREST)
+    hop = int(90 * abs(math.sin(u * math.pi * 3))); img.paste(s, (W // 2 - s.width // 2, 1700 - h - hop), s)
+    if u < 0.5:  # impact shake
+        k = random.Random(fr).randint(-22, 22); img = img.transform(img.size, Image.AFFINE, (1, 0, k, 0, 1, -k // 2))
+    return img
+def chart_panel(d, vals, labels, y0, y1, note=""):
+    """Bars of a series (e.g. a put's P&L as % of the premium, per day). Every value must be on a Theo fact sheet."""
+    n = len(vals); lo = min(0, min(vals)); hi = max(0, max(vals)); rng = (hi - lo) or 1
+    zero = y0 + (hi / rng) * (y1 - y0); bw = (W - 2 * M) / n
+    d.line([(M, zero), (W - M, zero)], fill=MUT, width=3)
+    for i, (v, lab) in enumerate(zip(vals, labels)):
+        x0 = M + i * bw + bw * .18; x1 = M + (i + 1) * bw - bw * .18; yv = zero - v / rng * (y1 - y0)
+        d.rectangle([x0, min(zero, yv), x1, max(zero, yv)], fill=RED if v < 0 else LIME)
+        d.text(((x0 + x1) / 2, max(zero, yv) + 34), f"{v:+d}%".replace("-", "\u2212"), font=mono(24, True), fill=INK, anchor="ms")
+        d.text(((x0 + x1) / 2, y0 - 14), lab, font=mono(22), fill=MUT, anchor="ms")
+    if note: d.text((M, y1 + 90), note, font=mono(22), fill=MUT, anchor="ls")
+
 def scene_frame(S, t, heads_override=None):
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     d.text((M, 120), "≈ Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
@@ -181,6 +227,9 @@ def scene_frame(S, t, heads_override=None):
     for i, ln in enumerate(body):
         ba = a * fade(t, t0 + 0.5 + i * 0.3, t0 + 0.8 + i * 0.3)
         d.text((M, y), ln, font=mono(38, True), fill=blend(LIME if i == hl else INK, ba), anchor="ls"); y += 62
+    ch = (S.get("charts") or {}).get(k)
+    if ch:
+        chart_panel(d, ch["vals"], ch["labels"], y + 40, y + 300, ch.get("note", "")); y += 400
     char_layer(img, d, S, t, cast, lines, y - 20)
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
     d.text((M, 1780), S["foot"], font=mono(22), fill=MUT, anchor="ls")
@@ -226,16 +275,19 @@ def outro_frame(S, t):
     return img
 
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
-    content = S["end"]; total = (COVER_F + INTRO_F) / FPS + content + (LOOP_F / FPS if S.get("loop") else OUTRO_S)
+    content = S["end"]; total = ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS + content + (LOOP_F / FPS if S.get("loop") else OUTRO_S)
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
-    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"])
+    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0)
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
     hov = S.get("b", {}).get("hook") if variant == "b" else None
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
         "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
         "-c:a", "aac", "-b:a", "160k", "-af", "adelay=33|33,loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out], stdin=subprocess.PIPE)
     cb = cover.tobytes()
-    for _ in range(COVER_F): p.stdin.write(cb)
+    if S.get("cold_open"):
+        for fr in range(COLD_F): p.stdin.write(cold_open_frame(S, fr, cover, pts).tobytes())
+    else:
+        for _ in range(COVER_F): p.stdin.write(cb)
     for fr in range(INTRO_F): p.stdin.write(intro_hook_frame(S, fr, pts).tobytes())
     for i in range(int(content * FPS)): p.stdin.write(scene_frame(S, i / FPS, hov).tobytes())
     if S.get("loop"):

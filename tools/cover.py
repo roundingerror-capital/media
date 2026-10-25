@@ -28,4 +28,4 @@ def make(out,kicker,line1,big,sub,sprite=None,big_color=LIME):
     d.text((72,1635-60),"AI TRADING BOT · REAL MONEY · NOT ADVICE",font=mono(34),fill=GREY)
     im.save(out,quality=92)
 if __name__=='__main__':
-    a=sys.argv; make(a[1],a[2],a[3],a[4],a[5],a[6] if len(a)>6 else None, (255,138,91) if (len(a)>7 and a[7]=='loss') else LIME)
+    a=sys.argv; make(a[1],a[2],a[3],a[4],a[5],a[6] if len(a)>6 else None, {'loss':(255,138,91),'red':(235,38,38)}.get(a[7] if len(a)>7 else '',LIME))
