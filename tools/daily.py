@@ -179,7 +179,7 @@ def outro_frame(S, t):
     if pos:
         d.text((M, y), "OUR OPEN POSITIONS" + (" \u00b7 " + S["positions_asof"] if S.get("positions_asof") else ""), font=mono(30, True), fill=LIME, anchor="ls"); y += 30
         for i, row in enumerate(pos[:5]):
-            a = fade(t, 0.1 + i * 0.12, 0.35 + i * 0.12)
+            a = 1.0 if t >= 0.1 + i * 0.12 else 0.0  # pop-in, no half-faded figures (2026-10-25: faint numbers were OCR-misread by the safety scan)
             d.rectangle([M, y, W - M, y + 92], outline=blend(LINE, a), width=3)
             d.text((M + 24, y + 62), row[0], font=archivo(48, 110, 900), fill=blend(INK, a), anchor="ls")
             d.text((M + 230, y + 42), row[1] + "  " + row[2], font=mono(30, True), fill=blend(INK, a), anchor="ls")
