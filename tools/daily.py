@@ -208,6 +208,27 @@ def chart_panel(d, vals, labels, y0, y1, note=""):
         d.text(((x0 + x1) / 2, y0 - 14), lab, font=mono(22), fill=MUT, anchor="ms")
     if note: d.text((M, y1 + 90), note, font=mono(22), fill=MUT, anchor="ls")
 
+def threeway_panel(d, cards, y0, quote=""):
+    """THE THREE-WAY (decision 20261022-threeway-series-1): SAFER · OURS · RISKIER side by side.
+    cards = [{"tag": "SAFER", "strike": "$22", "prem": "$0.40", "yld": "1.82%", "delta": "0.139", "hypo": True}, ...] from the fill sheet's variants."""
+    cw = (W - 2 * M - 2 * 24) // 3; ch = 470
+    for i, c in enumerate(cards):
+        x0 = M + i * (cw + 24); ours = not c.get("hypo")
+        d.rectangle([x0, y0, x0 + cw, y0 + ch], fill="#0f0f0f", outline=LIME if ours else "#5a5a5a", width=8 if ours else 3)
+        d.text((x0 + cw // 2, y0 + 56), c["tag"], font=archivo(44, 125, 900), fill=LIME if ours else INK, anchor="ms")
+        d.text((x0 + cw // 2, y0 + 160), c["strike"], font=archivo(80, 110, 900), fill=INK, anchor="ms")
+        d.text((x0 + cw // 2, y0 + 200), "strike", font=mono(22), fill=MUT, anchor="ms")
+        d.text((x0 + cw // 2, y0 + 268), c["prem"], font=archivo(54, 110, 900), fill=INK, anchor="ms")
+        d.text((x0 + cw // 2, y0 + 300), "premium/share", font=mono(22), fill=MUT, anchor="ms")
+        d.text((x0 + cw // 2, y0 + 362), c["yld"], font=archivo(54, 110, 900), fill=LIME if ours else INK, anchor="ms")
+        d.text((x0 + cw // 2, y0 + 394), "if it expires", font=mono(22), fill=MUT, anchor="ms")
+        d.text((x0 + cw // 2, y0 + 436), "delta " + c["delta"], font=mono(22, True), fill=MUT, anchor="ms")
+        if c.get("hypo"):
+            d.rectangle([x0 + 10, y0 + ch - 4, x0 + cw - 10, y0 + ch + 40], fill="#FF8A5B")
+            d.text((x0 + cw // 2, y0 + ch + 28), "HYPOTHETICAL", font=mono(24, True), fill="#000000", anchor="ms")
+    d.text((W // 2, y0 + ch + 90), "Variants: hypothetical, never traded, not a recommendation.", font=mono(24, True), fill=INK, anchor="ms")
+    if quote: d.text((W // 2, y0 + ch + 126), quote, font=mono(22), fill=MUT, anchor="ms")
+
 def scene_frame(S, t, heads_override=None):
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     d.text((M, 120), "≈ Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
@@ -227,6 +248,9 @@ def scene_frame(S, t, heads_override=None):
     for i, ln in enumerate(body):
         ba = a * fade(t, t0 + 0.5 + i * 0.3, t0 + 0.8 + i * 0.3)
         d.text((M, y), ln, font=mono(38, True), fill=blend(LIME if i == hl else INK, ba), anchor="ls"); y += 62
+    tw = (S.get("threeway") or {}).get(k)
+    if tw:
+        threeway_panel(d, tw["cards"], y + 10, tw.get("quote", "")); y += 660
     ch = (S.get("charts") or {}).get(k)
     if ch:
         chart_panel(d, ch["vals"], ch["labels"], y + 40, y + 300, ch.get("note", "")); y += 400
