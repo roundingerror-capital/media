@@ -1,5 +1,5 @@
 import numpy as np, wave, sys
-def make(path,dur,bpm,root,seed,mel_shift=0,cold=0.0):
+def make(path,dur,bpm,root,seed,mel_shift=0,cold=0.0,sfx=()):
     """cold > 0: a cold open of that many seconds comes first (impact + alarm); the riser/drop and groove shift by it."""
     sr=44100; beat=60/bpm; N=int(sr*dur); out=np.zeros(N); rng=np.random.default_rng(seed)
     def add(sig,t):
@@ -34,6 +34,13 @@ def make(path,dur,bpm,root,seed,mel_shift=0,cold=0.0):
         if b%2==0: add(bass(roots[bar],beat*1.8),tt)
         if tt>2.5+o and b%2==0: add(lead(mel[(b//2)%8],beat*0.9),tt+beat/2)
         b+=1
+    for ts,kind in sfx:  # meme hits, all synthesized
+        if kind=='boom':
+            t=np.arange(int(1.4*sr))/sr; add((np.sin(2*np.pi*np.cumsum(38+90*np.exp(-t*5))/sr)*np.exp(-t*2.2)*1.6+rng.standard_normal(len(t))*np.exp(-t*30)*0.3),ts)
+        elif kind=='scratch':
+            t=np.arange(int(0.45*sr))/sr; f=1400*(1-t/0.45)**2+90; add(np.sin(2*np.pi*np.cumsum(f)/sr)*rng.standard_normal(len(t))*0.8*np.exp(-t*3),ts)
+        elif kind=='pop':
+            t=np.arange(int(0.12*sr))/sr; add(np.sin(2*np.pi*(600+900*np.exp(-t*40))*t)*np.exp(-t*30)*0.5,ts)
     fade=np.ones(N); fade[-int(.8*sr):]=np.linspace(1,0,int(.8*sr)); out*=fade
     out=out/np.max(np.abs(out))*0.89
     data=(np.stack([out,out],1)*32767).astype('<i2')

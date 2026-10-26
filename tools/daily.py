@@ -42,6 +42,7 @@ def sprite_state(name, blink, t):
                 for x in range(x0, x1 + 1):
                     if px[x, y][3]: px[x, y] = lid
             for x in range(x0, x1 + 1): px[x, row] = LASH
+    if name in SHADES_ON: s = _shades(s, name, SHADES_ON[name])
     if name == "penny":  # bolt-feather wiggle: shift crest rows
         dx = int(round(math.sin(t * 9)))
         if dx:
@@ -162,11 +163,11 @@ def cta_pill(img, u, text="LIKE + FOLLOW", scale=1.0, hold=False, y=None, dur=CT
     d.text((x0 + pad * 2 + r * 2, (y0 + y1) // 2), text, font=f, fill="#000000", anchor="lm")
     return img
 
-# COLD OPEN (the boss 2026-10-25: viral Reels open on the climax, then rewind to how it happened).
-# spec["cold_open"] = {"big": "-219%", "line": "ONE PUT.", "shout": "WAIT, WHAT?!"}; spec["hook"] then reads like a rewind ("<< HOW DID WE GET HERE?").
-# Timeline: 0-1.8 s cold open (frame 0-2 = the cover, then it explodes), 1.8-3.0 s the standard AI TRADING BOT intro, story from 3.0 s.
-COLD_F = 54
-RED = (235, 38, 38)
+# TEASER / COLD OPEN (the boss 2026-10-25/26: "all of our videos start with a 1s teaser, short intro, and then the whole story").
+# spec["cold_open"] = {"big": "$700", "line": "4 HIMS PUTS.", "shout": "FREE MONEY?!", "tone": "win"|"loss"}; spec["hook"] reads like a rewind.
+# Timeline: 0-1.0 s teaser (frames 0-2 = the cover, then it explodes), 1.0-2.2 s the AI TRADING BOT intro, story from 2.2 s.
+COLD_F = 30
+RED = (235, 38, 38); LIME_T = (200, 240, 60)
 _VIG = None
 def _vignette():
     global _VIG
@@ -177,25 +178,85 @@ def _vignette():
     return _VIG
 def cold_open_frame(S, fr, cover, pts):
     if fr < 3: return cover
-    co = S["cold_open"]; u = fr / FPS
-    pulse = 0.5 + 0.5 * math.sin(u * 2 * math.pi * 3)
-    img = Image.composite(Image.new("RGB", (W, H), (120, 8, 8)), Image.new("RGB", (W, H), (0, 0, 0)), _vignette().point(lambda v: int(v * (0.45 + 0.55 * pulse))))
+    co = S["cold_open"]; u = fr / FPS; win = co.get("tone") == "win"
+    col = LIME_T if win else RED; glow = (40, 70, 0) if win else (120, 8, 8)
+    pulse = 0.5 + 0.5 * math.sin(u * 2 * math.pi * 4)
+    img = Image.composite(Image.new("RGB", (W, H), glow), Image.new("RGB", (W, H), (0, 0, 0)), _vignette().point(lambda v: int(v * (0.45 + 0.55 * pulse))))
     d = ImageDraw.Draw(img)
-    n = max(2, int(len(pts) * min(1, (u - 0.1) / 0.6)))  # red crash line draws itself (falls left to right)
-    crash = [(x, 1300 + (y - 260) * 0.35) for x, y in pts[:n]]
-    if len(crash) > 1: d.line(crash, fill=RED, width=14)
-    sc = 1 + 0.6 * max(0, 1 - (u - 0.1) / 0.18)
+    n = max(2, int(len(pts) * min(1, (u - 0.1) / 0.45)))  # the line draws itself
+    line = [(x, 1300 + (y - 260) * 0.35) for x, y in pts[:n]]
+    if len(line) > 1: d.line(line, fill=col, width=14)
+    sc = 1 + 0.6 * max(0, 1 - (u - 0.1) / 0.15)
     big = co["big"]; f = fit(big, int((W - 2 * M) * min(1.0, sc / 1.6 + 0.4)), 420, wdth=125, wght=900)
-    d.text((W // 2, 1000), big, font=f, fill=RED, anchor="ms", stroke_width=10, stroke_fill="#FFFFFF")
-    if co.get("line"): d.text((W // 2, 560), co["line"], font=archivo(96, 125, 900), fill=INK, anchor="ms")
-    if u > 0.8:
-        sh = co.get("shout", "WAIT, WHAT?!"); f2 = archivo(int(110 * (1 + max(0, .3 - (u - .8)))), 125, 900)
+    d.text((W // 2, 1000), big, font=f, fill=col, anchor="ms", stroke_width=10, stroke_fill="#000000" if win else "#FFFFFF")
+    if co.get("line"): d.text((W // 2, 560), co["line"], font=fit(co["line"], W - 2 * M, 96, wdth=125, wght=900), fill=INK, anchor="ms")
+    if u > 0.45:
+        sh = co.get("shout", "WAIT, WHAT?!"); f2 = fit(sh, W - 2 * M, int(110 * (1 + max(0, .25 - (u - .45)))), wdth=125, wght=900)
         d.text((W // 2, 1180), sh, font=f2, fill=INK, anchor="ms", stroke_width=6, stroke_fill="#000000")
     s = sprite_state("penny", False, u); h = 380; s = s.resize((int(s.width * h / s.height), h), Image.NEAREST)
-    hop = int(90 * abs(math.sin(u * math.pi * 3))); img.paste(s, (W // 2 - s.width // 2, 1700 - h - hop), s)
-    if u < 0.5:  # impact shake
+    hop = int(90 * abs(math.sin(u * math.pi * 4))); img.paste(s, (W // 2 - s.width // 2, 1700 - h - hop), s)
+    if u < 0.35:  # impact shake
         k = random.Random(fr).randint(-22, 22); img = img.transform(img.size, Image.AFFINE, (1, 0, k, 0, 1, -k // 2))
     return img
+
+# MEMES (the boss 2026-10-26: "MEME IT UP BRO, we need to go VIRAL"). Original takes on generic meme formats only:
+# no copyrighted images, characters, clips or sound samples (every sound is synthesized in tools/beat.py / here).
+# spec["memes"] = [{"t": 0.2, "dur": 2.8, "kind": "pov", "text": "POV: ..."},
+#                  {"t": 3.0, "dur": 1.6, "kind": "shades", "who": "theo"},          # pixel deal-with-it shades drop + boom
+#                  {"t": 9.0, "dur": 1.2, "kind": "zoom", "text": "..."},             # dramatic zoom + shake + boom
+#                  {"t": 13.0, "dur": 2.4, "kind": "twopanel", "a": "OPTIONS:", "a2": "PANICKING", "b": "THE STOCK:", "b2": "CHILLING"},
+#                  {"t": 19.5, "dur": 1.6, "kind": "freeze", "text": "yep. that's the whole plan."}]  # freeze frame + record scratch
+# Meme text sits in the free middle band (y ~860-1120, between the body text and the characters): never over a number, a headline or a face; every number in it is on a Theo sheet.
+SHADES_ON = {}
+def _shades(s, name, k):
+    """Draw pixel shades over the sprite's eyes; k 0..1 = drop progress (0 = above the head)."""
+    boxes, _, _ = EYES[name]; d = ImageDraw.Draw(s)
+    x0 = min(b[0] for b in boxes) - 2; x1 = max(b[2] for b in boxes) + 2; y0 = min(b[1] for b in boxes); y1 = max(b[3] for b in boxes)
+    dy = int((1 - k) * -(y0 + 6))
+    d.rectangle([x0, y0 + dy, x1, y0 + dy + 1], fill=(10, 10, 10, 255))
+    for bx0, by0, bx1, by1 in boxes:
+        d.rectangle([bx0 - 1, y0 + dy, bx1 + 1, y1 + dy], fill=(10, 10, 10, 255))
+        d.point((bx0, y0 + dy + 1), fill=(255, 255, 255, 255))
+    return s
+def meme_layer(img, S, t):
+    d = ImageDraw.Draw(img)
+    for m in S.get("memes", []):
+        u = t - m["t"]
+        if u < 0 or u > m.get("dur", 1.5): continue
+        k = m["kind"]
+        if k == "pov":
+            f = fit(m["text"], W - 2 * M, 64, wdth=100, wght=900); a = min(1, u / 0.12)
+            d.rectangle([0, 900, W, 1020], fill=(255, 255, 255))
+            d.text((W // 2, 982), m["text"], font=f, fill="#000000", anchor="ms")
+        elif k == "zoom":
+            z = 1 + 0.25 * min(1, u / 0.12); cx, cy = W // 2, H // 2
+            box = (int(cx - W / z / 2), int(cy - H / z / 2), int(cx + W / z / 2), int(cy + H / z / 2))
+            im2 = img.crop(box).resize((W, H)); sh = random.Random(int(t * 30)).randint(-14, 14) if u < 0.4 else 0
+            im2 = im2.transform(im2.size, Image.AFFINE, (1, 0, sh, 0, 1, sh // 2))
+            g = Image.new("RGB", (W, H), (0, 0, 0)); im2 = Image.composite(g, im2, _vignette().point(lambda v: int(v * 0.8)))
+            img.paste(im2); d = ImageDraw.Draw(img)
+            if m.get("text"):
+                f = fit(m["text"], W - 2 * M, 110, wdth=125, wght=900)
+                d.text((W // 2, 1000), m["text"], font=f, fill=(255, 255, 255), anchor="ms", stroke_width=8, stroke_fill="#000000")
+        elif k == "twopanel":
+            d.rectangle([0, 860, W, 1120], fill=(0, 0, 0))
+            for i, (lab, val) in enumerate(((m["a"], m["a2"]), (m["b"], m["b2"]))):
+                if u < i * 0.6: continue
+                y = 950 + i * 120
+                d.text((M, y), lab, font=archivo(52, 100, 900), fill=INK, anchor="ls")
+                d.text((W - M, y), val, font=archivo(64, 100, 900), fill=(235, 38, 38) if i == 0 else LIME, anchor="rs")
+        elif k == "freeze":
+            g = img.convert("L").convert("RGB"); img.paste(Image.blend(g, Image.new("RGB", (W, H), (40, 30, 20)), 0.25)); d = ImageDraw.Draw(img)
+            f = fit(m["text"], W - 2 * M, 84, wdth=110, wght=900)
+            d.rectangle([0, 900, W, 1040], fill=(0, 0, 0)); d.text((W // 2, 995), m["text"], font=f, fill=(255, 255, 255), anchor="ms")
+    return img
+def meme_sfx(S, offset):
+    """(time, kind) list for the beat: boom on shades/zoom, scratch on freeze, pop on pov/twopanel. offset = seconds before the story starts."""
+    out = []
+    for m in S.get("memes", []):
+        kk = {"shades": "boom", "zoom": "boom", "freeze": "scratch", "pov": "pop", "twopanel": "pop"}[m["kind"]]
+        out.append((offset + m["t"], kk))
+    return out
 def chart_panel(d, vals, labels, y0, y1, note=""):
     """Bars of a series (e.g. a put's P&L as % of the premium, per day). Every value must be on a Theo fact sheet."""
     n = len(vals); lo = min(0, min(vals)); hi = max(0, max(vals)); rng = (hi - lo) or 1
@@ -230,6 +291,9 @@ def threeway_panel(d, cards, y0, quote=""):
     if quote: d.text((W // 2, y0 + ch + 126), quote, font=mono(22), fill=MUT, anchor="ms")
 
 def scene_frame(S, t, heads_override=None):
+    SHADES_ON.clear()
+    for m in S.get("memes", []):
+        if m["kind"] == "shades" and m["t"] <= t <= m["t"] + m.get("dur", 1.6): SHADES_ON[m.get("who", "theo")] = min(1, (t - m["t"]) / 0.3)
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     d.text((M, 120), "≈ Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
     d.text((W - M, 120), S["label"], font=mono(24), fill=MUT, anchor="rs")
@@ -258,6 +322,7 @@ def scene_frame(S, t, heads_override=None):
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
     d.text((M, 1780), S["foot"], font=mono(22), fill=MUT, anchor="ls")
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
+    img = meme_layer(img, S, t)
     cta_pill(img, t)  # small CTA as the story starts (every video)
     if S.get("loop") and S.get("end") and t > S["end"] - 2.5:  # loops have no end card: a bigger CTA holds through the last 2.5 s
         cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.15, hold=True)
@@ -301,7 +366,7 @@ def outro_frame(S, t):
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     content = S["end"]; total = ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS + content + (LOOP_F / FPS if S.get("loop") else OUTRO_S)
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
-    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0)
+    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0, sfx=meme_sfx(S, ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS))
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
     hov = S.get("b", {}).get("hook") if variant == "b" else None
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
