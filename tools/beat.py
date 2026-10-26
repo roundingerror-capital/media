@@ -1,5 +1,6 @@
 import numpy as np, wave, sys
-def make(path,dur,bpm,root,seed,mel_shift=0,cold=0.0,sfx=()):
+def make(path,dur,bpm,root,seed,mel_shift=0,cold=0.0,sfx=(),groove=True):
+    """groove=False: only the teaser hit/alarm and the meme sounds (a song from tools/music plays underneath)."""
     """cold > 0: a cold open of that many seconds comes first (impact + alarm); the riser/drop and groove shift by it."""
     sr=44100; beat=60/bpm; N=int(sr*dur); out=np.zeros(N); rng=np.random.default_rng(seed)
     def add(sig,t):
@@ -20,12 +21,13 @@ def make(path,dur,bpm,root,seed,mel_shift=0,cold=0.0,sfx=()):
         t=np.arange(int(1.6*sr))/sr; add(np.sin(2*np.pi*(30+80*np.exp(-t*3))*t)*np.exp(-t*1.5)*1.2+rng.standard_normal(len(t))*np.exp(-t*6)*0.5,0.1)  # impact
         t=np.arange(int((cold-0.2)*sr))/sr; f=900+250*np.sign(np.sin(2*np.pi*3*t)); add(np.sign(np.sin(2*np.pi*np.cumsum(f)/sr))*0.07,0.15)  # alarm
     o=cold
-    t=np.arange(int(0.6*sr))/sr; add(rng.standard_normal(len(t))*np.linspace(0,0.25,len(t)),o)
+    if not groove: dur_groove=0
+    t=np.arange(int(0.6*sr))/sr; add(rng.standard_normal(len(t))*np.linspace(0,0.25,len(t))*(1 if groove else 0),o)
     add(kick()*1.3,0.6+o); add(rng.standard_normal(int(.5*sr))*np.exp(-np.arange(int(.5*sr))/sr*8)*0.4,0.6+o)
     semis=[0,0,-4,-2]; roots=[root*2**(s/12) for s in semis]
     scale=[0,3,5,7,10,12,15]; mel=[root*8*2**(scale[(i*3+mel_shift)%7]/12) for i in range(8)]
     b=0; t0=0.6+o
-    while t0+b*beat<dur:
+    while groove and t0+b*beat<dur:
         tt=t0+b*beat; bar=int(b//4)%4
         if b%4==0 or b%8==6: add(kick(),tt)
         if b%8==7: add(kick(),tt+beat/2)
@@ -42,7 +44,7 @@ def make(path,dur,bpm,root,seed,mel_shift=0,cold=0.0,sfx=()):
         elif kind=='pop':
             t=np.arange(int(0.12*sr))/sr; add(np.sin(2*np.pi*(600+900*np.exp(-t*40))*t)*np.exp(-t*30)*0.5,ts)
     fade=np.ones(N); fade[-int(.8*sr):]=np.linspace(1,0,int(.8*sr)); out*=fade
-    out=out/np.max(np.abs(out))*0.89
+    out=out/max(1e-9,np.max(np.abs(out)))*0.89
     data=(np.stack([out,out],1)*32767).astype('<i2')
     w=wave.open(path,'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(sr); w.writeframes(data.tobytes()); w.close()
 if __name__=='__main__':

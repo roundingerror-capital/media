@@ -244,7 +244,7 @@ def meme_layer(img, S, t):
                 if u < i * 0.6: continue
                 y = 950 + i * 120
                 d.text((M, y), lab, font=archivo(52, 100, 900), fill=INK, anchor="ls")
-                d.text((W - M, y), val, font=archivo(64, 100, 900), fill=(235, 38, 38) if i == 0 else LIME, anchor="rs")
+                d.text((W - M, y), val, font=archivo(64, 100, 900), fill=m.get("a2c", "#EB2626") if i == 0 else m.get("b2c", LIME), anchor="rs")
         elif k == "freeze":
             g = img.convert("L").convert("RGB"); img.paste(Image.blend(g, Image.new("RGB", (W, H), (40, 30, 20)), 0.25)); d = ImageDraw.Draw(img)
             f = fit(m["text"], W - 2 * M, 84, wdth=110, wght=900)
@@ -363,10 +363,24 @@ def outro_frame(S, t):
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     return img
 
+MUSIC = os.path.join(HERE, "music")
+def mix_music(S, sfx_wav, total, workdir):
+    """spec["music"] = a key of tools/music/manifest.json (one of our own Gemini songs). The song enters right after the teaser
+    (1.0 s; at 0.6 s without a teaser) from its start_s, under the teaser hit and the meme sounds, then fades out at the end."""
+    import json
+    man = json.load(open(os.path.join(MUSIC, "manifest.json")))[S["music"]]
+    enter = (COLD_F if S.get("cold_open") else COVER_F) / FPS
+    start = S.get("music_start", man["start_s"]); out = sfx_wav[:-4] + "_mix.wav"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", sfx_wav, "-ss", str(start), "-i", os.path.join(MUSIC, S["music"] + ".mp3"),
+        "-filter_complex", f"[1:a]atrim=0:{total - enter:.2f},afade=t=in:d=0.08,afade=t=out:st={max(0, total - enter - 1.2):.2f}:d=1.2,volume=0.85,adelay={int(enter*1000)}|{int(enter*1000)}[m];"
+        f"[0:a][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]", "-map", "[a]", "-ar", "44100", out], check=True)
+    return out
+
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     content = S["end"]; total = ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS + content + (LOOP_F / FPS if S.get("loop") else OUTRO_S)
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
-    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0, sfx=meme_sfx(S, ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS))
+    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], groove=not S.get("music"), cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0, sfx=meme_sfx(S, ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS))
+    if S.get("music"): wav = mix_music(S, wav, total + 0.3, workdir)
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
     hov = S.get("b", {}).get("hook") if variant == "b" else None
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
