@@ -25,7 +25,7 @@ def make(out,kicker,line1,big,sub,sprite=None,big_color=LIME):
     if sprite and os.path.exists(sprite):
         sp=Image.open(sprite).convert('RGBA'); s=max(1,int(300/sp.height)); sp=sp.resize((sp.width*s,sp.height*s),Image.NEAREST)
         im.paste(sp,(1080-72-sp.width,1635-sp.height-60),sp)
-    d.text((72,1635-60),"AI TRADING BOT · REAL MONEY · NOT ADVICE",font=mono(34),fill=GREY)
+    d.text((72,1635-60),"AI TRADING BOT · REAL MONEY · NOT FINANCIAL ADVICE",font=mono(34),fill=GREY)
     im.save(out,quality=92)
 if __name__=='__main__':
     a=sys.argv; make(a[1],a[2],a[3],a[4],a[5],a[6] if len(a)>6 else None, {'loss':(255,138,91),'red':(235,38,38)}.get(a[7] if len(a)>7 else '',LIME))

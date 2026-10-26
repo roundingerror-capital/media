@@ -320,7 +320,7 @@ def scene_frame(S, t, heads_override=None):
         chart_panel(d, ch["vals"], ch["labels"], y + 40, y + 300, ch.get("note", "")); y += 400
     char_layer(img, d, S, t, cast, lines, y - 20)
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
-    d.text((M, 1780), S["foot"], font=mono(22), fill=MUT, anchor="ls")
+    d.text((M, 1780), S["foot"].replace("NOT ADVICE", "NOT FINANCIAL ADVICE"), font=mono(22), fill=MUT, anchor="ls")
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     img = meme_layer(img, S, t)
     cta_pill(img, t)  # small CTA as the story starts (every video)
@@ -359,7 +359,7 @@ def outro_frame(S, t):
             d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
     char_layer(img, d, S, 30 + t, ["penny"], [(30.0, 40.0, "penny", "", "point")] if t > 0.3 else [], 10**6)
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
-    d.text((M, 1780), "REAL TRADES \u00b7 REAL MONEY \u00b7 NOT ADVICE", font=mono(22), fill=MUT, anchor="ls")
+    d.text((M, 1780), "REAL TRADES \u00b7 REAL MONEY \u00b7 NOT FINANCIAL ADVICE", font=mono(22), fill=MUT, anchor="ls")
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     return img
 
@@ -376,6 +376,12 @@ def mix_music(S, sfx_wav, total, workdir):
         f"[0:a][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]", "-map", "[a]", "-ar", "44100", out], check=True)
     return out
 
+def nfa(img):
+    """'NOT FINANCIAL ADVICE' on every frame of every video (the boss, 2026-10-26), bottom centre, below the safe footer."""
+    d = ImageDraw.Draw(img); f = mono(26, True); t = "NOT FINANCIAL ADVICE"
+    w = d.textlength(t, font=f); d.rectangle([W // 2 - w / 2 - 14, 1846, W // 2 + w / 2 + 14, 1886], fill="#000000")
+    d.text((W // 2, 1876), t, font=f, fill="#F2F2EE", anchor="ms"); return img
+
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     content = S["end"]; total = ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS + content + (LOOP_F / FPS if S.get("loop") else OUTRO_S)
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
@@ -388,18 +394,18 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
         "-c:a", "aac", "-b:a", "160k", "-af", "adelay=33|33,loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out], stdin=subprocess.PIPE)
     cb = cover.tobytes()
     if S.get("cold_open"):
-        for fr in range(COLD_F): p.stdin.write(cold_open_frame(S, fr, cover, pts).tobytes())
+        for fr in range(COLD_F): p.stdin.write(nfa(cold_open_frame(S, fr, cover, pts).copy()).tobytes())
     else:
         for _ in range(COVER_F): p.stdin.write(cb)
-    for fr in range(INTRO_F): p.stdin.write(intro_hook_frame(S, fr, pts).tobytes())
-    for i in range(int(content * FPS)): p.stdin.write(scene_frame(S, i / FPS, hov).tobytes())
+    for fr in range(INTRO_F): p.stdin.write(nfa(intro_hook_frame(S, fr, pts)).tobytes())
+    for i in range(int(content * FPS)): p.stdin.write(nfa(scene_frame(S, i / FPS, hov)).tobytes())
     if S.get("loop"):
         # LOOP variant (A/B "loop", 2026-10-22): no end card; the last 0.4 s crossfades back into the cover,
         # so the replay starts on the exact frame the viewer just saw.
         last = scene_frame(S, content - 1 / FPS, hov)
-        for i in range(LOOP_F): p.stdin.write(Image.blend(last, cover, (i + 1) / LOOP_F).tobytes())
+        for i in range(LOOP_F): p.stdin.write(nfa(Image.blend(last, cover, (i + 1) / LOOP_F)).tobytes())
     else:
-        for i in range(int(OUTRO_S * FPS)): p.stdin.write(outro_frame(S, i / FPS).tobytes())
+        for i in range(int(OUTRO_S * FPS)): p.stdin.write(nfa(outro_frame(S, i / FPS)).tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
 
 if __name__ == "__main__":
