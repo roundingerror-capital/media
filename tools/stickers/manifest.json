@@ -1,0 +1,302 @@
+{
+ "_note": "Sticker pack v1 (2026-10-27): generated in Gemini from Penny's spec, cleaned (checkerboard removed), vectorized (svg/) and rendered at 2048 px with transparency. plain/ = as drawn; outlined/ = white sticker border, use on black backgrounds. No text, logos, people or places. Never cover numbers, headlines or faces; keep the NOT FINANCIAL ADVICE band clear.",
+ "items": {
+  "arrow_curve_down_pale": {
+   "plain": "plain/arrow_curve_down_pale.png",
+   "outlined": "outlined/arrow_curve_down_pale.png",
+   "svg": "svg/arrow_curve_down_pale.svg",
+   "size": [
+    1244,
+    1586
+   ]
+  },
+  "arrow_curve_up_lime": {
+   "plain": "plain/arrow_curve_up_lime.png",
+   "outlined": "outlined/arrow_curve_up_lime.png",
+   "svg": "svg/arrow_curve_up_lime.svg",
+   "size": [
+    1777,
+    1531
+   ]
+  },
+  "arrow_double_white": {
+   "plain": "plain/arrow_double_white.png",
+   "outlined": "outlined/arrow_double_white.png",
+   "svg": "svg/arrow_double_white.svg",
+   "size": [
+    702,
+    1793
+   ]
+  },
+  "arrow_long_lime": {
+   "plain": "plain/arrow_long_lime.png",
+   "outlined": "outlined/arrow_long_lime.png",
+   "svg": "svg/arrow_long_lime.svg",
+   "size": [
+    1877,
+    838
+   ]
+  },
+  "arrow_loopy_black": {
+   "plain": "plain/arrow_loopy_black.png",
+   "outlined": "outlined/arrow_loopy_black.png",
+   "svg": "svg/arrow_loopy_black.svg",
+   "size": [
+    1833,
+    644
+   ]
+  },
+  "arrow_outline_white": {
+   "plain": "plain/arrow_outline_white.png",
+   "outlined": "outlined/arrow_outline_white.png",
+   "svg": "svg/arrow_outline_white.svg",
+   "size": [
+    1795,
+    645
+   ]
+  },
+  "arrow_rewind_spiral": {
+   "plain": "plain/arrow_rewind_spiral.png",
+   "outlined": "outlined/arrow_rewind_spiral.png",
+   "svg": "svg/arrow_rewind_spiral.svg",
+   "size": [
+    1637,
+    1767
+   ]
+  },
+  "arrow_scribble_red": {
+   "plain": "plain/arrow_scribble_red.png",
+   "outlined": "outlined/arrow_scribble_red.png",
+   "svg": "svg/arrow_scribble_red.svg",
+   "size": [
+    1884,
+    513
+   ]
+  },
+  "arrow_squiggle_up_lime": {
+   "plain": "plain/arrow_squiggle_up_lime.png",
+   "outlined": "outlined/arrow_squiggle_up_lime.png",
+   "svg": "svg/arrow_squiggle_up_lime.svg",
+   "size": [
+    1753,
+    1175
+   ]
+  },
+  "arrow_straight_lime": {
+   "plain": "plain/arrow_straight_lime.png",
+   "outlined": "outlined/arrow_straight_lime.png",
+   "svg": "svg/arrow_straight_lime.svg",
+   "size": [
+    1892,
+    751
+   ]
+  },
+  "arrow_swoosh_lime": {
+   "plain": "plain/arrow_swoosh_lime.png",
+   "outlined": "outlined/arrow_swoosh_lime.png",
+   "svg": "svg/arrow_swoosh_lime.svg",
+   "size": [
+    1856,
+    956
+   ]
+  },
+  "arrow_zigzag_flat_lime": {
+   "plain": "plain/arrow_zigzag_flat_lime.png",
+   "outlined": "outlined/arrow_zigzag_flat_lime.png",
+   "svg": "svg/arrow_zigzag_flat_lime.svg",
+   "size": [
+    1874,
+    843
+   ]
+  },
+  "arrow_zigzag_up_lime": {
+   "plain": "plain/arrow_zigzag_up_lime.png",
+   "outlined": "outlined/arrow_zigzag_up_lime.png",
+   "svg": "svg/arrow_zigzag_up_lime.svg",
+   "size": [
+    1809,
+    1089
+   ]
+  },
+  "bubble_exclaim_question": {
+   "plain": "plain/bubble_exclaim_question.png",
+   "outlined": "outlined/bubble_exclaim_question.png",
+   "svg": "svg/bubble_exclaim_question.svg",
+   "size": [
+    1695,
+    1630
+   ]
+  },
+  "button_bell": {
+   "plain": "plain/button_bell.png",
+   "outlined": "outlined/button_bell.png",
+   "svg": "svg/button_bell.svg",
+   "size": [
+    1626,
+    1618
+   ]
+  },
+  "button_heart": {
+   "plain": "plain/button_heart.png",
+   "outlined": "outlined/button_heart.png",
+   "svg": "svg/button_heart.svg",
+   "size": [
+    1640,
+    1610
+   ]
+  },
+  "button_plus": {
+   "plain": "plain/button_plus.png",
+   "outlined": "outlined/button_plus.png",
+   "svg": "svg/button_plus.svg",
+   "size": [
+    1659,
+    1610
+   ]
+  },
+  "button_press_hand": {
+   "plain": "plain/button_press_hand.png",
+   "outlined": "outlined/button_press_hand.png",
+   "svg": "svg/button_press_hand.svg",
+   "size": [
+    1798,
+    1540
+   ]
+  },
+  "calendar_expiry": {
+   "plain": "plain/calendar_expiry.png",
+   "outlined": "outlined/calendar_expiry.png",
+   "svg": "svg/calendar_expiry.svg",
+   "size": [
+    1822,
+    1535
+   ]
+  },
+  "candles": {
+   "plain": "plain/candles.png",
+   "outlined": "outlined/candles.png",
+   "svg": "svg/candles.svg",
+   "size": [
+    1880,
+    1424
+   ]
+  },
+  "cash_flying": {
+   "plain": "plain/cash_flying.png",
+   "outlined": "outlined/cash_flying.png",
+   "svg": "svg/cash_flying.svg",
+   "size": [
+    1875,
+    1521
+   ]
+  },
+  "cash_stack": {
+   "plain": "plain/cash_stack.png",
+   "outlined": "outlined/cash_stack.png",
+   "svg": "svg/cash_stack.svg",
+   "size": [
+    1821,
+    1514
+   ]
+  },
+  "circle_scribble_red": {
+   "plain": "plain/circle_scribble_red.png",
+   "outlined": "outlined/circle_scribble_red.png",
+   "svg": "svg/circle_scribble_red.svg",
+   "size": [
+    1846,
+    1321
+   ]
+  },
+  "flame": {
+   "plain": "plain/flame.png",
+   "outlined": "outlined/flame.png",
+   "svg": "svg/flame.svg",
+   "size": [
+    1357,
+    1761
+   ]
+  },
+  "hourglass": {
+   "plain": "plain/hourglass.png",
+   "outlined": "outlined/hourglass.png",
+   "svg": "svg/hourglass.svg",
+   "size": [
+    1172,
+    1785
+   ]
+  },
+  "impact_burst": {
+   "plain": "plain/impact_burst.png",
+   "outlined": "outlined/impact_burst.png",
+   "svg": "svg/impact_burst.svg",
+   "size": [
+    1883,
+    1577
+   ]
+  },
+  "lightbulb": {
+   "plain": "plain/lightbulb.png",
+   "outlined": "outlined/lightbulb.png",
+   "svg": "svg/lightbulb.svg",
+   "size": [
+    1423,
+    1721
+   ]
+  },
+  "parachute": {
+   "plain": "plain/parachute.png",
+   "outlined": "outlined/parachute.png",
+   "svg": "svg/parachute.svg",
+   "size": [
+    1455,
+    1765
+   ]
+  },
+  "rocket": {
+   "plain": "plain/rocket.png",
+   "outlined": "outlined/rocket.png",
+   "svg": "svg/rocket.svg",
+   "size": [
+    1821,
+    1768
+   ]
+  },
+  "skull": {
+   "plain": "plain/skull.png",
+   "outlined": "outlined/skull.png",
+   "svg": "svg/skull.svg",
+   "size": [
+    1556,
+    1618
+   ]
+  },
+  "speed_lines": {
+   "plain": "plain/speed_lines.png",
+   "outlined": "outlined/speed_lines.png",
+   "svg": "svg/speed_lines.svg",
+   "size": [
+    1795,
+    1141
+   ]
+  },
+  "stopwatch": {
+   "plain": "plain/stopwatch.png",
+   "outlined": "outlined/stopwatch.png",
+   "svg": "svg/stopwatch.svg",
+   "size": [
+    1546,
+    1744
+   ]
+  },
+  "sweat_drops": {
+   "plain": "plain/sweat_drops.png",
+   "outlined": "outlined/sweat_drops.png",
+   "svg": "svg/sweat_drops.svg",
+   "size": [
+    1271,
+    1720
+   ]
+  }
+ }
+}
