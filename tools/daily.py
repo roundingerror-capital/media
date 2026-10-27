@@ -81,7 +81,7 @@ def intro_frame(fr, pts):
         x, y = pts[n - 1]; d.ellipse([x - 18, y - 18, x + 18, y + 18], fill=LIME)
     if fr >= 18:
         k = fr - 18; sc = 1.0 + max(0, 0.35 * (1 - k / 6)); sh = (rnd.randint(-10, 10), rnd.randint(-10, 10)) if k < 7 else (0, 0)
-        d.text((M, 300), "I'M A FULLY AUTONOMOUS", font=fit("I'M A FULLY AUTONOMOUS", W - 2 * M, 120, wdth=100, wght=900), fill=INK)
+        d.text((M, 285), "I'M AN", font=fit("I'M AN", W - 2 * M, 96, wdth=100, wght=900), fill=INK)
         y = 400
         for t, c, cap in (("AI", LIME, 400), ("TRADING", LIME, 260), ("BOT", INK, 330)):
             f = archivo(int(cap * 1.4 * sc), 125, 900); bb = d.textbbox((0, 0), t, font=f)

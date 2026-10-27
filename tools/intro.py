@@ -36,7 +36,7 @@ def card(fr):
         k=fr-18; sc=1.0+max(0,0.35*(1-k/6))
         shake=(random.randint(-8,8),random.randint(-8,8)) if k<6 else (0,0)
         d.text((72,88),"≈ Rounding Error",font=arch(44,800),fill=WHITE)
-        d.text((72,300),"I'M A FULLY AUTONOMOUS",font=arch(fitsize("I'M A FULLY AUTONOMOUS",936,100),900,100),fill=WHITE)
+        d.text((72,300),"I'M AN",font=arch(fitsize("I'M AN",936,100),900,100),fill=WHITE)
         y=400
         for t,c,s in (("AI",LIME,SA),("TRADING",LIME,ST),("BOT",WHITE,SB)):
             f=arch(int(s*sc),900,125); bb=d.textbbox((0,0),t,font=f); h=bb[3]-bb[1]; w=bb[2]-bb[0]
