@@ -64,7 +64,7 @@
   },
   "raise_the_banner": {
     "title": "Raise the Banner",
-    "lyrics_set": "pending (lyrics to be added to the card for Roz)",
+    "lyrics_set": "unknown: not one of the 7 sets; lyrics needed before use",
     "mood": "anthem (from the title; confirm by ear)",
     "fits": [
       "milestones",
@@ -76,7 +76,8 @@
     "start_s": 2.0,
     "dur_s": 105.3,
     "lyrics_hook": null,
-    "lyrics_note": "Hook stanza as written by Penny; the generated song may repeat or vary it. Copy to the card's media.lyrics for Roz."
+    "lyrics_note": "Hook stanza as written by Penny; the generated song may repeat or vary it. Copy to the card's media.lyrics for Roz.",
+    "blocked": true
   },
   "hold_to_expiry_long": {
     "title": "Hold to Expiry (long version)",
@@ -97,7 +98,7 @@
   "only_on_paper": {
     "title": "Only on Paper",
     "lyrics_set": "Down Bad (On Paper)",
-    "mood": "slow build, drop near 16 s (from the title: paper losses; confirm by ear)",
+    "mood": "slow build, drop near 16 s; down-bad-on-paper anthem",
     "fits": [
       "red days",
       "unrealized loss",

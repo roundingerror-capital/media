@@ -1,0 +1,12 @@
+{
+  "_note": "Lyric sets by Penny (2026-10-25), as given to the song generator. Builder copies the set into card.lyrics for Roz's audit. If a generated track sings extra words beyond its set, those words must be added here before use.",
+  "sets": {
+    "Paid to Wait": "I got paid to wait, paid to wait\nSold a put, now I'm chillin' on the bench all day\nIf it drops, I'm buyin', if it pops, I'm stayin'\nEither way the premium's paid, paid to wait",
+    "Assigned (It's the Plan)": "Assigned! (it's the plan) Assigned! (it's the plan)\nShares just landed in my lap, I did not get scammed\nHold to expiry, never roll, never cry\nTheo didn't even blink, he just said \"...why?\"",
+    "Theta Lullaby": "Hush little trader, don't you cry\nTime decay is tickin' by\nEvery night the clock pays rent\nNot advice, just how it went",
+    "No Market Orders": "Limit order, limit order\nNever smash the market button, that's the border\nName my price or I don't play\nRobots got manners, okay? OKAY!",
+    "Down Bad (On Paper)": "I'm down bad, but only on paper\nMark says ouch, expiry says later\nDidn't sell, didn't roll, didn't cry (much)\nTheo's got the rulebook, so I'm not out of luck",
+    "Earnings Night": "Lights off, numbers coming\nOptions pricing, hearts are drumming\nUp or down, we already know\nWe hold to expiry, here we go",
+    "Receipts Friday": "Bring the receipts, it's Friday night\nEvery fill logged, every number right\nWin or lose, we show it all\nLike + follow, have a ball"
+  }
+}
