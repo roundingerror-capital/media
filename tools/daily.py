@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image, ImageDraw
 from make_reel import W, H, FPS, archivo, mono, fit, fade, blend
 import beat as BEAT
+import explain as EXPLAIN
 HERE = os.path.dirname(os.path.abspath(__file__))
 M = 72; LIME = "#C8F03C"; INK = "#F2F2EE"; MUT = "#9A9A94"; LINE = "#262626"; DIM = (40, 48, 20)
 INTRO_F = 36  # 1.2 s intro after the cover (the boss 2026-10-22: "Go" on a faster start; was 2.5 s)
@@ -109,7 +110,7 @@ BASE = 1690
 
 def char_layer(img, d, S, t, cast, lines, text_bottom):
     bpm = S["bpm"]; ph = t * bpm / 60
-    hpx = 430 if len(cast) < 3 else 380
+    hpx = S.get("_hpx") or (430 if len(cast) < 3 else 380)
     for i, n in enumerate(cast):
         xc = int(W * XS[len(cast)][i]); per, off = BLINK[n]
         blink = ((t + off) % per) < 0.12
@@ -290,11 +291,27 @@ def threeway_panel(d, cards, y0, quote=""):
     d.text((W // 2, y0 + ch + 90), "Variants: hypothetical, never traded, not a recommendation.", font=mono(24, True), fill=INK, anchor="ms")
     if quote: d.text((W // 2, y0 + ch + 126), quote, font=mono(22), fill=MUT, anchor="ms")
 
+_BG = {}
+def office_bg(S, path=None):
+    """Office backdrop (HQ render, 2026-10-28 the boss: "use the office as a setup to tell our stories"): a 9:16 crop of the office,
+    dimmed so white and lime text stays readable, cached per spec. spec["bg"] = png path, spec["bg_dim"] = 0..1 (default 0.42 brightness)."""
+    from PIL import ImageEnhance, ImageFilter
+    path = path or S["bg"]; k = (path, S.get("bg_dim", 0.42))
+    if k not in _BG:
+        im = Image.open(path).convert("RGB"); r = max(W / im.width, H / im.height)
+        im = im.resize((int(im.width * r + 0.5), int(im.height * r + 0.5)), Image.NEAREST)
+        x0 = (im.width - W) // 2; y0 = (im.height - H) // 2; im = im.crop((x0, y0, x0 + W, y0 + H))
+        im = ImageEnhance.Brightness(im.filter(ImageFilter.GaussianBlur(S.get("bg_blur", 1.5)))).enhance(k[1])
+        _BG[k] = im
+    return _BG[k].copy()
+
 def scene_frame(S, t, heads_override=None):
     SHADES_ON.clear()
     for m in S.get("memes", []):
         if m["kind"] == "shades" and m["t"] <= t <= m["t"] + m.get("dur", 1.6): SHADES_ON[m.get("who", "theo")] = min(1, (t - m["t"]) / 0.3)
-    img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
+    sc = S["scenes"]; k = max(i for i, s in enumerate(sc) if t >= s[0] or i == 0)
+    bgp = (S.get("bgs") or {}).get(k) or S.get("bg")
+    img = office_bg(S, bgp) if bgp else Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     d.text((M, 120), "≈ Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
     d.text((W - M, 120), S["label"], font=mono(24), fill=MUT, anchor="rs")
     d.line([(M, 150), (W - M, 150)], fill=LINE, width=2)
@@ -318,7 +335,12 @@ def scene_frame(S, t, heads_override=None):
     ch = (S.get("charts") or {}).get(k)
     if ch:
         chart_panel(d, ch["vals"], ch["labels"], y + 40, y + 300, ch.get("note", "")); y += 400
+    vz = (S.get("visuals") or {}).get(k)
+    S["_hpx"] = None
+    if vz:  # worked example (explain.py): characters shrink to the bottom band so the steps have room
+        y = EXPLAIN.draw(d, vz, t - t0, y); S["_hpx"] = 250
     char_layer(img, d, S, t, cast, lines, y - 20)
+    S["_hpx"] = None
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
     d.text((M, 1780), S["foot"].replace("NOT ADVICE", "NOT FINANCIAL ADVICE"), font=mono(22), fill=MUT, anchor="ls")
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
