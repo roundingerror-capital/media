@@ -20,7 +20,7 @@ def sprite(name, h):
 def brand(d, col=WHITE):
     d.text((72, TOP + 50), "≈ Rounding Error", font=arch(44, 800, 100), fill=col)
 def footer(d, col=GREY):
-    d.text((72, BOT - 70), "AI TRADING BOT · REAL MONEY · NOT FINANCIAL ADVICE", font=mono(30), fill=col)
+    d.text((72, BOT - 70), "AI TRADING BOT · REAL MONEY", font=mono(30), fill=col)
 def shadowed(img, sp, xy, blur=18, off=(0, 18), alpha=140):
     a = sp.split()[3].point(lambda v: alpha if v else 0); sh = Image.new("RGBA", sp.size, (0, 0, 0, 0)); sh.putalpha(a)
     sh = sh.filter(ImageFilter.GaussianBlur(blur)); img.paste(sh, (xy[0] + off[0], xy[1] + off[1]), sh); img.paste(sp, xy, sp)
@@ -85,7 +85,7 @@ def make(out, style, big, line="", kicker="", who=("theo",), tone="lime", sub=""
         dark = style in ("hero", "number", "panel")
         d.rectangle([kx, ky, kx + tw + 28, ky + 50], fill=BLACK if dark else acc)
         d.text((kx + 14, ky + 37), kicker, font=kf, fill=WHITE if dark else BLACK, anchor="ls")
-    if style != "chart":  # every cover says it (the boss, 2026-10-26); chart already has the full footer
+    if True:  # every cover says it once (the boss, 2026-10-26; once only, 2026-10-29)
         f = mono(28); t = "NOT FINANCIAL ADVICE"; w = d.textlength(t, font=f)
         d.rectangle([W // 2 - w / 2 - 14, BOT + 20, W // 2 + w / 2 + 14, BOT + 64], fill=BLACK); d.text((W // 2, BOT + 54), t, font=f, fill=WHITE, anchor="ms")
     img.save(out, quality=92); return out
