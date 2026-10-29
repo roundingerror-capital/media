@@ -106,7 +106,7 @@ def calc(d, v, u, y):
             d.text((x0 + 24, y + int(62 * k)), lab, font=mono(int(34 * k), True), fill=INK, anchor="ls"); d.text((x1 - 24, y + int(68 * k)), val, font=archivo(int(66 * k), 110, 900), fill=col or LIME, anchor="rs"); y += int(100 * k)
     if v.get("avoid") and u > n * ev + 0.8:
         a = fade(u, n * ev + 0.8, n * ev + 1.1); d.rectangle([x0, y, x1, y + int(70 * k)], fill="#0F1A06", outline=blend(LIME, a), width=3)
-        d.text((x0 + 22, y + int(46 * k)), "AVOID IT: " + v["avoid"], font=mono(int(28 * k), True), fill=blend(LIME, a), anchor="ls"); y += int(84 * k)
+        d.text((x0 + 22, y + int(46 * k)), v.get("avoid_label", "AVOID IT: ") + v["avoid"], font=mono(int(28 * k), True), fill=blend(LIME, a), anchor="ls"); y += int(84 * k)
     if v.get("hypo"): _stamp(d, x1 - 280, y + 6, v.get("stamp", "HYPOTHETICAL")); y += 60
     if v.get("note"): d.text((x0, y + 30), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
