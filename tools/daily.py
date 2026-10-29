@@ -12,6 +12,20 @@ import beat as BEAT
 import explain as EXPLAIN
 HERE = os.path.dirname(os.path.abspath(__file__))
 M = 72; LIME = "#C8F03C"; INK = "#F2F2EE"; MUT = "#9A9A94"; LINE = "#262626"; DIM = (40, 48, 20)
+HANDLE = "@roundingerror.capital"  # same handle on Instagram, TikTok and YouTube (Posts settings/channels)
+NETS = ("INSTAGRAM", "TIKTOK", "YOUTUBE")
+def follow_bar(d, y, big=False):
+    """The boss 2026-10-29: every video shows the full handle and where to follow us, so a clip that travels can be traced back.
+    Network names as plain text tags (no platform logos). y = baseline of the handle line."""
+    hf = mono(44 if big else 34, True); lf = mono(26 if big else 22, True); tf = mono(22 if big else 19, True)
+    lab = "FOLLOW "; lw = d.textlength(lab, font=lf); hw = d.textlength(HANDLE, font=hf)
+    x = (W - lw - hw) // 2 if big else M
+    d.text((x, y), lab, font=lf, fill=MUT, anchor="ls"); d.text((x + lw, y), HANDLE, font=hf, fill=LIME, anchor="ls")
+    pad, gap, ty = 12, 12, y + (22 if big else 18)
+    ws = [d.textlength(n, font=tf) + 2 * pad for n in NETS]; tx = (W - sum(ws) - gap * 2) // 2 if big else M
+    for n, w in zip(NETS, ws):
+        d.rounded_rectangle([tx, ty, tx + w, ty + (40 if big else 34)], radius=8, outline=INK, width=2)
+        d.text((tx + w / 2, ty + (29 if big else 25)), n, font=tf, fill=INK, anchor="ms"); tx += w + gap
 INTRO_F = 36  # 1.2 s intro after the cover (the boss 2026-10-22: "Go" on a faster start; was 2.5 s)
 INTRO_SRC = 60  # the intro animation is designed on 60 frames and played back compressed into INTRO_F
 COVER_F = 18  # cover held 0.6 s (2026-10-21 TikTok grid fix; trimmed from 1.0 s on 2026-10-22 for a faster start)
@@ -347,8 +361,7 @@ def scene_frame(S, t, heads_override=None):
     char_layer(img, d, S, t, cast, lines, y - 20)
     S["_hpx"] = None
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
-    d.text((M, 1780), re.sub(r"\s*\u00b7\s*NOT (FINANCIAL )?ADVICE", "", S["foot"]), font=mono(22), fill=MUT, anchor="ls")  # NFA once per frame: nfa() stamps it (the boss 2026-10-29: "3x is a bit much")
-    d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
+    follow_bar(d, 1782)  # handle + networks on every story frame; NFA once per frame via nfa() (the boss 2026-10-29)
     img = meme_layer(img, S, t)
     cta_pill(img, t)  # small CTA as the story starts (every video)
     if (S.get("loop") or S.get("outro") is False) and S.get("end") and t > S["end"] - 2.5:  # loops / outro-off have no end card: a bigger CTA holds through the last 2.5 s
@@ -385,10 +398,9 @@ def outro_frame(S, t):
             f = fit(txt, int((W - 2 * M) * min(sc, 1.3)), 170, wdth=125, wght=900)
             bb = d.textbbox((0, 0), txt, font=f)
             d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
+        follow_bar(d, y + 70, big=True)  # the full handle + networks right under LIKE + FOLLOW (the boss 2026-10-29)
     char_layer(img, d, S, 30 + t, ["penny"], [(30.0, 40.0, "penny", "", "point")] if t > 0.3 else [], 10**6)
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
-    d.text((M, 1780), "REAL TRADES \u00b7 REAL MONEY", font=mono(22), fill=MUT, anchor="ls")
-    d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     return img
 
 MUSIC = os.path.join(HERE, "music")
