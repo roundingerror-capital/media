@@ -399,7 +399,9 @@ def outro_frame(S, t):
             bb = d.textbbox((0, 0), txt, font=f)
             d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
         follow_bar(d, y + 70, big=True)  # the full handle + networks right under LIKE + FOLLOW (the boss 2026-10-29)
+    S["_hpx"] = 340 if len(pos) >= 5 else None  # 5 position rows push the follow bar down: a smaller Penny keeps her crest off the network tags
     char_layer(img, d, S, 30 + t, ["penny"], [(30.0, 40.0, "penny", "", "point")] if t > 0.3 else [], 10**6)
+    S["_hpx"] = None
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
     return img
 
