@@ -67,13 +67,13 @@ def hook_text(S):
     return " ".join(h for h, _ in S["scenes"][0][3])
 
 def intro_hook_frame(S, fr, pts):
-    im = intro_frame(int(fr * INTRO_SRC / INTRO_F), pts); d = ImageDraw.Draw(im); txt = hook_text(S)
+    im = intro_frame(int(fr * INTRO_SRC / INTRO_F), pts, (S.get("intro_cfg") or {}).get("tagline")); d = ImageDraw.Draw(im); txt = hook_text(S)
     f = fit(txt, W - 2 * M, 96, wdth=110, wght=900); bb = d.textbbox((0, 0), txt, font=f)
     y = 1560 - (bb[3] - bb[1]); d.rectangle([0, y - 40, W, 1600], fill="#000000")
     d.text((M - bb[0], y - bb[1]), txt, font=f, fill=LIME)
     return im
 
-def intro_frame(fr, pts):
+def intro_frame(fr, pts, tagline=None):
     im = Image.new("RGB", (W, H), (0, 0, 0)); d = ImageDraw.Draw(im); rnd = random.Random(fr)
     n = max(2, min(len(pts), int(len(pts) * fr / 18) + 2)) if fr < 18 else len(pts)
     col = LIME if fr < 18 else DIM
@@ -93,7 +93,7 @@ def intro_frame(fr, pts):
             w, h = bb[2] - bb[0], bb[3] - bb[1]
             d.text(((W - w) // 2 - bb[0] + sh[0], y - bb[1] + sh[1]), t, font=f, fill=c); y += int(h / sc) + 34
         if fr >= 42:
-            a = fade(fr / FPS, 42 / FPS, 48 / FPS); txt = "And this is what's going on ↓"
+            a = fade(fr / FPS, 42 / FPS, 48 / FPS); txt = tagline or "And this is what's going on ↓"
             d.text((M, y + 30), txt, font=fit(txt, W - 2 * M, 90, wdth=100, wght=900), fill=blend(INK, a))
     return im
 
@@ -346,7 +346,7 @@ def scene_frame(S, t, heads_override=None):
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     img = meme_layer(img, S, t)
     cta_pill(img, t)  # small CTA as the story starts (every video)
-    if S.get("loop") and S.get("end") and t > S["end"] - 2.5:  # loops have no end card: a bigger CTA holds through the last 2.5 s
+    if (S.get("loop") or S.get("outro") is False) and S.get("end") and t > S["end"] - 2.5:  # loops / outro-off have no end card: a bigger CTA holds through the last 2.5 s
         cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.15, hold=True)
     return img
 
@@ -359,7 +359,8 @@ def outro_frame(S, t):
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     d.text((M, 120), "\u2248 Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
     d.line([(M, 150), (W - M, 150)], fill=LINE, width=2)
-    pos = S.get("positions") or []; y = 260
+    ec = S.get("endcard") or {}  # Posts settings/endcard (the boss 2026-10-29: edit the end card in one place)
+    pos = (S.get("positions") or []) if ec.get("show_positions", True) else []; y = 260
     if pos:
         d.text((M, y), "OUR OPEN POSITIONS" + (" \u00b7 " + S["positions_asof"] if S.get("positions_asof") else ""), font=mono(30, True), fill=LIME, anchor="ls"); y += 30
         for i, row in enumerate(pos[:5]):
@@ -375,7 +376,7 @@ def outro_frame(S, t):
         y = 520
     k = max(0.0, t - 0.3); sc = 1.0 + max(0, 0.3 * (1 - k / 0.25)) if t > 0.3 else 0
     if t > 0.3:
-        for txt, c in (("LIKE + FOLLOW", LIME), ("FOR MORE UPDATES", INK)):
+        for txt, c in ((ec.get("line1") or "LIKE + FOLLOW", LIME), (ec.get("line2") or "FOR MORE UPDATES", INK)):
             f = fit(txt, int((W - 2 * M) * min(sc, 1.3)), 170, wdth=125, wght=900)
             bb = d.textbbox((0, 0), txt, font=f)
             d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
@@ -405,9 +406,13 @@ def nfa(img):
     d.text((W // 2, 1876), t, font=f, fill="#F2F2EE", anchor="ms"); return img
 
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
-    content = S["end"]; total = ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS + content + (LOOP_F / FPS if S.get("loop") else OUTRO_S)
+    # Per-post switches (Posts card intro/outro, the boss 2026-10-29): spec["intro"] False skips the AI TRADING BOT card,
+    # spec["outro"] False skips the end card (a big LIKE + FOLLOW pill holds over the last 2.5 s instead). Default: both on.
+    IF = INTRO_F if S.get("intro", True) is not False else 0
+    tail = LOOP_F / FPS if S.get("loop") else (OUTRO_S if S.get("outro", True) is not False else 0.0)
+    content = S["end"]; total = ((COLD_F if S.get("cold_open") else COVER_F) + IF) / FPS + content + tail
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
-    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], groove=not S.get("music"), cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0, sfx=meme_sfx(S, ((COLD_F if S.get("cold_open") else COVER_F) + INTRO_F) / FPS))
+    BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], groove=not S.get("music"), cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0, sfx=meme_sfx(S, ((COLD_F if S.get("cold_open") else COVER_F) + IF) / FPS))
     if S.get("music"): wav = mix_music(S, wav, total + 0.3, workdir)
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
     hov = S.get("b", {}).get("hook") if variant == "b" else None
@@ -419,14 +424,14 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
         for fr in range(COLD_F): p.stdin.write(nfa(cold_open_frame(S, fr, cover, pts).copy()).tobytes())
     else:
         for _ in range(COVER_F): p.stdin.write(cb)
-    for fr in range(INTRO_F): p.stdin.write(nfa(intro_hook_frame(S, fr, pts)).tobytes())
+    for fr in range(IF): p.stdin.write(nfa(intro_hook_frame(S, fr, pts)).tobytes())
     for i in range(int(content * FPS)): p.stdin.write(nfa(scene_frame(S, i / FPS, hov)).tobytes())
     if S.get("loop"):
         # LOOP variant (A/B "loop", 2026-10-22): no end card; the last 0.4 s crossfades back into the cover,
         # so the replay starts on the exact frame the viewer just saw.
         last = scene_frame(S, content - 1 / FPS, hov)
         for i in range(LOOP_F): p.stdin.write(nfa(Image.blend(last, cover, (i + 1) / LOOP_F)).tobytes())
-    else:
+    elif S.get("outro", True) is not False:
         for i in range(int(OUTRO_S * FPS)): p.stdin.write(nfa(outro_frame(S, i / FPS)).tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
 
