@@ -78,18 +78,35 @@ def gap(d, v, u, y):
 
 
 def calc(d, v, u, y):
-    """Step-by-step arithmetic. v: {rows:[[label, value, color]], total:[label, value, color], every, hypo, note}."""
-    ev = v.get("every", 1.1); x0, x1 = M, W - M
-    for i, (lab, val, col) in enumerate(v["rows"]):
+    """Step-by-step arithmetic. v: {rows:[[label, value, color] or [label, value, color, sublabel]], total:[label, value, color],
+    every, size (1.0 default; 1.2 = bigger), avoid ("how to avoid it" line, lime, after the total), hypo, note}."""
+    ev = v.get("every", 1.1); x0, x1 = M, W - M; k = v.get("size", 1.0)
+    two = v.get("two_line", False); rh = int((118 if two else 84) * k)
+    for i, row in enumerate(v["rows"]):
+        lab, val, col = row[0], row[1], row[2]; sub = row[3] if len(row) > 3 else ""
         a = fade(u, i * ev, i * ev + 0.25)
         if a <= 0: break
-        d.rectangle([x0, y, x1, y + 84], fill=PANEL, outline=LINE, width=2)
-        d.text((x0 + 24, y + 54), lab, font=mono(32, True), fill=blend(INK, a), anchor="ls")
-        d.text((x1 - 24, y + 56), val, font=archivo(48, 110, 900), fill=blend(col or INK, a), anchor="rs"); y += 96
+        if two:  # label across the top, then the sub-label left and the big value right on the line below: nothing overlaps
+            d.rectangle([x0, y, x1, y + rh], fill=PANEL, outline=LINE, width=2)
+            d.text((x0 + 24, y + int(44 * k)), lab, font=mono(int(31 * k), True), fill=blend(INK, a), anchor="ls")
+            if sub: d.text((x0 + 24, y + int(98 * k)), sub, font=mono(int(24 * k)), fill=blend(MUT, a), anchor="ls")
+            d.text((x1 - 24, y + int(104 * k)), val, font=archivo(int(56 * k), 110, 900), fill=blend(col or INK, a), anchor="rs"); y += rh + 12; continue
+        h0 = rh + (int(34 * k) if sub else 0)
+        d.rectangle([x0, y, x1, y + h0], fill=PANEL, outline=LINE, width=2)
+        d.text((x0 + 24, y + int(54 * k)), lab, font=mono(int(32 * k), True), fill=blend(INK, a), anchor="ls")
+        if sub: d.text((x0 + 24, y + int(54 * k) + int(36 * k)), sub, font=mono(int(25 * k)), fill=blend(MUT, a), anchor="ls")
+        d.text((x1 - 24, y + int(58 * k)), val, font=archivo(int(50 * k), 110, 900), fill=blend(col or INK, a), anchor="rs"); y += h0 + 12
     n = len(v["rows"])
     if v.get("total") and u > n * ev:
         lab, val, col = v["total"]; d.line([(x0, y + 6), (x1, y + 6)], fill=INK, width=4); y += 20
-        d.text((x0 + 24, y + 62), lab, font=mono(36, True), fill=INK, anchor="ls"); d.text((x1 - 24, y + 66), val, font=archivo(66, 110, 900), fill=col or LIME, anchor="rs"); y += 100
+        if two:
+            d.text((x0 + 24, y + int(44 * k)), lab, font=mono(int(32 * k), True), fill=INK, anchor="ls")
+            d.text((x1 - 24, y + int(124 * k)), val, font=archivo(int(76 * k), 110, 900), fill=col or LIME, anchor="rs"); y += int(140 * k)
+        else:
+            d.text((x0 + 24, y + int(62 * k)), lab, font=mono(int(34 * k), True), fill=INK, anchor="ls"); d.text((x1 - 24, y + int(68 * k)), val, font=archivo(int(66 * k), 110, 900), fill=col or LIME, anchor="rs"); y += int(100 * k)
+    if v.get("avoid") and u > n * ev + 0.8:
+        a = fade(u, n * ev + 0.8, n * ev + 1.1); d.rectangle([x0, y, x1, y + int(70 * k)], fill="#0F1A06", outline=blend(LIME, a), width=3)
+        d.text((x0 + 22, y + int(46 * k)), "AVOID IT: " + v["avoid"], font=mono(int(28 * k), True), fill=blend(LIME, a), anchor="ls"); y += int(84 * k)
     if v.get("hypo"): _stamp(d, x1 - 280, y + 6); y += 60
     if v.get("note"): d.text((x0, y + 30), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
