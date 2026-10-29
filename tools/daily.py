@@ -4,7 +4,7 @@ then scenes with big animated characters and an original beat (tools/beat.py).
 Usage (from a spec module): build(spec, out_mp4, cover_jpg, variant="a"|"b")
 A spec may define "b" overrides: {"hook": [...heads...]} replaces scene 1's headline.
 No numbers here: every figure lives in the spec and must be on a Theo fact sheet."""
-import os, sys, math, random, subprocess, colorsys
+import re, os, sys, math, random, subprocess, colorsys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image, ImageDraw
 from make_reel import W, H, FPS, archivo, mono, fit, fade, blend
@@ -258,6 +258,11 @@ def meme_sfx(S, offset):
         kk = {"shades": "boom", "zoom": "boom", "freeze": "scratch", "pov": "pop", "twopanel": "pop"}[m["kind"]]
         out.append((offset + m["t"], kk))
     return out
+def pctlab(v):
+    """+42% / \u22125.3%: integers stay whole, decimals keep one place (as written on the sheet)."""
+    t = f"{int(v):+d}%" if float(v).is_integer() else f"{float(v):+.1f}%"
+    return t.replace("-", "\u2212")
+
 def chart_panel(d, vals, labels, y0, y1, note=""):
     """Bars of a series (e.g. a put's P&L as % of the premium, per day). Every value must be on a Theo fact sheet."""
     n = len(vals); lo = min(0, min(vals)); hi = max(0, max(vals)); rng = (hi - lo) or 1
@@ -266,7 +271,7 @@ def chart_panel(d, vals, labels, y0, y1, note=""):
     for i, (v, lab) in enumerate(zip(vals, labels)):
         x0 = M + i * bw + bw * .18; x1 = M + (i + 1) * bw - bw * .18; yv = zero - v / rng * (y1 - y0)
         d.rectangle([x0, min(zero, yv), x1, max(zero, yv)], fill=RED if v < 0 else LIME)
-        d.text(((x0 + x1) / 2, max(zero, yv) + 34), f"{v:+d}%".replace("-", "\u2212"), font=mono(24, True), fill=INK, anchor="ms")
+        d.text(((x0 + x1) / 2, max(zero, yv) + 34), pctlab(v), font=mono(24, True), fill=INK, anchor="ms")
         d.text(((x0 + x1) / 2, y0 - 14), lab, font=mono(22), fill=MUT, anchor="ms")
     if note: d.text((M, y1 + 90), note, font=mono(22), fill=MUT, anchor="ls")
 
@@ -342,7 +347,7 @@ def scene_frame(S, t, heads_override=None):
     char_layer(img, d, S, t, cast, lines, y - 20)
     S["_hpx"] = None
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
-    d.text((M, 1780), S["foot"].replace("NOT ADVICE", "NOT FINANCIAL ADVICE"), font=mono(22), fill=MUT, anchor="ls")
+    d.text((M, 1780), re.sub(r"\s*\u00b7\s*NOT (FINANCIAL )?ADVICE", "", S["foot"]), font=mono(22), fill=MUT, anchor="ls")  # NFA once per frame: nfa() stamps it (the boss 2026-10-29: "3x is a bit much")
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     img = meme_layer(img, S, t)
     cta_pill(img, t)  # small CTA as the story starts (every video)
@@ -382,7 +387,7 @@ def outro_frame(S, t):
             d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
     char_layer(img, d, S, 30 + t, ["penny"], [(30.0, 40.0, "penny", "", "point")] if t > 0.3 else [], 10**6)
     d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
-    d.text((M, 1780), "REAL TRADES \u00b7 REAL MONEY \u00b7 NOT FINANCIAL ADVICE", font=mono(22), fill=MUT, anchor="ls")
+    d.text((M, 1780), "REAL TRADES \u00b7 REAL MONEY", font=mono(22), fill=MUT, anchor="ls")
     d.text((M, 1816), "@ROUNDINGERROR.CAPITAL", font=mono(22), fill=MUT, anchor="ls")
     return img
 
@@ -421,7 +426,7 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
         "-c:a", "aac", "-b:a", "160k", "-af", "adelay=33|33,loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out], stdin=subprocess.PIPE)
     cb = cover.tobytes()
     if S.get("cold_open"):
-        for fr in range(COLD_F): p.stdin.write(nfa(cold_open_frame(S, fr, cover, pts).copy()).tobytes())
+        for fr in range(COLD_F): p.stdin.write((nfa(cold_open_frame(S, fr, cover, pts).copy()) if fr >= 3 else cover).tobytes())  # the cover carries its own NFA badge
     else:
         for _ in range(COVER_F): p.stdin.write(cb)
     for fr in range(IF): p.stdin.write(nfa(intro_hook_frame(S, fr, pts)).tobytes())
