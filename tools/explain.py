@@ -15,7 +15,7 @@ def _stamp(d, x, y):
 
 def _step(d, y, n, tot, text, a=1.0):
     """'STEP 2/4' chip + the step's one-line instruction."""
-    chip = f"STEP {n}/{tot}"; f = mono(28, True); w = f.getlength(chip) + 32
+    chip = n if isinstance(n, str) else f"STEP {n}/{tot}"; f = mono(28, True); w = f.getlength(chip) + 32
     d.rectangle([M, y, M + w, y + 48], fill=blend(LIME, a)); d.text((M + 16, y + 35), chip, font=f, fill="#000000", anchor="ls")
     d.text((M + w + 20, y + 36), text, font=mono(30, True), fill=blend(INK, a), anchor="ls")
     return y + 72
