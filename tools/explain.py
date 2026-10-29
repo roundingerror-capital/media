@@ -8,9 +8,9 @@ from make_reel import W, archivo, mono, fit, fade, blend
 M = 72; LIME = "#C8F03C"; INK = "#F2F2EE"; MUT = "#9A9A94"; LINE = "#262626"; RED = "#FF6B5B"; AMB = "#FFC24B"; PANEL = "#0E0E0E"
 
 
-def _stamp(d, x, y):
+def _stamp(d, x, y, text="HYPOTHETICAL"):
     d.rectangle([x, y, x + 280, y + 44], fill="#FF8A5B")
-    d.text((x + 140, y + 32), "HYPOTHETICAL", font=mono(26, True), fill="#000000", anchor="ms")
+    d.text((x + 140, y + 32), text, font=mono(26, True), fill="#000000", anchor="ms")
 
 
 def _step(d, y, n, tot, text, a=1.0):
@@ -45,7 +45,7 @@ def book(d, v, u, y):
         y += rh
     if not reveal:
         d.text((x0, y + 40), "Your app shows you THIS line. Only this.", font=mono(32, True), fill=AMB, anchor="ls")
-    elif u > step_t + len(fills) * per + 0.3:
+    elif fills and u > step_t + len(fills) * per + 0.3:
         d.text((x0, y + 44), f"Average fill {v['avg']}  vs  top {v['top']}", font=mono(34, True), fill=INK, anchor="ls")
         d.text((x0, y + 96), v["diff"], font=archivo(54, 110, 900), fill=RED, anchor="ls")
     if v.get("hypo"): _stamp(d, x1 - 280, y + 110)
@@ -107,7 +107,7 @@ def calc(d, v, u, y):
     if v.get("avoid") and u > n * ev + 0.8:
         a = fade(u, n * ev + 0.8, n * ev + 1.1); d.rectangle([x0, y, x1, y + int(70 * k)], fill="#0F1A06", outline=blend(LIME, a), width=3)
         d.text((x0 + 22, y + int(46 * k)), "AVOID IT: " + v["avoid"], font=mono(int(28 * k), True), fill=blend(LIME, a), anchor="ls"); y += int(84 * k)
-    if v.get("hypo"): _stamp(d, x1 - 280, y + 6); y += 60
+    if v.get("hypo"): _stamp(d, x1 - 280, y + 6, v.get("stamp", "HYPOTHETICAL")); y += 60
     if v.get("note"): d.text((x0, y + 30), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
 
@@ -129,7 +129,7 @@ def outcomes(d, v, u, y):
             d.text((x0 + cw // 2, yy + 44), val, font=archivo(40, 110, 900), fill=blend(INK, a), anchor="ms"); yy += 96
         d.text((x0 + cw // 2, y + ch - 30), c["total"], font=archivo(44, 110, 900), fill=blend(col, a), anchor="ms")
     y += ch + 20
-    if v.get("hypo"): _stamp(d, W - M - 280, y); y += 60
+    if v.get("hypo"): _stamp(d, W - M - 280, y, v.get("stamp", "HYPOTHETICAL")); y += 60
     if v.get("note"): d.text((M, y + 30), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
 
@@ -152,6 +152,7 @@ def roll(d, v, u, y):
         d.text((M + 30, y + 78), lab, font=mono(34, True), fill=INK, anchor="ls"); d.text((W - M - 30, y + 84), val, font=archivo(70, 110, 900), fill=col, anchor="rs")
     y += 150
     if u > 3.4 and v.get("after"): d.text((M, y + 20), v["after"], font=mono(30, True), fill=AMB, anchor="ls"); y += 60
+    if v.get("hypo"): _stamp(d, W - M - 280, y + 6); y += 60
     if v.get("note"): d.text((M, y + 30), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
 
@@ -169,7 +170,7 @@ def spread(d, v, u, y):
         d.rectangle([X(b), y + 36, X(k), y + 84], fill=blend(col, a))
         d.text((X(b), y + 24), "bid " + r["bid"], font=mono(24, True), fill=blend(INK, a), anchor="ls")
         d.text((X(k), y + 118), "ask " + r["ask"], font=mono(24, True), fill=blend(INK, a), anchor="rs")
-        d.text((x1, y + 160), f"gap {r['width']}  ({r['pct']} of the price)", font=mono(28, True), fill=blend(col, a), anchor="rs"); y += 200
+        d.text((x1, y + 160), f"gap {r['width']}  ({r['pct']} of the price)", font=mono(28, True), fill=blend(col, a), anchor="rs"); y += v.get("row_h", 200)
     if v.get("note"): d.text((M, y + 20), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
 
