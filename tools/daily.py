@@ -14,6 +14,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 M = 72; LIME = "#C8F03C"; INK = "#F2F2EE"; MUT = "#9A9A94"; LINE = "#262626"; DIM = (40, 48, 20)
 HANDLE = "@roundingerror.capital"  # same handle on Instagram, TikTok and YouTube (Posts settings/channels)
 NETS = ("INSTAGRAM", "TIKTOK", "YOUTUBE")
+# SAFE LAYOUT (the boss 2026-10-31, measured from his Instagram / TikTok / YouTube phone screenshots): every word on screen sits
+# inside this box, so no app header, caption, username or button column ever covers it. Characters and the office may run outside.
+SAFE_T, SAFE_B = 270, 1470        # app header above, name + caption below
+SAFE_L, SAFE_R = 60, 880          # right of 880 is the button column (from y 850 down); above 850 text may run to W - M
+SAFE_Y = 850
+CX = (M + SAFE_R) // 2            # centre line for text below SAFE_Y
+EXPLAIN.XR = SAFE_R
+EXPLAIN.SUBS = False
+def follow_block(img, y):
+    """End card only: FOLLOW @roundingerror.capital + the real Instagram / TikTok / YouTube logos (tools/logos.py),
+    centred left of the button column. y = baseline of the handle line. Returns the bottom y."""
+    import logos
+    d = ImageDraw.Draw(img); hf = mono(40, True); lf = mono(26, True)
+    lab = "FOLLOW "; lw = d.textlength(lab, font=lf); hw = d.textlength(HANDLE, font=hf); x = CX - (lw + hw) // 2
+    d.text((x, y), lab, font=lf, fill=MUT, anchor="ls"); d.text((x + lw, y), HANDLE, font=hf, fill=LIME, anchor="ls")
+    s = 128; gap = 40; tx = CX - (3 * s + 2 * gap) // 2; ty = y + 30
+    for n in NETS: img.paste(logos.logo(n, s), (tx, ty), logos.logo(n, s)); tx += s + gap
+    return ty + s
 def follow_bar(d, y, big=False):
     """The boss 2026-10-29: every video shows the full handle and where to follow us, so a clip that travels can be traced back.
     Network names as plain text tags (no platform logos). y = baseline of the handle line."""
@@ -83,7 +101,8 @@ def hook_text(S):
 def intro_hook_frame(S, fr, pts):
     im = intro_frame(int(fr * INTRO_SRC / INTRO_F), pts, (S.get("intro_cfg") or {}).get("tagline")); d = ImageDraw.Draw(im); txt = hook_text(S)
     f = fit(txt, W - 2 * M, 96, wdth=110, wght=900); bb = d.textbbox((0, 0), txt, font=f)
-    y = 1560 - (bb[3] - bb[1]); d.rectangle([0, y - 40, W, 1600], fill="#000000")
+    f = fit(txt, SAFE_R - M, 96, wdth=110, wght=900); bb = d.textbbox((0, 0), txt, font=f)
+    y = SAFE_B - 20 - (bb[3] - bb[1]); d.rectangle([0, y - 40, W, SAFE_B], fill="#000000")
     d.text((M - bb[0], y - bb[1]), txt, font=f, fill=LIME)
     return im
 
@@ -96,24 +115,24 @@ def intro_frame(fr, pts, tagline=None):
         x, y = pts[n - 1]; d.ellipse([x - 18, y - 18, x + 18, y + 18], fill=LIME)
     if fr >= 18:
         k = fr - 18; sc = 1.0 + max(0, 0.35 * (1 - k / 6)); sh = (rnd.randint(-10, 10), rnd.randint(-10, 10)) if k < 7 else (0, 0)
-        d.text((M, 285), "I'M AN", font=fit("I'M AN", W - 2 * M, 96, wdth=100, wght=900), fill=INK)
-        y = 400
-        for t, c, cap in (("AI", LIME, 400), ("TRADING", LIME, 260), ("BOT", INK, 330)):
+        d.text((M, 330), "I'M AN", font=fit("I'M AN", W - 2 * M, 96, wdth=100, wght=900), fill=INK)
+        y = 450
+        for t, c, cap in (("AI", LIME, 260), ("TRADING", LIME, 170), ("BOT", INK, 210)):
             f = archivo(int(cap * 1.4 * sc), 125, 900); bb = d.textbbox((0, 0), t, font=f)
-            if bb[2] - bb[0] > (W - 2 * M) * sc:
-                f = archivo(int(f.size * (W - 2 * M) * sc / (bb[2] - bb[0])), 125, 900); bb = d.textbbox((0, 0), t, font=f)
+            if bb[2] - bb[0] > (SAFE_R - M) * sc:
+                f = archivo(int(f.size * (SAFE_R - M) * sc / (bb[2] - bb[0])), 125, 900); bb = d.textbbox((0, 0), t, font=f)
             if bb[3] - bb[1] > cap * sc:
                 f = archivo(int(f.size * cap * sc / (bb[3] - bb[1])), 125, 900); bb = d.textbbox((0, 0), t, font=f)
             w, h = bb[2] - bb[0], bb[3] - bb[1]
-            d.text(((W - w) // 2 - bb[0] + sh[0], y - bb[1] + sh[1]), t, font=f, fill=c); y += int(h / sc) + 34
+            d.text((CX - w // 2 - bb[0] + sh[0], y - bb[1] + sh[1]), t, font=f, fill=c); y += int(h / sc) + 34
         if fr >= 42:
             a = fade(fr / FPS, 42 / FPS, 48 / FPS); txt = tagline or "And this is what's going on ↓"
-            d.text((M, y + 30), txt, font=fit(txt, W - 2 * M, 90, wdth=100, wght=900), fill=blend(INK, a))
+            d.text((M, y + 30), txt, font=fit(txt, SAFE_R - M, 72, wdth=100, wght=900), fill=blend(INK, a))
     return im
 
 def bubble(d, xc, y, txt):
     f = mono(34, True); tw = int(f.getlength(txt)); bw, bh = tw + 48, 76
-    bx = int(min(max(M, xc - bw / 2), W - M - bw))
+    bx = int(min(max(M, xc - bw / 2), SAFE_R - bw))
     d.rectangle([bx, y, bx + bw, y + bh], fill=INK); d.rectangle([bx + 4, y + 4, bx + bw - 5, y + bh - 5], outline="#1A1A1A", width=4)
     d.polygon([(xc - 14, y + bh), (xc + 14, y + bh), (xc, y + bh + 20)], fill=INK)
     d.text((bx + 24, y + 52), txt, font=f, fill="#000000", anchor="ls")
@@ -161,7 +180,7 @@ CTA_S = 3.5  # small CTA at the start of the story (the boss 2026-10-25: "cta at
 def _heart(d, x, y, r, col):
     d.ellipse([x - r, y - r, x, y], fill=col); d.ellipse([x, y - r, x + r, y], fill=col)
     d.polygon([(x - r, y - r * 0.45), (x + r, y - r * 0.45), (x, y + r * 0.9)], fill=col)
-def cta_pill(img, u, text="LIKE + FOLLOW", scale=1.0, hold=False, y=None, dur=CTA_S):
+def cta_pill(img, u, text="LIKE + FOLLOW", scale=1.0, hold=False, y=None, dur=CTA_S, xr=None):
     """Small call to action: a lime pill top-right, in the free band between the header rule (y 150) and the kicker (y ~262).
     Slides in, pulses twice, slides out after `dur` s (stays if hold). u = seconds since it appeared."""
     if u < 0 or (not hold and u > dur): return img
@@ -172,7 +191,7 @@ def cta_pill(img, u, text="LIKE + FOLLOW", scale=1.0, hold=False, y=None, dur=CT
     off = int((1 - (1 - (1 - k_in) ** 3)) * (w + M)) + int(k_out ** 2 * (w + M))
     pulse = 1 + 0.06 * max(0, math.sin(math.pi * min(1, max(0, (u - 0.6) / 0.3)))) + 0.06 * max(0, math.sin(math.pi * min(1, max(0, (u - 1.6) / 0.3))))
     w2, h2 = int(w * pulse), int(h * pulse)
-    x1 = W - M + off; x0 = x1 - w2; y0 = (y if y is not None else 176) - (h2 - h) // 2; y1 = y0 + h2
+    x1 = (xr or (W - M)) + off; x0 = x1 - w2; y0 = (y if y is not None else 176) - (h2 - h) // 2; y1 = y0 + h2
     d.rounded_rectangle([x0, y0, x1, y1], radius=h2 // 2, fill=LIME)
     _heart(d, x0 + pad + r, (y0 + y1) // 2 - r // 4, r, "#000000")
     d.text((x0 + pad * 2 + r * 2, (y0 + y1) // 2), text, font=f, fill="#000000", anchor="lm")
@@ -202,12 +221,12 @@ def cold_open_frame(S, fr, cover, pts):
     line = [(x, 1300 + (y - 260) * 0.35) for x, y in pts[:n]]
     if len(line) > 1: d.line(line, fill=col, width=14)
     sc = 1 + 0.6 * max(0, 1 - (u - 0.1) / 0.15)
-    big = co["big"]; f = fit(big, int((W - 2 * M) * min(1.0, sc / 1.6 + 0.4)), 420, wdth=125, wght=900)
-    d.text((W // 2, 1000), big, font=f, fill=col, anchor="ms", stroke_width=10, stroke_fill="#000000" if win else "#FFFFFF")
-    if co.get("line"): d.text((W // 2, 560), co["line"], font=fit(co["line"], W - 2 * M, 96, wdth=125, wght=900), fill=INK, anchor="ms")
+    big = co["big"]; f = fit(big, int((W - 2 * M) * min(1.0, sc / 1.6 + 0.4)), 400, wdth=125, wght=900)
+    d.text((W // 2, 720), big, font=f, fill=col, anchor="ms", stroke_width=10, stroke_fill="#000000" if win else "#FFFFFF")
+    if co.get("line"): d.text((W // 2, 400), co["line"], font=fit(co["line"], W - 2 * M, 96, wdth=125, wght=900), fill=INK, anchor="ms")
     if u > 0.45:
         sh = co.get("shout", "WAIT, WHAT?!"); f2 = fit(sh, W - 2 * M, int(110 * (1 + max(0, .25 - (u - .45)))), wdth=125, wght=900)
-        d.text((W // 2, 1180), sh, font=f2, fill=INK, anchor="ms", stroke_width=6, stroke_fill="#000000")
+        d.text((W // 2, 840), sh, font=f2, fill=INK, anchor="ms", stroke_width=6, stroke_fill="#000000")
     s = sprite_state("penny", False, u); h = 380; s = s.resize((int(s.width * h / s.height), h), Image.NEAREST)
     hop = int(90 * abs(math.sin(u * math.pi * 4))); img.paste(s, (W // 2 - s.width // 2, 1700 - h - hop), s)
     if u < 0.35:  # impact shake
@@ -240,30 +259,30 @@ def meme_layer(img, S, t):
         if u < 0 or u > m.get("dur", 1.5): continue
         k = m["kind"]
         if k == "pov":
-            f = fit(m["text"], W - 2 * M, 64, wdth=100, wght=900); a = min(1, u / 0.12)
+            f = fit(m["text"], SAFE_R - M - 20, 64, wdth=100, wght=900); a = min(1, u / 0.12)
             d.rectangle([0, 900, W, 1020], fill=(255, 255, 255))
-            d.text((W // 2, 982), m["text"], font=f, fill="#000000", anchor="ms")
+            d.text((CX, 982), m["text"], font=f, fill="#000000", anchor="ms")
         elif k == "zoom":
-            z = 1 + 0.25 * min(1, u / 0.12); cx, cy = W // 2, H // 2
+            z = 1 + 0.07 * min(1, u / 0.12); cx, cy = (M + SAFE_R) // 2, H // 2  # small punch-in: a big zoom pushed the headline under the app header (2026-10-31)
             box = (int(cx - W / z / 2), int(cy - H / z / 2), int(cx + W / z / 2), int(cy + H / z / 2))
             im2 = img.crop(box).resize((W, H)); sh = random.Random(int(t * 30)).randint(-14, 14) if u < 0.4 else 0
             im2 = im2.transform(im2.size, Image.AFFINE, (1, 0, sh, 0, 1, sh // 2))
             g = Image.new("RGB", (W, H), (0, 0, 0)); im2 = Image.composite(g, im2, _vignette().point(lambda v: int(v * 0.8)))
             img.paste(im2); d = ImageDraw.Draw(img)
             if m.get("text"):
-                f = fit(m["text"], W - 2 * M, 110, wdth=125, wght=900)
-                d.text((W // 2, 1000), m["text"], font=f, fill=(255, 255, 255), anchor="ms", stroke_width=8, stroke_fill="#000000")
+                f = fit(m["text"], SAFE_R - M - 20, 110, wdth=125, wght=900)
+                d.text((CX, 1000), m["text"], font=f, fill=(255, 255, 255), anchor="ms", stroke_width=8, stroke_fill="#000000")
         elif k == "twopanel":
             d.rectangle([0, 860, W, 1120], fill=(0, 0, 0))
             for i, (lab, val) in enumerate(((m["a"], m["a2"]), (m["b"], m["b2"]))):
                 if u < i * 0.6: continue
                 y = 950 + i * 120
                 d.text((M, y), lab, font=archivo(52, 100, 900), fill=INK, anchor="ls")
-                d.text((W - M, y), val, font=archivo(64, 100, 900), fill=m.get("a2c", "#EB2626") if i == 0 else m.get("b2c", LIME), anchor="rs")
+                d.text((SAFE_R, y), val, font=archivo(64, 100, 900), fill=m.get("a2c", "#EB2626") if i == 0 else m.get("b2c", LIME), anchor="rs")
         elif k == "freeze":
             g = img.convert("L").convert("RGB"); img.paste(Image.blend(g, Image.new("RGB", (W, H), (40, 30, 20)), 0.25)); d = ImageDraw.Draw(img)
-            f = fit(m["text"], W - 2 * M, 84, wdth=110, wght=900)
-            d.rectangle([0, 900, W, 1040], fill=(0, 0, 0)); d.text((W // 2, 995), m["text"], font=f, fill=(255, 255, 255), anchor="ms")
+            f = fit(m["text"], SAFE_R - M - 20, 84, wdth=110, wght=900)
+            d.rectangle([0, 900, W, 1040], fill=(0, 0, 0)); d.text((CX, 995), m["text"], font=f, fill=(255, 255, 255), anchor="ms")
     return img
 def meme_sfx(S, offset):
     """(time, kind) list for the beat: boom on shades/zoom, scratch on freeze, pop on pov/twopanel. offset = seconds before the story starts."""
@@ -280,8 +299,8 @@ def pctlab(v):
 def chart_panel(d, vals, labels, y0, y1, note=""):
     """Bars of a series (e.g. a put's P&L as % of the premium, per day). Every value must be on a Theo fact sheet."""
     n = len(vals); lo = min(0, min(vals)); hi = max(0, max(vals)); rng = (hi - lo) or 1
-    zero = y0 + (hi / rng) * (y1 - y0); bw = (W - 2 * M) / n
-    d.line([(M, zero), (W - M, zero)], fill=MUT, width=3)
+    zero = y0 + (hi / rng) * (y1 - y0); bw = (SAFE_R - M) / n
+    d.line([(M, zero), (SAFE_R, zero)], fill=MUT, width=3)
     for i, (v, lab) in enumerate(zip(vals, labels)):
         x0 = M + i * bw + bw * .18; x1 = M + (i + 1) * bw - bw * .18; yv = zero - v / rng * (y1 - y0)
         d.rectangle([x0, min(zero, yv), x1, max(zero, yv)], fill=RED if v < 0 else LIME)
@@ -331,23 +350,20 @@ def scene_frame(S, t, heads_override=None):
     sc = S["scenes"]; k = max(i for i, s in enumerate(sc) if t >= s[0] or i == 0)
     bgp = (S.get("bgs") or {}).get(k) or S.get("bg")
     img = office_bg(S, bgp) if bgp else Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
-    d.text((M, 120), "≈ Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
-    d.text((W - M, 120), S["label"], font=mono(24), fill=MUT, anchor="rs")
-    d.line([(M, 150), (W - M, 150)], fill=LINE, width=2)
     sc = S["scenes"]; k = max(i for i, s in enumerate(sc) if t >= s[0] or i == 0)
     t0, t1, kick, heads, body, lines, cast, hl = sc[k]
     if k == 0 and heads_override: heads = heads_override
     a = 1.0 if k == 0 else fade(t, t0, t0 + 0.3)
-    d.text((M, 290), kick, font=mono(30, True), fill=blend(LIME, a), anchor="ls")
+    d.text((M, 352), kick, font=mono(30, True), fill=blend(LIME, a), anchor="ls")
     f = min((fit(h, W - 2 * M - 8, 160 if len(heads) == 1 else 132, wdth=110, wght=900) for h, _ in heads), key=lambda q: q.size)
-    y = 300 + int(f.size * 1.05)
+    y = 362 + int(f.size * 1.05)
     for i, (h, c) in enumerate(heads):
         ha = a * fade(t, t0 + i * 0.12, t0 + 0.3 + i * 0.12) if k else (1.0 if t > 0.25 else fade(t, i * 0.06, 0.2 + i * 0.06))
         d.text((M, y), h, font=f, fill=blend(c, ha), anchor="ls"); y += int(f.size * 1.05)
     y += 30
     for i, ln in enumerate(body):
         ba = a * fade(t, t0 + 0.5 + i * 0.3, t0 + 0.8 + i * 0.3)
-        d.text((M, y), ln, font=mono(38, True), fill=blend(LIME if i == hl else INK, ba), anchor="ls"); y += 62
+        d.text((M, y), ln, font=fit_mono(ln, (W - M if y < SAFE_Y else SAFE_R) - M, 38), fill=blend(LIME if i == hl else INK, ba), anchor="ls"); y += 62
     tw = (S.get("threeway") or {}).get(k)
     if tw:
         threeway_panel(d, tw["cards"], y + 10, tw.get("quote", "")); y += 660
@@ -360,12 +376,10 @@ def scene_frame(S, t, heads_override=None):
         y = EXPLAIN.draw(d, vz, t - t0, y); S["_hpx"] = 250
     char_layer(img, d, S, t, cast, lines, y - 20)
     S["_hpx"] = None
-    d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
-    follow_bar(d, 1782)  # handle + networks on every story frame; NFA once per frame via nfa() (the boss 2026-10-29)
+    # safe layout (2026-10-31): no header, no follow bar, no top-right pill on story frames; the apps already show our name + Follow there
     img = meme_layer(img, S, t)
-    cta_pill(img, t)  # small CTA as the story starts (every video)
     if (S.get("loop") or S.get("outro") is False) and S.get("end") and t > S["end"] - 2.5:  # loops / outro-off have no end card: a bigger CTA holds through the last 2.5 s
-        cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.15, hold=True)
+        cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.0, hold=True, y=1360, xr=SAFE_R)
     return img
 
 LOOP_F = 12  # 0.4 s crossfade to the cover in the loop variant
@@ -375,15 +389,13 @@ def outro_frame(S, t):
     open_legs: [(ticker, "$100 put", "exp 10/30", "out of the money"), ...]. Never account value, cash,
     account numbers or a broker screenshot (Rules: no fund size or personal data in public)."""
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
-    d.text((M, 120), "\u2248 Rounding Error", font=archivo(40, 110, 800), fill=INK, anchor="ls")
-    d.line([(M, 150), (W - M, 150)], fill=LINE, width=2)
     ec = S.get("endcard") or {}  # Posts settings/endcard (the boss 2026-10-29: edit the end card in one place)
-    pos = (S.get("positions") or []) if ec.get("show_positions", True) else []; y = 260
+    pos = (S.get("positions") or []) if ec.get("show_positions", True) else []; y = 352
     if pos:
         d.text((M, y), "OUR OPEN POSITIONS" + (" \u00b7 " + S["positions_asof"] if S.get("positions_asof") else ""), font=mono(30, True), fill=LIME, anchor="ls"); y += 30
         for i, row in enumerate(pos[:5]):
             a = 1.0 if t >= 0.1 + i * 0.12 else 0.0  # pop-in, no half-faded figures (2026-10-25: faint numbers were OCR-misread by the safety scan)
-            d.rectangle([M, y, W - M, y + 92], outline=blend(LINE, a), width=3)
+            d.rectangle([M, y, SAFE_R, y + 92], outline=blend(LINE, a), width=3)
             d.text((M + 24, y + 62), row[0], font=archivo(48, 110, 900), fill=blend(INK, a), anchor="ls")
             d.text((M + 230, y + 42), row[1] + "  " + row[2], font=mono(30, True), fill=blend(INK, a), anchor="ls")
             col = LIME if "out of" in row[3] or "worthless" in row[3] else "#FF8A5B"
@@ -391,18 +403,17 @@ def outro_frame(S, t):
             y += 110
         y += 40
     else:
-        y = 520
+        y = 560
     k = max(0.0, t - 0.3); sc = 1.0 + max(0, 0.3 * (1 - k / 0.25)) if t > 0.3 else 0
     if t > 0.3:
         for txt, c in ((ec.get("line1") or "LIKE + FOLLOW", LIME), (ec.get("line2") or "FOR MORE UPDATES", INK)):
-            f = fit(txt, int((W - 2 * M) * min(sc, 1.3)), 170, wdth=125, wght=900)
+            f = fit(txt, int((SAFE_R - M) * min(sc, 1.15)), 120 if pos else 160, wdth=125, wght=900)
             bb = d.textbbox((0, 0), txt, font=f)
-            d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
-        follow_bar(d, y + 70, big=True)  # the full handle + networks right under LIKE + FOLLOW (the boss 2026-10-29)
-    S["_hpx"] = 340 if len(pos) >= 5 else None  # 5 position rows push the follow bar down: a smaller Penny keeps her crest off the network tags
+            d.text((CX - (bb[2] - bb[0]) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
+        follow_block(img, y + 60); d = ImageDraw.Draw(img)  # handle + real logos, inside the safe box (the boss 2026-10-31)
+    S["_hpx"] = 300 if len(pos) >= 4 else None
     char_layer(img, d, S, 30 + t, ["penny"], [(30.0, 40.0, "penny", "", "point")] if t > 0.3 else [], 10**6)
     S["_hpx"] = None
-    d.line([(M, 1735), (W - M, 1735)], fill=LINE, width=2)
     return img
 
 MUSIC = os.path.join(HERE, "music")
@@ -419,10 +430,15 @@ def mix_music(S, sfx_wav, total, workdir):
     return out
 
 def nfa(img):
-    """'NOT FINANCIAL ADVICE' on every frame of every video (the boss, 2026-10-26), bottom centre, below the safe footer."""
-    d = ImageDraw.Draw(img); f = mono(26, True); t = "NOT FINANCIAL ADVICE"
-    w = d.textlength(t, font=f); d.rectangle([W // 2 - w / 2 - 14, 1846, W // 2 + w / 2 + 14, 1886], fill="#000000")
-    d.text((W // 2, 1876), t, font=f, fill="#F2F2EE", anchor="ms"); return img
+    """'NOT FINANCIAL ADVICE' on every frame of every video (the boss, 2026-10-26), once, small, at the top-left of the safe box
+    (2026-10-31: it used to sit under the apps' captions). Scenes start their kicker below it at y 352."""
+    d = ImageDraw.Draw(img); f = mono(24, True); t = "NOT FINANCIAL ADVICE"
+    w = d.textlength(t, font=f); d.rectangle([M - 10, SAFE_T + 4, M + w + 10, SAFE_T + 44], fill="#000000")
+    d.text((M, SAFE_T + 34), t, font=f, fill="#F2F2EE", anchor="ls"); return img
+def fit_mono(txt, width, size, bold=True):
+    f = mono(size, bold)
+    while size > 22 and f.getlength(txt) > width: size -= 2; f = mono(size, bold)
+    return f
 
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     # Per-post switches (Posts card intro/outro, the boss 2026-10-29): spec["intro"] False skips the AI TRADING BOT card,
