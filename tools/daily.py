@@ -29,7 +29,7 @@ def follow_block(img, y):
     d = ImageDraw.Draw(img); hf = mono(40, True); lf = mono(26, True)
     lab = "FOLLOW "; lw = d.textlength(lab, font=lf); hw = d.textlength(HANDLE, font=hf); x = CX - (lw + hw) // 2
     d.text((x, y), lab, font=lf, fill=MUT, anchor="ls"); d.text((x + lw, y), HANDLE, font=hf, fill=LIME, anchor="ls")
-    s = 128; gap = 40; tx = CX - (3 * s + 2 * gap) // 2; ty = y + 30
+    s = 96; gap = 72; tx = CX - (3 * s + 2 * gap) // 2; ty = y + 60
     for n in NETS: img.paste(logos.logo(n, s), (tx, ty), logos.logo(n, s)); tx += s + gap
     return ty + s
 def follow_bar(d, y, big=False):
