@@ -496,10 +496,12 @@ def mix_music(S, sfx_wav, total, workdir):
     (1.0 s; at 0.6 s without a teaser) from its start_s, under the teaser hit and the meme sounds, then fades out at the end."""
     import json
     man = json.load(open(os.path.join(MUSIC, "manifest.json")))[S["music"]]
-    enter = (COLD_F if S.get("cold_open") else COVER_F) / FPS
+    loop = bool(S.get("loop"))  # loops: song from frame 1 and no fade-out (build_loop cross-fades the tail into the head)
+    enter = 0.0 if loop else (COLD_F if S.get("cold_open") else COVER_F) / FPS
     start = S.get("music_start", man["start_s"]); out = sfx_wav[:-4] + "_mix.wav"
+    fades = "afade=t=in:d=0.08" + ("" if loop else f",afade=t=out:st={max(0, total - enter - 1.2):.2f}:d=1.2")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", sfx_wav, "-ss", str(start), "-i", os.path.join(MUSIC, S["music"] + ".mp3"),
-        "-filter_complex", f"[1:a]atrim=0:{total - enter:.2f},afade=t=in:d=0.08,afade=t=out:st={max(0, total - enter - 1.2):.2f}:d=1.2,volume=0.85,adelay={int(enter*1000)}|{int(enter*1000)}[m];"
+        "-filter_complex", f"[1:a]atrim=0:{total - enter:.2f},{fades},volume=0.85,adelay={int(enter*1000)}|{int(enter*1000)}[m];"
         f"[0:a][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]", "-map", "[a]", "-ar", "44100", out], check=True)
     return out
 
@@ -517,6 +519,8 @@ def fit_mono(txt, width, size, bold=True):
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     # Per-post switches (Posts card intro/outro, the boss 2026-10-29): spec["intro"] False skips the AI TRADING BOT card,
     # spec["outro"] False skips the end card (a big LIKE + FOLLOW pill holds over the last 2.5 s instead). Default: both on.
+    if S.get("loop"):  # T-069: a real loop has no beginning and no end (no cover, teaser, intro card or end pill)
+        return build_loop(S, out, cover_jpg, variant, workdir)
     IF = INTRO_F if S.get("intro", True) is not False else 0
     tail = LOOP_F / FPS if S.get("loop") else (OUTRO_S if S.get("outro", True) is not False else 0.0)
     content = S["end"]; total = ((COLD_F if S.get("cold_open") else COVER_F) + IF) / FPS + content + tail
@@ -542,6 +546,39 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
         for i in range(LOOP_F): p.stdin.write(nfa(Image.blend(last, cover, (i + 1) / LOOP_F)).tobytes())
     elif S.get("outro", True) is not False:
         for i in range(int(OUTRO_S * FPS)): p.stdin.write(nfa(outro_frame(S, i / FPS)).tobytes())
+    p.stdin.close(); p.wait(); os.remove(wav); return out
+
+def _loop_wav(path, total, xf):
+    """Make the audio loop: the file is cut to `total` s and its last `xf` s are cross-faded with its first `xf` s,
+    so the end of the song runs straight into the start on replay."""
+    import wave, numpy as np
+    with wave.open(path) as w: ch, sw, sr = w.getnchannels(), w.getsampwidth(), w.getframerate(); a = np.frombuffer(w.readframes(w.getnframes()), np.int16).reshape(-1, ch).astype(np.float32)
+    n = int(total * sr); k = int(xf * sr); a = a[:n + k] if len(a) >= n + k else np.pad(a, ((0, n + k - len(a)), (0, 0)))
+    body = a[:n].copy(); r = np.linspace(0, 1, k)[:, None]
+    body[n - k:n] = a[n - k:n] * (1 - r) + a[:k] * r  # tail fades into the head
+    with wave.open(path, "wb") as w: w.setnchannels(ch); w.setsampwidth(sw); w.setframerate(sr); w.writeframes(np.clip(body, -32768, 32767).astype(np.int16).tobytes())
+    return path
+
+def build_loop(S, out, cover_jpg, variant="a", workdir="/tmp"):
+    """LOOP variant (T-069, the boss 2026-10-28: "it has to end the same way it started"). Starts straight on the first story
+    frame (no cover flash, teaser or intro card), runs a whole number of bars, then the last 0.4 s cross-fades picture AND
+    music back into frame 1, so the replay is seamless. No end pill: the CTA lives in the caption and the small start pill.
+    Write the script so the last line runs into the first (e.g. ends "...so when the bell rings," and restarts on "DING!").
+    The custom cover still goes to every network as the thumbnail (publish.cover_url), so the video needn't start on it."""
+    bar = 4 * 60.0 / S["bpm"]; content = max(bar, round(S["end"] / bar) * bar); xf = LOOP_F / FPS
+    wav = os.path.join(workdir, os.path.basename(out) + ".wav")
+    BEAT.make(wav, content + xf + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], groove=not S.get("music"), cold=0.0, sfx=meme_sfx(S, 0.0))
+    if S.get("music"): wav = mix_music(S, wav, content + xf + 0.3, workdir)
+    _loop_wav(wav, content, xf)
+    hov = S.get("b", {}).get("hook") if variant == "b" else None
+    p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
+        "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
+        "-c:a", "aac", "-b:a", "160k", "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out], stdin=subprocess.PIPE)
+    n = int(round(content * FPS)); first = nfa(scene_frame(S, 0.0, hov))
+    for i in range(n):
+        fr = nfa(scene_frame(S, min(i / FPS, S["end"] - 1 / FPS), hov))
+        if i >= n - LOOP_F: fr = Image.blend(fr, first, (i - (n - LOOP_F) + 1) / (LOOP_F + 1))
+        p.stdin.write(fr.tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
 
 if __name__ == "__main__":
