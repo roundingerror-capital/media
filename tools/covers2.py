@@ -6,6 +6,7 @@ import os, math, random
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 D = os.path.dirname(os.path.abspath(__file__)); F = D + "/fonts/"; SP = D + "/sprites/"
 W, H = 1080, 1920; TOP, BOT = 285, 1635
+SAFE_R = 880; CX = (72 + SAFE_R) // 2  # in-feed safe box (daily.py): below y 850 text stays left of the app buttons
 LIME = (200, 240, 60); WHITE = (242, 242, 238); BLACK = (0, 0, 0); RED = (235, 38, 38); PAPER = (242, 240, 232); GREY = (154, 154, 148)
 def arch(sz, wt=900, wd=125):
     f = ImageFont.truetype(F + "Archivo[wdth,wght].ttf", sz); f.set_variation_by_axes([wt, wd]); return f
@@ -45,9 +46,10 @@ def make(out, style, big, line="", kicker="", who=("theo",), tone="lime", sub=""
         brand(d)
     elif style == "number":  # full-bleed giant number, tiny character peeking
         img.paste(acc if tone != "paper" else PAPER, [0, 0, W, H]); d = ImageDraw.Draw(img); fg = BLACK
-        f = fitf(d, big, W - 80, 520); d.text((W // 2, 1020), big, font=f, fill=fg, anchor="ms")
-        if line: d.text((W // 2, 640), line, font=fitf(d, line, W - 160, 110), fill=fg, anchor="ms")
-        if sub: d.text((W // 2, 1180), sub, font=fitf(d, sub, W - 160, 60, 800, 100), fill=fg, anchor="ms")
+        # safe layout (2026-10-31): the giant number ends above y 850, so the apps' button column never cuts it
+        f = fitf(d, big, W - 80, 340); d.text((W // 2, 845), big, font=f, fill=fg, anchor="ms")
+        if line: d.text((W // 2, 590), line, font=fitf(d, line, W - 160, 100), fill=fg, anchor="ms")
+        if sub: d.text((CX, 1000), sub, font=fitf(d, sub, SAFE_R - 72, 60, 800, 100), fill=fg, anchor="ms")
         sp = sprite(who[0], 330); img.paste(sp, (W - sp.width - 40, BOT - sp.height + 20), sp)
         d.text((72, TOP + 60), "≈ Rounding Error", font=arch(44, 800, 100), fill=fg)
     elif style == "meme":  # classic top/bottom caption on white, reaction face in the middle
@@ -76,9 +78,10 @@ def make(out, style, big, line="", kicker="", who=("theo",), tone="lime", sub=""
         for i in range(10): d.line([(0, TOP + 120 * i), (W, TOP + 120 * i)], fill=(26, 26, 26), width=2)
         d.line(pts, fill=col, width=26, joint="curve"); ex, ey = pts[-1]
         d.polygon([(ex + 50, ey + (40 if tone == "red" else -40)), (ex - 40, ey - 30), (ex - 10, ey + 50)] if tone == "red" else [(ex + 50, ey - 40), (ex - 30, ey - 40), (ex + 20, ey + 40)], fill=col)
-        f = fitf(d, big, W - 140, 300); d.text((72, 1480 if tone == "red" else 1000), big, font=f, fill=WHITE, anchor="ls", stroke_width=8, stroke_fill=BLACK)
+        f = fitf(d, big, W - 140, 260); d.text((72, 840), big, font=f, fill=WHITE, anchor="ls", stroke_width=8, stroke_fill=BLACK)  # safe layout: ends above y 850
         if line: d.text((72, TOP + 290), line, font=fitf(d, line, W - 160, 96, 900, 110), fill=col, anchor="ls")
-        sp = sprite(who[0], 300); img.paste(sp, (W - sp.width - 60, (TOP + 330) if tone != "red" else (BOT - 420)), sp) if tone != "red" else img.paste(sp, (W - sp.width - 60, TOP + 300), sp); brand(d); footer(d)
+        sp = sprite(who[0], 300); img.paste(sp, (W - sp.width - 60, BOT - sp.height), sp); brand(d)
+        d.text((72, 1360), "AI TRADING BOT · REAL MONEY", font=mono(30), fill=GREY)
     ky = {"hero": BOT - 140, "versus": TOP + 135, "number": TOP + 135, "chart": TOP + 135}.get(style)
     if kicker and ky is not None:
         kf = mono(32); tw = d.textlength(kicker, font=kf); kx = 72 if style != "panel" else 40
@@ -86,7 +89,7 @@ def make(out, style, big, line="", kicker="", who=("theo",), tone="lime", sub=""
         d.rectangle([kx, ky, kx + tw + 28, ky + 50], fill=BLACK if dark else acc)
         d.text((kx + 14, ky + 37), kicker, font=kf, fill=WHITE if dark else BLACK, anchor="ls")
     if True:  # every cover says it once (the boss, 2026-10-26; once only, 2026-10-29)
-        f = mono(28); t = "NOT FINANCIAL ADVICE"; w = d.textlength(t, font=f)
-        d.rectangle([W // 2 - w / 2 - 14, BOT + 20, W // 2 + w / 2 + 14, BOT + 64], fill=BLACK); d.text((W // 2, BOT + 54), t, font=f, fill=WHITE, anchor="ms")
+        f = mono(28); t = "NOT FINANCIAL ADVICE"; w = d.textlength(t, font=f); ny = 1400  # inside the safe box (2026-10-31; was under the captions)
+        d.rectangle([CX - w / 2 - 14, ny, CX + w / 2 + 14, ny + 44], fill=BLACK); d.text((CX, ny + 34), t, font=f, fill=WHITE, anchor="ms")
     img.save(out, quality=92); return out
 STYLES = ["hero", "versus", "number", "meme", "panel", "chart"]

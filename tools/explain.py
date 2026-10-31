@@ -5,7 +5,15 @@ math that is not a real trade carries "hypo": True and shows a HYPOTHETICAL stam
 from PIL import ImageDraw
 from make_reel import W, archivo, mono, fit, fade, blend
 
+SUBS = True  # small grey sub-labels under each row; the safe layout turns them off (unreadable on a phone, 2026-10-31)
+XR = W - 72  # right edge of every panel; daily.py sets 880 in the safe layout (app buttons sit right of it)
 M = 72; LIME = "#C8F03C"; INK = "#F2F2EE"; MUT = "#9A9A94"; LINE = "#262626"; RED = "#FF6B5B"; AMB = "#FFC24B"; PANEL = "#0E0E0E"
+
+
+def _fitm(txt, width, size, bold=True):
+    f = mono(size, bold)
+    while size > 20 and f.getlength(txt) > width: size -= 1; f = mono(size, bold)
+    return f
 
 
 def _stamp(d, x, y, text="HYPOTHETICAL"):
@@ -24,7 +32,7 @@ def _step(d, y, n, tot, text, a=1.0):
 def book(d, v, u, y):
     """Order book walk. v: {side, levels:[[price, size]], order, fills:[[price, qty]], avg, top, diff, note, hypo}.
     0-1.2 s: only the top level is visible (what the app shows). Then the hidden levels appear, then the order eats them."""
-    lv = v["levels"]; rh = 74; x0, x1 = M, W - M
+    lv = v["levels"]; rh = 74; x0, x1 = M, XR
     reveal = u > v.get("reveal_at", 1.2)
     d.text((x0, y + 30), v.get("title", "THE ORDER BOOK"), font=mono(26, True), fill=MUT, anchor="ls"); y += 50
     d.text((x0 + 20, y + 28), "PRICE", font=mono(24, True), fill=MUT, anchor="ls"); d.text((x0 + 330, y + 28), "SHARES WAITING", font=mono(24, True), fill=MUT, anchor="ls")
@@ -55,7 +63,7 @@ def book(d, v, u, y):
 
 def gap(d, v, u, y):
     """Overnight gap. v: {close:[label, price], open:[label, price], move, line1, line2, note}."""
-    h = 420; x0, x1 = M + 40, W - M - 40; top = y + 20
+    h = 420; x0, x1 = M + 40, XR - 40; top = y + 20
     p_c, p_o = float(v["close"][1].strip("$")), float(v["open"][1].strip("$")); hi, lo = max(p_c, p_o), min(p_c, p_o); pad = (hi - lo) * 0.6
     def Y(p): return top + (hi + pad - p) / (hi - lo + 2 * pad) * h
     xc, xo = x0 + 160, x1 - 160
@@ -80,15 +88,15 @@ def gap(d, v, u, y):
 def calc(d, v, u, y):
     """Step-by-step arithmetic. v: {rows:[[label, value, color] or [label, value, color, sublabel]], total:[label, value, color],
     every, size (1.0 default; 1.2 = bigger), avoid ("how to avoid it" line, lime, after the total), hypo, note}."""
-    ev = v.get("every", 1.1); x0, x1 = M, W - M; k = v.get("size", 1.0)
+    ev = v.get("every", 1.1); x0, x1 = M, XR; k = v.get("size", 1.0)
     two = v.get("two_line", False); rh = int((118 if two else 84) * k)
     for i, row in enumerate(v["rows"]):
-        lab, val, col = row[0], row[1], row[2]; sub = row[3] if len(row) > 3 else ""
+        lab, val, col = row[0], row[1], row[2]; sub = (row[3] if len(row) > 3 else "") if SUBS else ""
         a = fade(u, i * ev, i * ev + 0.25)
         if a <= 0: break
         if two:  # label across the top, then the sub-label left and the big value right on the line below: nothing overlaps
             d.rectangle([x0, y, x1, y + rh], fill=PANEL, outline=LINE, width=2)
-            d.text((x0 + 24, y + int(44 * k)), lab, font=mono(int(31 * k), True), fill=blend(INK, a), anchor="ls")
+            d.text((x0 + 24, y + int(44 * k)), lab, font=_fitm(lab, x1 - x0 - 48, int(31 * k)), fill=blend(INK, a), anchor="ls")
             if sub: d.text((x0 + 24, y + int(98 * k)), sub, font=mono(int(24 * k)), fill=blend(MUT, a), anchor="ls")
             d.text((x1 - 24, y + int(104 * k)), val, font=archivo(int(56 * k), 110, 900), fill=blend(col or INK, a), anchor="rs"); y += rh + 12; continue
         h0 = rh + (int(34 * k) if sub else 0)
@@ -129,7 +137,7 @@ def outcomes(d, v, u, y):
             d.text((x0 + cw // 2, yy + 44), val, font=archivo(40, 110, 900), fill=blend(INK, a), anchor="ms"); yy += 96
         d.text((x0 + cw // 2, y + ch - 30), c["total"], font=archivo(44, 110, 900), fill=blend(col, a), anchor="ms")
     y += ch + 20
-    if v.get("hypo"): _stamp(d, W - M - 280, y, v.get("stamp", "HYPOTHETICAL")); y += 60
+    if v.get("hypo"): _stamp(d, XR - 280, y, v.get("stamp", "HYPOTHETICAL")); y += 60
     if v.get("note"): d.text((M, y + 30), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
 
@@ -145,21 +153,21 @@ def roll(d, v, u, y):
             d.text((x0 + cw // 2, y + 64), side[0], font=mono(28, True), fill=blend(INK, a), anchor="ms")
             d.text((x0 + cw // 2, y + 190), side[1], font=archivo(80, 110, 900), fill=blend(col, a), anchor="ms")
             d.text((x0 + cw // 2, y + 262), side[2], font=mono(24), fill=blend(MUT, a), anchor="ms")
-    if u > 1.2: d.text((W // 2, y + ch // 2 + 30), "+", font=archivo(90, 110, 900), fill=INK, anchor="ms")
+    if u > 1.2: d.text(((M + XR) // 2, y + ch // 2 + 30), "+", font=archivo(90, 110, 900), fill=INK, anchor="ms")
     y += ch + 40
     if u > 2.4:
-        lab, val, col = v["net"]; d.rectangle([M, y, W - M, y + 120], fill="#141414", outline=col, width=4)
-        d.text((M + 30, y + 78), lab, font=mono(34, True), fill=INK, anchor="ls"); d.text((W - M - 30, y + 84), val, font=archivo(70, 110, 900), fill=col, anchor="rs")
+        lab, val, col = v["net"]; d.rectangle([M, y, XR, y + 120], fill="#141414", outline=col, width=4)
+        d.text((M + 30, y + 78), lab, font=mono(34, True), fill=INK, anchor="ls"); d.text((XR - 30, y + 84), val, font=archivo(70, 110, 900), fill=col, anchor="rs")
     y += 150
     if u > 3.4 and v.get("after"): d.text((M, y + 20), v["after"], font=mono(30, True), fill=AMB, anchor="ls"); y += 60
-    if v.get("hypo"): _stamp(d, W - M - 280, y + 6); y += 60
+    if v.get("hypo"): _stamp(d, XR - 280, y + 6); y += 60
     if v.get("note"): d.text((M, y + 30), v["note"], font=mono(22), fill=MUT, anchor="ls"); y += 50
     return y
 
 
 def spread(d, v, u, y):
     """Bid/ask width at two times. v: {rows:[{time, bid, ask, width, pct}], scale:[lo, hi], every, note}."""
-    lo, hi = v["scale"]; x0, x1 = M + 220, W - M - 20; ev = v.get("every", 1.6)
+    lo, hi = v["scale"]; x0, x1 = M + 220, XR - 20; ev = v.get("every", 1.6)
     def X(p): return x0 + (p - lo) / (hi - lo) * (x1 - x0)
     for i, r in enumerate(v["rows"]):
         a = fade(u, i * ev, i * ev + 0.3)
