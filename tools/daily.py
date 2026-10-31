@@ -22,6 +22,7 @@ SAFE_Y = 850
 CX = (M + SAFE_R) // 2            # centre line for text below SAFE_Y
 EXPLAIN.XR = SAFE_R
 EXPLAIN.SUBS = False
+LOGOS = False  # platform glyphs on the end card; off until all three brand pages are read and recorded (Roz, 2026-10-31)
 def follow_block(img, y):
     """End card only: FOLLOW @roundingerror.capital + the real Instagram / TikTok / YouTube logos (tools/logos.py),
     centred left of the button column. y = baseline of the handle line. Returns the bottom y."""
@@ -29,6 +30,7 @@ def follow_block(img, y):
     d = ImageDraw.Draw(img); hf = mono(40, True); lf = mono(26, True)
     lab = "FOLLOW "; lw = d.textlength(lab, font=lf); hw = d.textlength(HANDLE, font=hf); x = CX - (lw + hw) // 2
     d.text((x, y), lab, font=lf, fill=MUT, anchor="ls"); d.text((x + lw, y), HANDLE, font=hf, fill=LIME, anchor="ls")
+    if not LOGOS: return y + 10  # handle only (Roz T-062 2026-10-31: TikTok / YouTube brand pages not yet recorded)
     s = 96; gap = 72; tx = CX - (3 * s + 2 * gap) // 2; ty = y + 60
     for n in NETS: img.paste(logos.logo(n, s), (tx, ty), logos.logo(n, s)); tx += s + gap
     return ty + s
