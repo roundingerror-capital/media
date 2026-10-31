@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import daily
 
 def build(card, out):
-    S = {"positions": card["positions"][:5], "positions_asof": card.get("positions_asof", ""), "chars": {}, "end": 0, "bpm": card.get("bpm", 140)}
+    S = {"positions": card["positions"], "positions_asof": card.get("positions_asof", ""), "end_char": card.get("end_char"), "chars": {}, "end": 0, "bpm": card.get("bpm", 140)}
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{daily.W}x{daily.H}",
         "-r", str(daily.FPS), "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20", "-movflags", "+faststart", out],
         stdin=subprocess.PIPE)

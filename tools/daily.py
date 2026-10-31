@@ -182,22 +182,75 @@ CTA_S = 3.5  # small CTA at the start of the story (the boss 2026-10-25: "cta at
 def _heart(d, x, y, r, col):
     d.ellipse([x - r, y - r, x, y], fill=col); d.ellipse([x, y - r, x + r, y], fill=col)
     d.polygon([(x - r, y - r * 0.45), (x + r, y - r * 0.45), (x, y + r * 0.9)], fill=col)
+def button(img, x0, y0, x1, y1, fill=None, radius=None):
+    """Shaded button (the boss 2026-10-31: the COMMENT BELOW button looked flat and as wide as its text).
+    Soft drop shadow, vertical gradient (lighter top, deeper bottom), 4 px black outline, glossy top highlight. Returns img."""
+    import numpy as np
+    from PIL import ImageFilter
+    fill = fill or LIME_T; r = radius if radius is not None else (y1 - y0) // 2
+    w, h = int(x1 - x0), int(y1 - y0)
+    if w <= 0 or h <= 0: return img
+    base = img.convert("RGBA")
+    sh = Image.new("RGBA", base.size, (0, 0, 0, 0)); ImageDraw.Draw(sh).rounded_rectangle([x0 + 6, y0 + 14, x1 + 6, y1 + 14], radius=r, fill=(0, 0, 0, 170))
+    base = Image.alpha_composite(base, sh.filter(ImageFilter.GaussianBlur(14)))
+    top = np.array([min(255, c * 1.18 + 20) for c in fill]); bot = np.array([c * 0.72 for c in fill])
+    g = np.linspace(0, 1, h)[:, None, None]; grad = (top * (1 - g) + bot * g).astype("uint8").repeat(w, 1)
+    mask = Image.new("L", (w, h), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=r, fill=255)
+    base.paste(Image.fromarray(grad, "RGB"), (int(x0), int(y0)), mask)
+    hl = Image.new("RGBA", base.size, (0, 0, 0, 0)); hd = ImageDraw.Draw(hl)
+    hd.rounded_rectangle([x0 + r * 0.45, y0 + 6, x1 - r * 0.45, y0 + h * 0.42], radius=max(4, int(r * 0.6)), fill=(255, 255, 255, 70))
+    base = Image.alpha_composite(base, hl)
+    ImageDraw.Draw(base).rounded_rectangle([x0, y0, x1, y1], radius=r, outline=(0, 0, 0, 255), width=4)
+    return base.convert("RGB")
+
 def cta_pill(img, u, text="LIKE + FOLLOW", scale=1.0, hold=False, y=None, dur=CTA_S, xr=None):
-    """Small call to action: a lime pill top-right, in the free band between the header rule (y 150) and the kicker (y ~262).
-    Slides in, pulses twice, slides out after `dur` s (stays if hold). u = seconds since it appeared."""
+    """Call to action pill: slides in, pulses twice, slides out after `dur` s (stays if hold). u = seconds since it appeared.
+    Shaded button with padding well past the text (about one text-height on each side)."""
     if u < 0 or (not hold and u > dur): return img
     d = ImageDraw.Draw(img); f = archivo(int(40 * scale), 110, 900)
-    tw = d.textlength(text, font=f); r = int(14 * scale); pad = int(22 * scale); h = int(64 * scale)
-    w = int(tw + pad * 3 + r * 2)
+    tw = d.textlength(text, font=f); r = int(14 * scale); h = int(72 * scale); pad = int(h * 0.62)
+    w = int(tw + pad * 2 + r * 2 + int(14 * scale))
     k_in = min(1, u / 0.25); k_out = 0 if hold else max(0, (u - (dur - 0.3)) / 0.3)
     off = int((1 - (1 - (1 - k_in) ** 3)) * (w + M)) + int(k_out ** 2 * (w + M))
     pulse = 1 + 0.06 * max(0, math.sin(math.pi * min(1, max(0, (u - 0.6) / 0.3)))) + 0.06 * max(0, math.sin(math.pi * min(1, max(0, (u - 1.6) / 0.3))))
     w2, h2 = int(w * pulse), int(h * pulse)
     x1 = (xr or (W - M)) + off; x0 = x1 - w2; y0 = (y if y is not None else 176) - (h2 - h) // 2; y1 = y0 + h2
-    d.rounded_rectangle([x0, y0, x1, y1], radius=h2 // 2, fill=LIME)
-    _heart(d, x0 + pad + r, (y0 + y1) // 2 - r // 4, r, "#000000")
-    d.text((x0 + pad * 2 + r * 2, (y0 + y1) // 2), text, font=f, fill="#000000", anchor="lm")
+    img = button(img, x0, y0, x1, y1); d = ImageDraw.Draw(img)
+    hx = x0 + (w2 - (tw + r * 2 + int(14 * scale))) // 2
+    _heart(d, hx + r, (y0 + y1) // 2 - r // 4, r, "#000000")
+    d.text((hx + r * 2 + int(14 * scale), (y0 + y1) // 2), text, font=f, fill="#000000", anchor="lm")
     return img
+
+def cta_button(img, text, cx, y, size=64, arrow=True):
+    """Big centred CTA (e.g. COMMENT BELOW + a down arrow): shaded button, padding one text-height each side. y = top."""
+    d = ImageDraw.Draw(img)
+    while size > 24:  # shrink until text + one text-height of padding each side fits the safe box (M .. SAFE_R)
+        f = archivo(size, 125, 900); tw = d.textlength(text, font=f)
+        if tw + size * 2 <= SAFE_R - M: break
+        size -= 2
+    h = int(size * 2.0); pad = int(size * 1.0); w = tw + pad * 2; cx = min(max(cx, M + w / 2), SAFE_R - w / 2)
+    x0, x1 = cx - w / 2, cx + w / 2
+    img = button(img, x0, y, x1, y + h, radius=int(h * 0.3)); d = ImageDraw.Draw(img)
+    d.text((cx, y + h / 2), text, font=f, fill="#000000", anchor="mm")
+    if arrow:
+        a = y + h + 30; s = size / 64
+        pts = [(cx - 70 * s, a), (cx + 70 * s, a), (cx + 70 * s, a + 80 * s), (cx + 140 * s, a + 80 * s), (cx, a + 210 * s), (cx - 140 * s, a + 80 * s), (cx - 70 * s, a + 80 * s)]
+        img = button_poly(img, pts)
+    return img
+
+def button_poly(img, pts, fill=None):
+    """Same shading for a polygon (the CTA arrow): shadow, flat fill with a lighter top half, black outline."""
+    from PIL import ImageFilter
+    fill = fill or LIME_T; base = img.convert("RGBA")
+    sh = Image.new("RGBA", base.size, (0, 0, 0, 0)); ImageDraw.Draw(sh).polygon([(x + 6, y + 14) for x, y in pts], fill=(0, 0, 0, 170))
+    base = Image.alpha_composite(base, sh.filter(ImageFilter.GaussianBlur(12))); d = ImageDraw.Draw(base)
+    d.polygon(pts, fill=tuple(int(c * 0.8) for c in fill) + (255,))
+    ys = [p[1] for p in pts]; mid = min(ys) + (max(ys) - min(ys)) * 0.45
+    top = Image.new("RGBA", base.size, (0, 0, 0, 0)); ImageDraw.Draw(top).polygon(pts, fill=tuple(min(255, int(c * 1.12 + 15)) for c in fill) + (255,))
+    clip = Image.new("L", base.size, 0); ImageDraw.Draw(clip).rectangle([0, 0, base.width, mid], fill=255)
+    base.paste(top, (0, 0), Image.composite(top.split()[3], Image.new("L", base.size, 0), clip))
+    ImageDraw.Draw(base).polygon(pts, outline=(0, 0, 0, 255), width=4)
+    return base.convert("RGB")
 
 # TEASER / COLD OPEN (the boss 2026-10-25/26: "all of our videos start with a 1s teaser, short intro, and then the whole story").
 # spec["cold_open"] = {"big": "$700", "line": "4 HIMS PUTS.", "shout": "FREE MONEY?!", "tone": "win"|"loss"}; spec["hook"] reads like a rewind.
@@ -380,41 +433,60 @@ def scene_frame(S, t, heads_override=None):
     S["_hpx"] = None
     # safe layout (2026-10-31): no header, no follow bar, no top-right pill on story frames; the apps already show our name + Follow there
     img = meme_layer(img, S, t)
-    if (S.get("loop") or S.get("outro") is False) and S.get("end") and t > S["end"] - 2.5:  # loops / outro-off have no end card: a bigger CTA holds through the last 2.5 s
-        cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.0, hold=True, y=1360, xr=SAFE_R)
+    # outro-off videos have no end card: a bigger CTA holds through the last 2.5 s. Loops never get it (T-069: an end pill says "this is the end";
+    # a loop's CTA lives in the caption and the small start pill).
+    if S.get("outro") is False and not S.get("loop") and S.get("end") and t > S["end"] - 2.5:
+        img = cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.0, hold=True, y=1360, xr=SAFE_R)
     return img
 
 LOOP_F = 12  # 0.4 s crossfade to the cover in the loop variant
 OUTRO_S = 3.5  # end card (the boss 2026-10-21): "like and follow for more updates" + our open positions
+END_CAST = {"theo": "nod", "penny": "point", "ada": "thumbs"}  # every character this file can animate; add Roz/Kit once they have video sprites (T-067)
+def end_char(S):
+    """Who hosts the end card: spec["end_char"] if set, else one pick from END_CAST that stays the same for a day (seeded by positions_asof)."""
+    import random
+    c = S.get("end_char")
+    return c if c in END_CAST else random.Random(S.get("positions_asof") or S.get("seed") or "").choice(sorted(END_CAST))
+
 def outro_frame(S, t):
     """End card. Positions come ONLY from the spec's "positions" list, copied from a Theo fact sheet's
     open_legs: [(ticker, "$100 put", "exp 10/30", "out of the money"), ...]. Never account value, cash,
-    account numbers or a broker screenshot (Rules: no fund size or personal data in public)."""
+    account numbers or a broker screenshot (Rules: no fund size or personal data in public).
+    1-5 positions: big rows. 6-10: compact rows (ITM / OTM). More than 10: the first 9 plus "+N MORE", so a leg never silently vanishes (T-067)."""
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     ec = S.get("endcard") or {}  # Posts settings/endcard (the boss 2026-10-29: edit the end card in one place)
-    pos = (S.get("positions") or []) if ec.get("show_positions", True) else []; y = 352
+    pos = list((S.get("positions") or []) if ec.get("show_positions", True) else []); y = 352
+    if len(pos) > 10: pos = pos[:9] + [("+%d MORE" % (len(pos) - 9), "", "", "")]
+    big = len(pos) <= 5; rh = 110 if big else 72
     if pos:
         d.text((M, y), "OUR OPEN POSITIONS" + (" \u00b7 " + S["positions_asof"] if S.get("positions_asof") else ""), font=mono(30, True), fill=LIME, anchor="ls"); y += 30
-        for i, row in enumerate(pos[:5]):
-            a = 1.0 if t >= 0.1 + i * 0.12 else 0.0  # pop-in, no half-faded figures (2026-10-25: faint numbers were OCR-misread by the safety scan)
-            d.rectangle([M, y, SAFE_R, y + 92], outline=blend(LINE, a), width=3)
-            d.text((M + 24, y + 62), row[0], font=archivo(48, 110, 900), fill=blend(INK, a), anchor="ls")
-            d.text((M + 230, y + 42), row[1] + "  " + row[2], font=mono(30, True), fill=blend(INK, a), anchor="ls")
+        for i, row in enumerate(pos):
+            a = 1.0 if t >= 0.1 + i * (0.12 if big else 0.06) else 0.0  # pop-in, no half-faded figures (OCR)
             col = LIME if "out of" in row[3] or "worthless" in row[3] else "#FF8A5B"
-            d.text((M + 230, y + 78), row[3].upper(), font=mono(24, True), fill=blend(col, a), anchor="ls")
-            y += 110
-        y += 40
+            d.rectangle([M, y, SAFE_R, y + rh - 18], outline=blend(LINE, a), width=3)
+            if big:
+                d.text((M + 24, y + 62), row[0], font=archivo(48, 110, 900), fill=blend(INK, a), anchor="ls")
+                d.text((M + 230, y + 42), row[1] + "  " + row[2], font=mono(30, True), fill=blend(INK, a), anchor="ls")
+                d.text((M + 230, y + 78), row[3].upper(), font=mono(24, True), fill=blend(col, a), anchor="ls")
+            else:
+                d.text((M + 20, y + 40), row[0], font=archivo(36, 110, 900), fill=blend(INK, a), anchor="ls")
+                if row[1]:
+                    d.text((M + 170, y + 38), row[1] + "  " + row[2], font=mono(24, True), fill=blend(INK, a), anchor="ls")
+                    d.text((SAFE_R - 20, y + 38), "OTM" if col == LIME else "ITM", font=mono(24, True), fill=blend(col, a), anchor="rs")
+            y += rh
+        y += 40 if big else 16
     else:
         y = 560
     k = max(0.0, t - 0.3); sc = 1.0 + max(0, 0.3 * (1 - k / 0.25)) if t > 0.3 else 0
     if t > 0.3:
         for txt, c in ((ec.get("line1") or "LIKE + FOLLOW", LIME), (ec.get("line2") or "FOR MORE UPDATES", INK)):
-            f = fit(txt, int((SAFE_R - M) * min(sc, 1.15)), 120 if pos else 160, wdth=125, wght=900)
+            f = fit(txt, int((SAFE_R - M) * min(sc, 1.15)), (160 if not pos else 120 if big else 80), wdth=125, wght=900)
             bb = d.textbbox((0, 0), txt, font=f)
-            d.text((CX - (bb[2] - bb[0]) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + 26
-        follow_block(img, y + 60); d = ImageDraw.Draw(img)  # handle + real logos, inside the safe box (the boss 2026-10-31)
-    S["_hpx"] = 300 if len(pos) >= 4 else None
-    char_layer(img, d, S, 30 + t, ["penny"], [(30.0, 40.0, "penny", "", "point")] if t > 0.3 else [], 10**6)
+            d.text((CX - (bb[2] - bb[0]) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + (26 if big else 14)
+        follow_block(img, y + (60 if big else 44)); d = ImageDraw.Draw(img)
+    who = end_char(S)
+    S["_hpx"] = None if len(pos) < 4 else (300 if big else 240)
+    char_layer(img, d, S, 30 + t, [who], [(30.0, 40.0, who, "", END_CAST[who])] if t > 0.3 else [], 10**6)
     S["_hpx"] = None
     return img
 
