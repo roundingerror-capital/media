@@ -32,9 +32,8 @@ def make(out, style, big, line="", kicker="", who=("theo",), tone="lime", sub=""
         img.paste(bg["lime" if tone != "red" else "red"], [0, 0, W, H]); d = ImageDraw.Draw(img)
         for i in range(0, H, 60): d.line([(0, i), (W, i - 400)], fill=tuple(max(0, c - 18) for c in (LIME if tone != "red" else RED)), width=22)
         sp = sprite(who[0], 760); shadowed(img, sp, (W // 2 - sp.width // 2, BOT - 120 - sp.height))
-        f = fitf(d, big, W - 120, 300); d.text((W // 2, TOP + 330), big, font=f, fill=BLACK, anchor="ms", stroke_width=10, stroke_fill=WHITE)
-        if line: d.text((W // 2, TOP + 110), line, font=fitf(d, line, W - 160, 80, 900, 110), fill=BLACK, anchor="ms")
-        d.text((72, BOT - 40), "≈ Rounding Error", font=arch(40, 800, 100), fill=BLACK)
+        f = fitf(d, big, W - 120, 300); d.text((W // 2, TOP + 400), big, font=f, fill=BLACK, anchor="ms", stroke_width=10, stroke_fill=WHITE)
+        if line: d.text((W // 2, TOP + 180), line, font=fitf(d, line, W - 160, 80, 900, 110), fill=BLACK, anchor="ms")
     elif style == "versus":  # two characters, diagonal split, VS
         d.polygon([(0, 0), (W, 0), (W, 760), (0, 1220)], fill=(18, 18, 18)); d.polygon([(0, 1220), (W, 760), (W, H), (0, H)], fill=acc)
         a, b = (who + ("penny",))[:2]
@@ -82,7 +81,7 @@ def make(out, style, big, line="", kicker="", who=("theo",), tone="lime", sub=""
         if line: d.text((72, TOP + 290), line, font=fitf(d, line, W - 160, 96, 900, 110), fill=col, anchor="ls")
         sp = sprite(who[0], 300); img.paste(sp, (W - sp.width - 60, BOT - sp.height), sp); brand(d)
         d.text((72, 1360), "AI TRADING BOT · REAL MONEY", font=mono(30), fill=GREY)
-    ky = {"hero": BOT - 140, "versus": TOP + 135, "number": TOP + 135, "chart": TOP + 135}.get(style)
+    ky = {"hero": TOP + 30, "versus": TOP + 135, "number": TOP + 135, "chart": TOP + 135}.get(style)
     if kicker and ky is not None:
         kf = mono(32); tw = d.textlength(kicker, font=kf); kx = 72 if style != "panel" else 40
         dark = style in ("hero", "number", "panel")

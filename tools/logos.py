@@ -30,10 +30,13 @@ def youtube(s):
     d = ImageDraw.Draw(im); d.rectangle([s * 0.36, s * 0.34, s * 0.68, s * 0.66], fill="#FFFFFF")  # shows through the play cut-out
     im.alpha_composite(glyph("youtube", n, "#FF0000"), ((s - n) // 2, (s - n) // 2)); return im
 MAKERS = {"INSTAGRAM": instagram, "TIKTOK": tiktok, "YOUTUBE": youtube}
+MONO = True  # 2026-10-31 Roz T-062: Instagram's brand page (about.meta.com/brand/resources/instagram/icons, read 2026-10-31) says
+# promote your account with the GLYPH (not the gradient app icon), in black, white or one solid color, unaltered, paired with a
+# call to action, min 29 px, clear space = half its size. So the end card uses solid white glyphs for all three networks.
 _C = {}
 def logo(net, size):
-    k = (net, size)
-    if k not in _C: _C[k] = MAKERS[net](size)
+    k = (net, size, MONO)
+    if k not in _C: _C[k] = glyph(net.lower(), size, "#FFFFFF") if MONO else MAKERS[net](size)
     return _C[k]
 if __name__ == "__main__":
     row = Image.new("RGBA", (3 * 200 + 40, 240), (20, 20, 20, 255))
