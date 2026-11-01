@@ -1,0 +1,110 @@
+{
+ "2026-11": {
+  "combos": [
+   "ada,kit|penny,roz|roz,kit|roz,penny|ada,penny,roz"
+  ],
+  "lines": [
+   "Look at those bars!",
+   "Respawn with the rule.",
+   "Plot twist?!",
+   "That's a boss, not a bug.",
+   "Careful counts.",
+   "Tell a friend!"
+  ],
+  "hooks": [
+   "ada,kit"
+  ],
+  "by_ticker": {
+   "PLTR": {
+    "casts": [
+     [
+      "ada",
+      "kit"
+     ],
+     [
+      "penny",
+      "roz"
+     ],
+     [
+      "roz",
+      "kit"
+     ],
+     [
+      "roz",
+      "penny"
+     ],
+     [
+      "ada",
+      "penny",
+      "roz"
+     ]
+    ],
+    "lines": [
+     [
+      [
+       "ada",
+       "Look at those bars!",
+       "thumbs"
+      ],
+      [
+       "kit",
+       "Respawn with the rule.",
+       "nod"
+      ]
+     ],
+     [
+      [
+       "penny",
+       "Plot twist?!",
+       "wave"
+      ]
+     ],
+     [
+      [
+       "kit",
+       "That's a boss, not a bug.",
+       "spin"
+      ]
+     ],
+     [
+      [
+       "roz",
+       "Careful counts.",
+       "nod"
+      ]
+     ],
+     [
+      [
+       "penny",
+       "Tell a friend!",
+       "jump"
+      ]
+     ]
+    ],
+    "xs": [
+     [
+      0.22,
+      0.62
+     ],
+     [
+      0.38,
+      0.78
+     ],
+     [
+      0.38,
+      0.78
+     ],
+     [
+      0.26,
+      0.74
+     ],
+     [
+      0.2,
+      0.5,
+      0.8
+     ]
+    ]
+   }
+  }
+ }
+}
