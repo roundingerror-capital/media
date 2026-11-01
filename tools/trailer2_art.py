@@ -41,7 +41,7 @@ def fawn(shadow=False, v=None):
     """60x80 fawn, real deer colours: warm chestnut coat, cream belly and muzzle, big dark doe eyes with long lashes and
     two catchlights, soft rosy inner ears, white dapples, a tiny black nose, a pink flower by one ear and a pink bow collar.
     shadow=True gives the shadow-realm version (same shapes, near-black palette), for the reveal before the flashback."""
-    im = Image.new("RGBA", (60, 80)); d = ImageDraw.Draw(im)
+    im = Image.new("RGBA", (60, 78)); d = ImageDraw.Draw(im)
     if shadow:
         C, CD, CL, CR, BE = (34, 24, 30, 255), (22, 14, 20, 255), (48, 36, 44, 255), (60, 44, 54, 255), (44, 32, 40, 255)
         SPOT, EYEW, EYE, NOSE = (70, 56, 66, 255), (210, 196, 214, 255), (20, 10, 18, 255), (10, 6, 10, 255)
@@ -53,13 +53,15 @@ def fawn(shadow=False, v=None):
     if v.get("coat") and not shadow: C, CD, CL, CR, BE = v["coat"]
     if v.get("acc_col"): PINK, PINK2 = v["acc_col"]
     if v.get("eye"): EYE = v["eye"]
-    # legs (slim) + hooves
-    for x in (22, 34):
-        d.rectangle([x, 62, x + 4, 76], fill=CD); d.rectangle([x, 75, x + 4, 78], fill=(40, 26, 22, 255))
+    # four short legs: two hind legs behind (darker, wider stance), two front legs under the chest, all with little hooves
+    for x in (22, 33):   # two short legs with hooves, like the rest of the cast
+        d.rectangle([x, 61, x + 5, 72], fill=C); d.rectangle([x, 71, x + 5, 74], fill=(40, 26, 22, 255))
     # body + cream belly + dapples
-    d.ellipse([15, 40, 45, 66], fill=C); d.ellipse([21, 48, 39, 65], fill=BE)
+    d.ellipse([15, 40, 45, 64], fill=C); d.ellipse([21, 47, 39, 63], fill=BE)
     if v.get("spots", True):
         for e in ([19, 46, 22, 49], [38, 44, 41, 47], [23, 42, 25, 44], [40, 52, 42, 54], [17, 54, 19, 56]): d.ellipse(e, fill=SPOT)
+    d.ellipse([9, 47, 17, 56], fill=C); d.ellipse([43, 47, 51, 56], fill=C)                        # little arms at the sides, hoof tips
+    d.rectangle([10, 54, 16, 56], fill=(40, 26, 22, 255)); d.rectangle([44, 54, 50, 56], fill=(40, 26, 22, 255))
     # neck
     d.rectangle([26, 32, 34, 42], fill=C)
     acc = v.get("acc", "bow")
