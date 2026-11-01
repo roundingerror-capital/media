@@ -424,7 +424,7 @@ def scene_frame(S, t, heads_override=None):
         threeway_panel(d, tw["cards"], y + 10, tw.get("quote", "")); y += 660
     ch = (S.get("charts") or {}).get(k)
     if ch:
-        chart_panel(d, ch["vals"], ch["labels"], y + 40, y + 300, ch.get("note", "")); y += 400
+        chart_panel(d, ch["vals"], ch["labels"], y + 70, y + 330, ch.get("note", "")); y += 430  # +70: the bar labels sit above y0, clear of the last body line (earnings template, 2026-11-01)
     vz = (S.get("visuals") or {}).get(k)
     S["_hpx"] = None
     if vz:  # worked example (explain.py): characters shrink to the bottom band so the steps have room
