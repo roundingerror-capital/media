@@ -115,6 +115,116 @@ DEER = [  # 8 takes for the boss to pick from (V25)
     ("Sunset", dict(coat=((226, 134, 78, 255), (178, 92, 46, 255), (255, 238, 210, 255)), head="crown", acc="bow", acc_col=((255, 100, 140, 255), (255, 170, 190, 255)), eyes="big")),
 ]
 
+# ---------------------------------------------------------------- HD fawn (2026-11-01, the boss: "higher rez and shade it way way better")
+def _ramp(base, n=5):
+    """5 tones from one base colour: deep shade, shade, base, light, highlight (light from the top-left)."""
+    r, g, b = base[:3]
+    def mix(c, t, to): return tuple(int(c[i] + (to[i] - c[i]) * t) for i in range(3))
+    deep = mix((r, g, b), .45, (40, 18, 30)); sh = mix((r, g, b), .25, (60, 30, 40))
+    li = mix((r, g, b), .28, (255, 240, 220)); hi = mix((r, g, b), .55, (255, 250, 240))
+    return [deep, sh, (r, g, b), li, hi]
+def _sphere(mask_draw_fn, box, ramp, px, light=(-.5, -.65, .58), bands=(.18, .42, .72, .9), rim=True):
+    """Fill the shape with sphere shading: a surface normal per pixel (z from the ellipse), lit from the top-left; the lambert
+    term picks one of 5 tones, so highlights sit where a real sphere's would. Thin rim light on the shadow side."""
+    x0, y0, x1, y1 = box; cx, cy = (x0 + x1) / 2, (y0 + y1) / 2; rx, ry = (x1 - x0) / 2, (y1 - y0) / 2
+    m = Image.new("L", px.size, 0); mask_draw_fn(ImageDraw.Draw(m)); mp = m.load(); out = px.load()
+    lx, ly, lz = light; ln = (lx * lx + ly * ly + lz * lz) ** .5; lx, ly, lz = lx / ln, ly / ln, lz / ln
+    for y in range(px.height):
+        for x in range(px.width):
+            if not mp[x, y]: continue
+            nx, ny = (x - cx) / rx, (y - cy) / ry; r2 = min(1.0, nx * nx + ny * ny); nz = (1 - r2) ** .5
+            lam = max(0.0, nx * lx + ny * ly + nz * lz)            # 0..1
+            lam = lam ** 1.4
+            k = 0 if lam < bands[0] else 1 if lam < bands[1] else 2 if lam < bands[2] else 3 if lam < bands[3] else 4
+            if rim and r2 > .78 and nx > .25 and ny > -.2 and k < 2: k = 2      # rim light bottom-right
+            c = ramp[k]; out[x, y] = (c[0], c[1], c[2], 255)
+def fawn_hd(shadow=False, v=None):
+    """96x120 fawn with real shading: 5-tone ramps per material, sphere shading on head, body and muzzle, rim light,
+    layered eyes (iris ring, pupil, two catchlights), inner-ear gradient, dithered belly edge, hoof shine, 3 px outline."""
+    v = v or {}
+    Wd, Hd = 96, 120; im = Image.new("RGBA", (Wd, Hd))
+    coat = v.get("coat", ((184, 122, 72, 255), (134, 82, 44, 255), (246, 228, 200, 255)))
+    C = coat[0][:3]; BE = coat[2][:3]; IN = v.get("inner", (238, 178, 160, 255))[:3]
+    if shadow:
+        C, BE, IN = (40, 28, 36), (54, 42, 50), (62, 40, 56)
+    RC, RB, RI = _ramp(C), _ramp(BE), _ramp(IN)
+    if shadow:
+        RC = [(14, 8, 12), (24, 16, 22), (40, 28, 36), (58, 44, 54), (78, 62, 74)]; RB = [(22, 14, 20), (34, 24, 32), (54, 42, 50), (70, 56, 66), (90, 74, 86)]; RI = [(24, 12, 20), (40, 22, 34), (62, 40, 56), (84, 58, 76), (104, 76, 96)]
+    OUT = (46, 26, 20) if not shadow else (8, 4, 8)
+    acc_col = v.get("acc_col", ((255, 140, 180, 255), (255, 196, 216, 255)))
+    PINK, PINK2 = acc_col[0][:3], acc_col[1][:3]; GOLD = (255, 220, 120)
+    body = Image.new("RGBA", (Wd, Hd))
+    # ears (outer), head, body as shaded spheres; drawn back to front
+    for (poly, box, ramp) in (([(32, 36), (2, 20), (6, 10), (20, 10), (44, 24)], (2, 10, 44, 36), RC), ([(64, 36), (94, 20), (90, 10), (76, 10), (52, 24)], (52, 10, 94, 36), RC)):
+        _sphere(lambda d, p=poly: d.polygon(p, fill=255), box, ramp, body, bands=(.3, .5, .78, .95), rim=False)
+    for (poly, box, ramp) in (([(30, 30), (10, 18), (12, 14), (36, 24)], (10, 14, 36, 30), RI), ([(66, 30), (86, 18), (84, 14), (60, 24)], (60, 14, 86, 30), RI)):
+        _sphere(lambda d, p=poly: d.polygon(p, fill=255), box, ramp, body, bands=(.35, .6, .9, 1.1), rim=False)
+    _sphere(lambda d: d.ellipse([26, 64, 70, 112], fill=255), (26, 64, 70, 112), RC, body, bands=(.22, .45, .74, .92))   # body
+    _sphere(lambda d: d.ellipse([14, 14, 82, 78], fill=255), (14, 14, 82, 78), RC, body, bands=(.22, .45, .74, .92))     # head
+    _sphere(lambda d: d.ellipse([34, 76, 62, 108], fill=255), (34, 76, 62, 108), RB, body, bands=(.3, .55, .85, 1.1), rim=False)   # belly
+    _sphere(lambda d: d.ellipse([34, 48, 62, 74], fill=255), (34, 48, 62, 74), RB, body, bands=(.3, .55, .85, 1.1), rim=False)     # muzzle
+    bd = ImageDraw.Draw(body)
+    for x in (30, 56):  # feet with a shine
+        bd.rounded_rectangle([x, 106, x + 10, 116], radius=3, fill=RC[1]); bd.rectangle([x, 112, x + 10, 116], fill=OUT if not shadow else (10, 6, 10)); bd.rectangle([x + 2, 113, x + 4, 114], fill=(120, 100, 110))
+    bp = body.load()
+    for x in range(36, 60):  # dithered belly edge
+        for y in (75, 76, 77):
+            if (x + y) % 2 == 0 and bp[x, y][3]: bp[x, y] = RB[2] + (255,)
+    if v.get("spots", True):
+        SP = RC[4] if not shadow else (84, 70, 82)
+        for (x, y) in ((24, 28), (44, 20), (68, 26), (60, 36), (28, 40), (30, 84), (64, 88), (24, 72), (70, 74)):
+            bd.ellipse([x, y, x + 3, y + 3], fill=SP)
+    # outline around the union
+    a = body.split()[3].filter(ImageFilter.MaxFilter(5)); o = Image.new("RGBA", (Wd, Hd), OUT + (255,)); o.putalpha(a)
+    im.alpha_composite(o); im.alpha_composite(body); d = ImageDraw.Draw(im)
+    # eyes: white, iris ring, pupil, two catchlights, lid line, lashes
+    eyes = v.get("eyes", "big"); IRIS = (96, 60, 48) if not shadow else (40, 26, 38); PUP = (30, 16, 16) if not shadow else (12, 6, 12)
+    for x0 in (24, 54):
+        if eyes == "big":
+            d.ellipse([x0, 34, x0 + 18, 54], fill=(250, 246, 244)); d.ellipse([x0 + 2, 35, x0 + 17, 53], fill=IRIS); d.ellipse([x0 + 4, 38, x0 + 15, 52], fill=PUP)
+            d.ellipse([x0 + 5, 38, x0 + 9, 42], fill=(255, 255, 255)); d.ellipse([x0 + 12, 47, x0 + 14, 49], fill=(255, 255, 255))
+            d.arc([x0 - 1, 33, x0 + 19, 55], 190, 350, fill=OUT, width=2)
+        elif eyes == "sleepy":
+            d.ellipse([x0, 38, x0 + 18, 54], fill=(250, 246, 244)); d.ellipse([x0 + 3, 39, x0 + 16, 53], fill=PUP); d.ellipse([x0 + 5, 41, x0 + 8, 44], fill=(255, 255, 255))
+            d.chord([x0 - 1, 33, x0 + 19, 47], 180, 360, fill=RC[2]); d.arc([x0 - 1, 33, x0 + 19, 47], 180, 360, fill=OUT, width=2)
+        else:
+            d.ellipse([x0 + 2, 37, x0 + 16, 52], fill=PUP); d.ellipse([x0 + 5, 39, x0 + 8, 42], fill=(255, 255, 255))
+        lx = x0 - 1 if x0 < 48 else x0 + 19; sd = -1 if x0 < 48 else 1
+        for k in range(3): d.line([(lx, 36 + k * 3), (lx + sd * 4, 32 + k * 3)], fill=OUT, width=2)
+    d.ellipse([44, 56, 52, 62], fill=PUP); d.ellipse([45, 57, 47, 58], fill=(140, 120, 130))                       # nose with a shine
+    d.line([(48, 62), (48, 65)], fill=OUT, width=1); d.arc([42, 62, 54, 70], 10, 170, fill=OUT, width=1)           # tiny smile
+    d.ellipse([18, 54, 30, 60], fill=(240, 150, 160) if not shadow else (90, 50, 70)); d.ellipse([66, 54, 78, 60], fill=(240, 150, 160) if not shadow else (90, 50, 70))   # blush
+    # accessory
+    acc = v.get("acc", "bow")
+    if acc == "bow":
+        for pts in ([(48, 78), (34, 72), (34, 86)], [(48, 78), (62, 72), (62, 86)]): d.polygon(pts, fill=PINK); d.polygon([(p[0], p[1]) for p in pts], outline=tuple(int(c * .7) for c in PINK))
+        d.polygon([(38, 75), (44, 77), (40, 82)], fill=PINK2); d.polygon([(58, 75), (52, 77), (56, 82)], fill=PINK2)
+        d.rounded_rectangle([45, 75, 51, 81], radius=2, fill=PINK2); d.point([(46, 76)], fill=(255, 255, 255))
+    elif acc == "pearls":
+        for k in range(8):
+            x = 32 + k * 4.6; y = 76 + (abs(k - 3.5) ** 1.6) * -1.1 + 4
+            d.ellipse([x, y, x + 3, y + 3], fill=(246, 242, 236)); d.point([(int(x) + 1, int(y) + 1)], fill=(255, 255, 255))
+    elif acc == "scarf":
+        d.rounded_rectangle([32, 72, 64, 80], radius=3, fill=PINK); d.rectangle([54, 80, 62, 96], fill=PINK); d.rectangle([34, 73, 62, 75], fill=PINK2); d.rectangle([56, 82, 58, 94], fill=PINK2)
+    elif acc == "bell":
+        d.rounded_rectangle([32, 72, 64, 77], radius=2, fill=PINK); d.ellipse([43, 76, 53, 86], fill=GOLD); d.ellipse([45, 78, 48, 81], fill=(255, 248, 200)); d.point([(48, 84)], fill=OUT)
+    head = v.get("head", "flower")
+    if head == "flower":
+        fx, fy = 72, 16
+        for dx, dy in ((-4, 0), (4, 0), (0, -4), (0, 4)): d.ellipse([fx + dx - 3, fy + dy - 3, fx + dx + 3, fy + dy + 3], fill=PINK)
+        d.ellipse([fx - 2, fy - 2, fx + 2, fy + 2], fill=GOLD); d.point([(fx - 4, fy - 4)], fill=PINK2)
+    elif head == "crown":
+        d.polygon([(36, 18), (36, 6), (42, 12), (48, 4), (54, 12), (60, 6), (60, 18)], fill=GOLD); d.line([(37, 17), (59, 17)], fill=(200, 150, 40), width=2)
+        for x in (42, 48, 54): d.ellipse([x - 1, 13, x + 1, 15], fill=PINK)
+    elif head == "headbow":
+        d.polygon([(48, 14), (38, 8), (38, 20)], fill=PINK); d.polygon([(48, 14), (58, 8), (58, 20)], fill=PINK); d.rounded_rectangle([45, 11, 51, 17], radius=2, fill=PINK2)
+    elif head == "crownflowers":
+        for fx in (32, 48, 64):
+            col = PINK if fx != 48 else (255, 255, 255)
+            for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)): d.ellipse([fx + dx - 2, 14 + dy - 2, fx + dx + 2, 14 + dy + 2], fill=col)
+            d.ellipse([fx - 1, 13, fx + 1, 15], fill=GOLD)
+    return _pad(im, 2)
+
 if __name__ == "__main__":
     import sys
     p, f, g = piggy(), fawn(), fawn(True)
