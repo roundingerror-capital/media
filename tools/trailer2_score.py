@@ -92,7 +92,8 @@ def render(path, T):
         add(tone(523.25 * 2 ** (mb[i % len(mb)] / 12), .6, "tri", .05, 3, vib=.006), t); i += 1; t += .3
     for k, tb in enumerate(T["beg"]): add(tone(330 * 2 ** (k * 4 / 12), .18, "sq", .06, 10), tb)
     add(tone(392, .12, "sq", .05, 12), T["ask"]); add(tone(523, .2, "sq", .05, 10), T["ask"] + .12)
-    add(tone(660, .14, "sq", .05, 10), T["fancy"]); add(tone(880, .25, "sq", .05, 8), T["fancy"] + .14)
+    add(tone(660, .14, "sq", .05, 10), T["hypo"]); add(tone(880, .25, "sq", .05, 8), T["hypo"] + .14)
+    add(tone(1175, .3, "tri", .06, 6), T["askbots"]); add(tone(740, .2, "sq", .05, 9), T["botsaid"]); add(tone(988, .25, "sq", .05, 8), T["botsaid"] + .15)
     add(tone(1046, .3, "tri", .06, 6), T["what"]); add(tone(988, .3, "tri", .06, 6), T["what"] + .14)      # her: soft bells
     add(tone(1318, .45, "tri", .07, 5), T["why"])
     add(tone(784, .5, "tri", .06, 4), T["fine"]); add(tone(196, .6, "saw", .06, 4), T["fine"] + .1)

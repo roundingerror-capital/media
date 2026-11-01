@@ -44,7 +44,7 @@ def pad(sp, p):
 def rim(sp, col=LIME, w=5):
     sp = pad(sp, w + 2); return outline(sp, col, w)
 # ---------------------------------------------------------------- timeline
-T = dict(meet=0.6, fund=1.25, bot=2.5, roster=5.0, card=3.0)
+T = dict(meet=0.6, fund=1.25, bot=2.5, roster=5.4, card=3.6)
 T["cards"] = [T["roster"] + i * T["card"] for i in range(5)]
 T["team"] = T["roster"] + 5 * T["card"]          # 20.0 lineup
 T["above"] = T["team"] + 1.9                       # 21.9 "and above them all"
@@ -63,12 +63,14 @@ T["fb"] = T["rew"] + 0.7                           # 35.5 flashback plays
 T["beg"] = [T["fb"] + .5, T["fb"] + 1.0, T["fb"] + 1.5]
 T["what"] = T["fb"] + 2.3                          # her: "...what now?"
 T["ask"] = T["fb"] + 3.2                           # him: the money
-T["why"] = T["fb"] + 5.0                           # her: "Why?"
-T["fancy"] = T["fb"] + 5.8                         # him: BIG BOY FANCY
-T["fine"] = T["fb"] + 7.6                          # her: "...fine."
-T["honey"] = T["fb"] + 8.7                         # her: "ok honey, here..."
+T["why"] = T["fb"] + 5.0                           # her: "Why? So you can look online for fake points?"
+T["hypo"] = T["fb"] + 6.9                          # him: "They're not fake. They're... hypothetical."
+T["askbots"] = T["fb"] + 8.6                       # her: "Did you ask the bots?"
+T["botsaid"] = T["fb"] + 9.8                       # him: "The bots said to ask you."
+T["fine"] = T["fb"] + 11.4                         # her: "...fine."
+T["honey"] = T["fb"] + 12.5                        # her: "ok honey, here..."
 T["coins"] = T["honey"] + .5
-T["ff"] = T["fb"] + 10.8                           # fast-forward back
+T["ff"] = T["fb"] + 14.6                           # fast-forward back
 T["ledge2"] = T["ff"] + 0.7                        # lightning callback: THE BOSS. #1.*
 T["biz"] = T["ledge2"] + 2.2                       # back to business
 T["biz_lines"] = [T["biz"] + .1 + i * .55 for i in range(4)]
@@ -135,8 +137,20 @@ for _i in range(60): _v += _r.gauss(0, .06); CHART.append(_v)
 CHART = [v - CHART[-1] * i / 59 for i, v in enumerate(CHART)]  # zigzag that ends where it started: an illustration, never a performance line (Roz 11/1)
 def sc_bot(t):
     u = t - T["bot"]; img = Image.new("RGB", (W, H), BLACK); d = ImageDraw.Draw(img)
+    # bars marching under the line, lime up / orange down, then the zigzag line draws over them (illustration; it carries no numbers)
+    rb = random.Random(5); n = int(min(1, u / 1.6) * len(CHART))
+    for i in range(26):
+        x = SAFE_L + i * 38 - int(u * 90) % 38; hgt = int(80 + abs(rb.gauss(0, 1)) * 230 * (0.6 + 0.4 * math.sin(u * 3 + i)))
+        up = rb.random() > .45; col = LIME if up else ORANGE
+        d.rectangle([x, 1680 - hgt, x + 24, 1680], fill=bl(col, .28)); d.line([(x + 12, 1680 - hgt - 40), (x + 12, 1680 + 30)], fill=bl(col, .28), width=3)
+    if n > 1:
+        lo, hi = min(CHART), max(CHART); pts = [(SAFE_L + i * (W - 2 * SAFE_L) / 59, 1600 - (v - lo) / (hi - lo) * 520) for i, v in enumerate(CHART[:n])]
+        glow = Image.new("RGB", (W, H), BLACK); ImageDraw.Draw(glow).line(pts, fill=LIME, width=26)
+        img = Image.blend(img, Image.composite(glow, img, glow.convert("L").point(lambda v: 90 if v else 0)).filter(ImageFilter.GaussianBlur(18)), .6)
+        d = ImageDraw.Draw(img); d.line(pts, fill=LIME, width=9); x, y = pts[-1]
+        d.ellipse([x - 16, y - 16, x + 16, y + 16], fill=(255, 255, 255)); d.ellipse([x - 10, y - 10, x + 10, y + 10], fill=LIME)
     kicker(d, "WHO ARE WE?")
-    k = min(1, u / .5); lineup(img, W // 2, 1700 + int((1 - k) ** 3 * 400), 5, alpha=min(1, u / .4))
+    k = min(1, u / .5); lineup(img, W // 2, 1860 + int((1 - k) ** 3 * 400), 4, alpha=min(1, u / .4))
     if u > .05: d.text((SAFE_L + 12, 520), "I'M AN", font=archivo(110, 125, 900), fill=INK, anchor="ls")
     slam(d, "AI TRADING", 700, LIME, t, T["bot"] + .25, start=240)
     slam(d, "BOT.", 900, LIME, t, T["bot"] + .45, start=240)
@@ -145,6 +159,46 @@ def sc_bot(t):
     a2 = fade(u, 1.8, 2.1)
     d.text((SAFE_L + 12, 1070), "And one human.", font=mono(40, True), fill=bl(MUT, a2), anchor="ls")
     return img
+def anim(name, t, u, pose, s=11):
+    """One character, alive: blink (Theo/Penny/Ada), beat bounce, squash & stretch, tilt, and a pose that fits the line."""
+    base = daily.sprite_state(name.lower(), ((t + hash(name) % 7) % 3.1) < .12, t) if name.lower() in daily.SP else load(dict((c[0], c[3]) for c in CAST)[name])
+    base = outline(pad(base, 2), (0, 0, 0), 1)
+    ph = t * 140 / 60; sx = 1 - .04 * math.sin(2 * math.pi * ph / 2); sy = 1 + .05 * math.sin(2 * math.pi * ph / 2)
+    hop = 14 * abs(math.sin(math.pi * ph)); ang = 0; flip = False
+    if pose == "nod": hop = -10 * abs(math.sin(2 * math.pi * u * 1.5)); ang = 4 * math.sin(u * 6)
+    elif pose == "point": ang = -12; hop += 10
+    elif pose == "thumbs": hop += 50 * abs(math.sin(math.pi * u * 3)); ang = 8
+    elif pose == "deadpan": hop = 0; sx, sy = 1, 1; ang = 0
+    elif pose == "jump": hop += 70 * abs(math.sin(math.pi * u * 2.5))
+    elif pose == "spin":
+        if u < .8: sx *= math.cos(2 * math.pi * u / .8)
+        hop += 30 * abs(math.sin(math.pi * u * 2))
+    elif pose == "shake": ang = 10 * math.sin(u * 14)
+    w = max(2, int(abs(base.width * s * sx))); h = int(base.height * s * sy)
+    im = base.resize((w, h), Image.NEAREST)
+    if sx < 0: im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    if abs(ang) > .5: im = im.rotate(ang, resample=Image.NEAREST, expand=True)
+    return im, int(hop)
+def stamp(d, cx, cy, txt, col, k, size=120, ang=-12):
+    """Rubber stamp slamming in: scale overshoot, thick outline box."""
+    if k <= 0: return
+    f = archivo(int(size * k), 125, 900); tw = d.textlength(txt, font=f)
+    box = Image.new("RGBA", (int(tw + 80), int(size * k * 1.3)), (0, 0, 0, 0)); bd = ImageDraw.Draw(box)
+    bd.rounded_rectangle([0, 0, box.width - 1, box.height - 1], radius=18, outline=col, width=10)
+    bd.text((box.width // 2, int(box.height * .78)), txt, font=f, fill=col, anchor="ms")
+    box = box.rotate(ang, resample=Image.BICUBIC, expand=True)
+    d._image.paste(box, (int(cx - box.width / 2), int(cy - box.height / 2)), box)
+def candles(d, u, y0, seed=9, alpha=.9):
+    r = random.Random(seed)
+    for i in range(24):
+        x = SAFE_L + i * 40 - int(u * 160) % 40; o = r.uniform(-1, 1); c = o + r.uniform(-.8, .8); hi_ = max(o, c) + r.uniform(0, .5); lo_ = min(o, c) - r.uniform(0, .5)
+        col = LIME if c >= o else ORANGE; sc = 110
+        d.line([(x + 12, y0 - hi_ * sc), (x + 12, y0 - lo_ * sc)], fill=bl(col, alpha), width=4)
+        d.rectangle([x, y0 - max(o, c) * sc, x + 24, y0 - min(o, c) * sc + 2], fill=bl(col, alpha))
+GIMMICK = {
+    "THEO": "candles", "PENNY": "confetti", "ADA": "checks", "ROZ": "no", "KIT": "log"}
+POSES = {"THEO": "nod", "PENNY": "point", "ADA": "thumbs", "ROZ": "deadpan", "KIT": "spin"}
+LOGLINES = ["decision 0412 · logged", "decision 0413 · logged", "pattern: same mistake, 3rd time", "decision 0414 · logged", "pattern found · flagged"]
 def sc_card(t):
     i = min(4, int((t - T["roster"]) // T["card"])); u = t - T["cards"][i]
     name, role, line, _, acc = CAST[i]
@@ -152,31 +206,62 @@ def sc_card(t):
     # accent diagonal wipe + giant ghost number
     wx = int(min(1, u / .22) * (W + 900)) - 900
     d.polygon([(wx, 0), (wx + 900, 0), (wx + 500, H), (wx - 400, H)], fill=bl(acc, .16))
-    big = scaled(SPR[name], 46); big = big.crop((0, 0, big.width, int(big.height * .62)))  # band-photo portrait: head and shoulders, huge, faded
-    paste_c(img, big, W // 2 + 120, 1960, alpha=0.16)
-    d = ImageDraw.Draw(img)
     gf = archivo(760, 125, 900); d.text((W - 40, 1500), f"0{i + 1}", font=gf, fill=bl(acc, .10), anchor="rs")
+    g = GIMMICK[name]
+    # the character's own thing, behind
+    if g == "candles" and u > .5: candles(d, u, 1500, alpha=.75)
+    if g == "checks" and u > .5:
+        for j in range(18):
+            r = random.Random(j); x = r.randint(SAFE_L, W - 80); y = int((u * 700 + r.randint(0, 1000)) % 1000) + 900
+            d.line([(x, y), (x + 20, y + 20), (x + 56, y - 28)], fill=bl(LIME, .9), width=12)
+    if g == "confetti" and u > .6:
+        for j in range(60):
+            r = random.Random(j); x = r.randint(60, W - 60); y = int((u * r.randint(500, 900) + r.randint(0, 1200)) % 1300) + 600
+            d.rectangle([x, y, x + 14, y + 22], fill=[LIME, ROSE, INK, (120, 200, 255)][j % 4])
+    if g == "log" and u > .5:
+        f = mono(30, True)
+        for j, ln in enumerate(LOGLINES):
+            tj = .5 + j * .45
+            if u < tj: continue
+            shown = ln[:int((u - tj) / .45 * len(ln)) + 1]
+            d.text((SAFE_L + 12, 1180 + j * 48), "> " + shown + ("_" if int(u * 6) % 2 else ""), font=f, fill=LIME if "pattern" in ln else INK, anchor="ls")
+        for j in range(5):  # pattern dots connecting
+            if u > 1.2 + j * .2: d.ellipse([SAFE_R - 240 + j * 48 - 6, 1000 + (j % 2) * 60 - 6, SAFE_R - 240 + j * 48 + 6, 1000 + (j % 2) * 60 + 6], fill=ROSE)
+            if j and u > 1.3 + j * .2: d.line([(SAFE_R - 240 + (j - 1) * 48, 1000 + ((j - 1) % 2) * 60), (SAFE_R - 240 + j * 48, 1000 + (j % 2) * 60)], fill=ROSE, width=4)
     kicker(d, f"MEET THE FUND · 0{i + 1}/05")
     slam(d, name, 600, INK, t, T["cards"][i] + .08, start=300)
     if u > .3:
         f = archivo(54, 125, 900); w = d.textlength(role, font=f); x0, x1 = SAFE_L + 12, SAFE_L + 12 + int(w) + 72
-        d.rounded_rectangle([x0 + 4, 648, x1 + 4, 752], radius=26, fill=(0, 0, 0))                        # outer dark plate
+        d.rounded_rectangle([x0 + 4, 648, x1 + 4, 752], radius=26, fill=(0, 0, 0))
         img = daily.button(img, x0, 640, x1, 744, fill=LIME, radius=26); d = ImageDraw.Draw(img)
         d.text((SAFE_L + 48, 714), role, font=f, fill=BLACK, anchor="ls")
     a = fade(u, .55, .8)
     if a:
         f = mono(38, True); y = 810; cur = ""
-        for w_ in line.split():  # wrap: below SAFE_Y the text must stay left of SAFE_R
+        for w_ in line.split():
             nx = (cur + " " + w_).strip()
             if d.textlength(nx, font=f) <= SAFE_R - SAFE_L - 24: cur = nx
             else: d.text((SAFE_L + 12, y), cur, font=f, fill=bl(INK, a), anchor="ls"); y += 52; cur = w_
         d.text((SAFE_L + 12, y), cur, font=f, fill=bl(INK, a), anchor="ls")
-    # sprite slides in from the right, then bounces on the beat
-    sp = scaled(SPR[name], 11); k = min(1, u / .3); ease = 1 - (1 - k) ** 3
-    bob = int(14 * abs(math.sin(u * math.pi * 140 / 60)))
-    paste_c(img, sp, int(W + 300 - (W + 300 - 640) * ease), 1820 - bob)
-    if u > T["card"] - .12:  # whip-pan blur into the next card
-        img = img.filter(ImageFilter.BoxBlur(10))
+    # the character slides in and performs
+    pose = POSES[name] if u > .9 else None
+    sp, hop = anim(name, t, u - .9, pose, s=11); k = min(1, u / .3); ease = 1 - (1 - k) ** 3
+    cx = int(W + 300 - (W + 300 - 640) * ease); by = 1820 - hop
+    d.ellipse([cx - 160, by - 14, cx + 160, by + 26], fill=(26, 26, 26))
+    paste_c(img, sp, cx, by); d = ImageDraw.Draw(img)
+    # the character's own thing, in front
+    if g == "candles" and u > 1.6: stamp(d, 360, 1300, "SOLD", LIME, min(1, pop(t, T["cards"][i] + 1.6, .2)), size=110)
+    if g == "confetti" and u > 1.4:
+        kk = min(1, pop(t, T["cards"][i] + 1.4, .2)); img = daily.button(img, 330 - int(230 * kk), 1250, 330 + int(230 * kk), 1250 + int(96 * kk), fill=LIME, radius=44); d = ImageDraw.Draw(img)
+        if kk > .6: d.text((330, 1250 + int(66 * kk)), "LIKE + FOLLOW", font=archivo(int(44 * kk), 118, 900), fill=BLACK, anchor="ms")
+    if g == "checks" and u > 1.6: stamp(d, 330, 1240, "CHECKED", LIME, min(1, pop(t, T["cards"][i] + 1.6, .2)), size=90, ang=8)
+    if g == "no":
+        for j, (tx, ty) in enumerate([(300, 1120), (560, 1300), (330, 1480)]):
+            tj = .9 + j * .45
+            if u > tj: stamp(d, tx, ty, "NO", (255, 92, 70), min(1, pop(t, T["cards"][i] + tj, .18)), size=130, ang=[-14, 9, -6][j])
+        if u > 2.6: stamp(d, 820, 1040, "yes", LIME, min(1, pop(t, T["cards"][i] + 2.6, .2)), size=70, ang=4)
+    if g == "log" and u > 2.8: stamp(d, 330, 1620, "PATTERN", ROSE, min(1, pop(t, T["cards"][i] + 2.8, .2)), size=90, ang=-8)
+    if u > T["card"] - .12: img = img.filter(ImageFilter.BoxBlur(10))
     return img
 def lineup(img, cx, by, s, alpha=1.0, gap=16):
     sps = [scaled(SPR[c[0]], s) for c in CAST]; tw = sum(p.width for p in sps) + gap * 4; x = cx - tw // 2
@@ -243,43 +328,70 @@ def bolt(d, x0, y0, x1, y1, seed, w=10, col=(255, 255, 255)):
     pts.append((x1, y1)); d.line(pts, fill=col, width=w)
     for k in range(2, n - 1, 2):  # branches
         px, py = pts[k]; d.line([(px, py), (px + r.randint(-160, 160), py + r.randint(80, 200))], fill=col, width=max(3, w // 2))
+def window_scene(d, x, y, w, h, kind, u, r):
+    """Tiny things happening in the building's windows."""
+    d.rectangle([x, y, x + w, y + h], fill=(255, 220, 130) if kind != "dark" else (20, 20, 30))
+    if kind == "party":
+        for k in range(5): d.rectangle([x + 6 + k * (w // 5), y + 6 + int(8 * abs(math.sin(u * 7 + k))), x + 6 + k * (w // 5) + 6, y + 6 + int(8 * abs(math.sin(u * 7 + k))) + 6], fill=[LIME, ROSE, (120, 200, 255), GOLD][k % 4])
+        for k in range(3): d.rectangle([x + 10 + k * 20, y + h - 24 + int(6 * abs(math.sin(u * 9 + k))), x + 20 + k * 20, y + h - 2], fill=(40, 30, 20))
+    elif kind == "desk":
+        d.rectangle([x + 8, y + h - 20, x + w - 8, y + h - 14], fill=(90, 60, 30)); d.rectangle([x + w // 2 - 8, y + h - 36, x + w // 2 + 8, y + h - 20], fill=(40, 30, 20))
+        d.rectangle([x + 10, y + h - 34, x + 26, y + h - 22], fill=(120, 200, 255) if int(u * 4) % 2 else (60, 120, 200))
+    elif kind == "cat":
+        d.ellipse([x + w // 2 - 10, y + h - 18, x + w // 2 + 10, y + h - 4], fill=(30, 20, 20)); d.polygon([(x + w // 2 - 8, y + h - 16), (x + w // 2 - 6, y + h - 26), (x + w // 2 - 2, y + h - 16)], fill=(30, 20, 20))
+        d.polygon([(x + w // 2 + 2, y + h - 16), (x + w // 2 + 6, y + h - 26), (x + w // 2 + 8, y + h - 16)], fill=(30, 20, 20))
+        d.line([(x + w // 2 + 10, y + h - 10), (x + w // 2 + 18 + int(4 * math.sin(u * 5)), y + h - 20)], fill=(30, 20, 20), width=3)
+    elif kind == "plant":
+        d.rectangle([x + w // 2 - 6, y + h - 14, x + w // 2 + 6, y + h - 4], fill=(150, 80, 50)); d.ellipse([x + w // 2 - 12, y + h - 34, x + w // 2 + 12, y + h - 12], fill=(60, 140, 70))
+    elif kind == "tv":
+        d.rectangle([x + 8, y + 8, x + w - 8, y + h - 14], fill=[(60, 120, 220), (220, 80, 80), (80, 200, 120)][int(u * 3 + r) % 3])
 def ledge(t, t0, text_fn, dur_flash=(0.0, 0.9, 1.4)):
-    """Rooftop ledge, rain, city silhouettes, the boss standing on the edge; lightning flashes at t0 + each dur_flash."""
+    """Four quadrants: Q1 (top right) the boss on the roof edge, Q4 (bottom right) his building with life in the windows,
+    Q2 + Q3 (the left half) the city far behind, with the words left-aligned and lightning timed to them."""
     u = t - t0; img = Image.new("RGB", (W, H), (6, 8, 14)); d = ImageDraw.Draw(img)
     fl = max([max(0, 1 - (u - f) / .25) for f in dur_flash if u >= f] + [0])
-    sky = tuple(int(c + (200 - c) * fl * .9) for c in (14, 16, 30))
-    d.rectangle([0, 0, W, 1500], fill=sky)
+    sky = tuple(int(c + (190 - c) * fl * .9) for c in (12, 14, 28))
+    d.rectangle([0, 0, W, H], fill=sky)
     r = random.Random(3)
-    for i in range(14):  # far towers
-        bx = i * 90 - 40; bh = r.randint(260, 640); d.rectangle([bx, 1500 - bh, bx + 70, 1500], fill=(10, 10, 18) if fl < .3 else (30, 30, 46))
-        for wy in range(1500 - bh + 30, 1480, 46):
-            for wx in range(bx + 10, bx + 60, 22):
-                if r.random() < .35: d.rectangle([wx, wy, wx + 8, wy + 14], fill=(255, 220, 120) if r.random() < .8 else (120, 200, 255))
-    for i in range(70):  # rain
-        rr = random.Random(i + int(u * 40)); x = rr.randint(0, W); y = rr.randint(0, 1500); d.line([(x, y), (x - 10, y + 60)], fill=(80, 90, 120), width=2)
+    for i in range(12):  # far city, left half and behind
+        bx = i * 96 - 60; bh = r.randint(220, 560); d.rectangle([bx, 1700 - bh, bx + 76, 1700], fill=(9, 9, 16) if fl < .3 else (26, 26, 40))
+        for wy in range(1700 - bh + 30, 1680, 44):
+            for wx in range(bx + 10, bx + 66, 22):
+                if r.random() < .3: d.rectangle([wx, wy, wx + 8, wy + 14], fill=(255, 220, 120) if r.random() < .8 else (120, 200, 255))
+    d.rectangle([0, 1700, W, H], fill=(8, 8, 12))
+    for i in range(60):  # rain
+        rr = random.Random(i + int(u * 40)); x = rr.randint(0, W); y = rr.randint(0, H); d.line([(x, y), (x - 10, y + 60)], fill=(70, 80, 110), width=2)
     if fl > 0:
-        d2 = ImageDraw.Draw(img)
-        bolt(d2, W // 2 + 250, 0, W // 2 + 120, 760, int(t0 * 10) + int(u * 4), w=12)
-        bolt(d2, 160, 0, 260, 620, int(t0 * 10) + 7 + int(u * 4), w=6, col=(220, 230, 255))
-    d.rectangle([0, 1500, W, H], fill=(14, 14, 18)); d.rectangle([0, 1500, W, 1540], fill=(30, 30, 36))   # the ledge
-    cape = rim(scaled(BOSS, 9), LIME if fl < .4 else (255, 255, 255), 5)
-    paste_c(img, cape, W // 2 + 170, 1512)   # on the edge, off to the right, text on the left
+        bolt(d, 420, 0, 300, 560, int(t0 * 10) + int(u * 4), w=12)
+        bolt(d, 130, 0, 200, 420, int(t0 * 10) + 7 + int(u * 4), w=6, col=(220, 230, 255))
+    # the building: Q4, with the roof at y 960
+    BX, BY = 560, 960
+    d.rectangle([BX, BY, W, H], fill=(18, 18, 24)); d.rectangle([BX, BY, W, BY + 30], fill=(44, 44, 52)); d.rectangle([BX - 16, BY - 14, W, BY + 4], fill=(60, 60, 70))
+    kinds = ["party", "desk", "cat", "dark", "plant", "tv", "desk", "dark", "party", "cat", "tv", "plant", "dark", "desk", "party", "cat"]
+    k = 0
+    for wy in range(BY + 90, H - 60, 200):
+        for wx in range(BX + 50, W - 110, 130):
+            window_scene(d, wx, wy, 100, 120, kinds[k % len(kinds)], u + k, k); k += 1
+    cape = rim(scaled(BOSS, 7), LIME if fl < .4 else (255, 255, 255), 4)
+    paste_c(img, cape, 830, BY - 8)   # Q1: on the edge
     text_fn(d, u, fl); return img
 def sc_no1(t):
     def txt(d, u, fl):
         kicker(d, "OFFICIAL RANKING", col=INK if fl > .3 else MUT)
-        slam(d, "THE BOSS", 560, INK, t, T["no1"] + .05, start=230)
-        slam(d, "IS #1.", 800, GOLD, t, T["no1"] + .45, start=300)
-    img = ledge(t, T["no1"], txt, dur_flash=(0.05, 0.5, 1.1))
+        slam(d, "THE", 620, INK, t, T["no1"] + .05, start=200, maxw=460)
+        slam(d, "BOSS", 820, INK, t, T["no1"] + .25, start=200, maxw=460)
+        slam(d, "IS #1.", 1180, GOLD, t, T["no1"] + .75, start=200, maxw=460)
+    img = ledge(t, T["no1"], txt, dur_flash=(0.05, 0.75, 1.4))
     u = t - T["no1"]
     return shift(img, *shake(t, 8)) if .45 < u < .8 else img
 def sc_ledge2(t):
     def txt(d, u, fl):
         kicker(d, "BACK TO BUSINESS", col=INK if fl > .3 else MUT)
-        slam(d, "THE BOSS.", 560, INK, t, T["ledge2"] + .05, start=230)
-        slam(d, "#1.*", 800, GOLD, t, T["ledge2"] + .5, start=300)
-        if u > 1.0: d.text((SAFE_L + 12, 880), "*at the office", font=mono(30, True), fill=INK, anchor="ls")
-    img = ledge(t, T["ledge2"], txt, dur_flash=(0.0, 0.55, 1.3))
+        slam(d, "THE", 620, INK, t, T["ledge2"] + .05, start=200, maxw=460)
+        slam(d, "BOSS.", 820, INK, t, T["ledge2"] + .2, start=200, maxw=460)
+        slam(d, "#1.*", 1180, GOLD, t, T["ledge2"] + .6, start=220, maxw=460)
+        if u > 1.1: d.text((SAFE_L + 12, 1260), "*at the office", font=mono(30, True), fill=INK, anchor="ls")
+    img = ledge(t, T["ledge2"], txt, dur_flash=(0.0, 0.6, 1.3))
     return shift(img, *shake(t, 10)) if .5 < t - T["ledge2"] < .85 else img
 def sc_yet(t):
     u = t - T["yet"]; img = Image.new("RGB", (W, H), BLACK); d = ImageDraw.Draw(img)
@@ -383,7 +495,9 @@ LINES = [  # the back and forth: (start, who, text, size)
     (T["what"], "her", "…what now?", 60),
     (T["ask"], "him", "Can I have the money so the bots can trade for real?", 54),
     (T["why"], "her", "Why? So you can look online for fake points?", 50),
-    (T["fancy"], "him", "So we can be BIG BOY FANCY.", 62),
+    (T["hypo"], "him", "They're not fake. They're… hypothetical.", 54),
+    (T["askbots"], "her", "Did you ask the bots?", 56),
+    (T["botsaid"], "him", "The bots said to ask you.", 58),
     (T["fine"], "her", "…fine.", 90),
     (T["honey"], "her", "ok honey, here…", 60)]
 def sc_flash(t):
