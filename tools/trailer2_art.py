@@ -225,6 +225,76 @@ def fawn_hd(shadow=False, v=None):
             d.ellipse([fx - 1, 13, fx + 1, 15], fill=GOLD)
     return _pad(im, 2)
 
+# ---------------------------------------------------------------- the 64x64 STANDARD (V22/V23: every official avatar is a 64x64 pixel grid, ~45x56 figure,
+# 2 px near-black outline, soft 3-4 tone shading, big black eyes with a white dot, small arms and stub legs). The fawn must match it.
+def fawn64(shadow=False, v=None):
+    v = v or {}
+    im = Image.new("RGBA", (64, 64))
+    coat = v.get("coat", ((184, 122, 72, 255), (134, 82, 44, 255), (246, 228, 200, 255)))
+    C, BE = coat[0][:3], coat[2][:3]; IN = v.get("inner", (238, 178, 160, 255))[:3]
+    if shadow: C, BE, IN = (40, 28, 36), (54, 42, 50), (62, 40, 56)
+    RC, RB, RI = _ramp(C), _ramp(BE), _ramp(IN)
+    if shadow:
+        RC = [(14, 8, 12), (24, 16, 22), (40, 28, 36), (58, 44, 54), (78, 62, 74)]; RB = [(22, 14, 20), (34, 24, 32), (54, 42, 50), (70, 56, 66), (90, 74, 86)]; RI = RB
+    OUT = (34, 22, 18) if not shadow else (6, 3, 6)
+    acc_col = v.get("acc_col", ((255, 140, 180, 255), (255, 196, 216, 255))); PINK, PINK2 = acc_col[0][:3], acc_col[1][:3]; GOLD = (255, 220, 120)
+    body = Image.new("RGBA", (64, 64)); B = (.3, .5, .8, .97)   # gentle: mostly base, light on top-left, shade at the bottom edge
+    # ears out to the sides, inner ear
+    for poly, box in (([(22, 24), (8, 14), (11, 8), (20, 9), (30, 17)], (8, 8, 30, 24)), ([(42, 24), (56, 14), (53, 8), (44, 9), (34, 17)], (34, 8, 56, 24))):
+        _sphere(lambda d, p=poly: d.polygon(p, fill=255), box, RC, body, bands=B, rim=False)
+    for poly, box in (([(21, 20), (12, 14), (14, 11), (26, 17)], (12, 11, 26, 20)), ([(43, 20), (52, 14), (50, 11), (38, 17)], (38, 11, 52, 20))):
+        _sphere(lambda d, p=poly: d.polygon(p, fill=255), box, RI, body, bands=(.35, .6, .9, 1.1), rim=False)
+    _sphere(lambda d: d.ellipse([19, 36, 45, 58], fill=255), (19, 36, 45, 58), RC, body, bands=B)          # body
+    _sphere(lambda d: d.ellipse([13, 10, 51, 44], fill=255), (13, 10, 51, 44), RC, body, bands=B)          # head
+    _sphere(lambda d: d.ellipse([25, 42, 39, 57], fill=255), (25, 42, 39, 57), RB, body, bands=(.35, .6, .9, 1.1), rim=False)   # belly
+    _sphere(lambda d: d.ellipse([25, 29, 39, 42], fill=255), (25, 29, 39, 42), RB, body, bands=(.35, .6, .9, 1.1), rim=False)   # muzzle
+    bd = ImageDraw.Draw(body)
+    bd.ellipse([15, 42, 21, 50], fill=RC[2]); bd.ellipse([43, 42, 49, 50], fill=RC[2]); bd.rectangle([16, 48, 20, 49], fill=RC[1]); bd.rectangle([44, 48, 48, 49], fill=RC[1])   # arms
+    for x in (25, 34): bd.rounded_rectangle([x, 56, x + 5, 61], radius=1, fill=RC[1]); bd.rectangle([x, 60, x + 5, 61], fill=RC[0])   # legs + hooves
+    if v.get("spots", True):
+        SP = RC[4] if not shadow else (84, 70, 82)
+        for (x, y) in ((19, 16), (31, 13), (44, 18), (40, 24), (20, 26), (22, 46), (41, 48)): bd.rectangle([x, y, x + 1, y + 1], fill=SP)
+    a = body.split()[3].filter(ImageFilter.MaxFilter(3)); o = Image.new("RGBA", (64, 64), OUT + (255,)); o.putalpha(a)
+    im.alpha_composite(o); im.alpha_composite(body); d = ImageDraw.Draw(im)
+    # eyes: big black, white dot (the roster look), lashes; nose; blush
+    EYE = (26, 16, 16) if not shadow else (8, 4, 8); eyes = v.get("eyes", "big")
+    for x0 in (19, 36):
+        if eyes == "sleepy":
+            d.ellipse([x0, 23, x0 + 8, 31], fill=EYE); d.rectangle([x0, 21, x0 + 8, 25], fill=RC[2]); d.rectangle([x0 + 2, 26, x0 + 3, 27], fill=(255, 255, 255))
+        elif eyes == "button":
+            d.ellipse([x0 + 1, 22, x0 + 7, 29], fill=EYE); d.rectangle([x0 + 2, 23, x0 + 3, 24], fill=(255, 255, 255))
+        else:
+            d.ellipse([x0, 20, x0 + 8, 30], fill=EYE); d.rectangle([x0 + 2, 22, x0 + 3, 23], fill=(255, 255, 255)); d.point([(x0 + 6, 27)], fill=(255, 255, 255))
+        lx = x0 - 1 if x0 < 32 else x0 + 9; sd = -1 if x0 < 32 else 1
+        d.line([(lx, 21), (lx + sd * 2, 19)], fill=OUT); d.line([(lx, 24), (lx + sd * 2, 23)], fill=OUT)
+    d.rectangle([30, 33, 33, 35], fill=EYE); d.point([(30, 33)], fill=(120, 100, 110))
+    d.point([(31, 36), (32, 36), (30, 37), (33, 37)], fill=OUT)   # tiny smile
+    d.rectangle([15, 31, 19, 33], fill=(236, 150, 160) if not shadow else (80, 44, 62)); d.rectangle([45, 31, 49, 33], fill=(236, 150, 160) if not shadow else (80, 44, 62))
+    acc = v.get("acc", "bow")
+    if acc == "bow":
+        d.polygon([(32, 42), (26, 39), (26, 46)], fill=PINK); d.polygon([(32, 42), (38, 39), (38, 46)], fill=PINK); d.rectangle([31, 41, 33, 43], fill=PINK2); d.point([(27, 40), (37, 40)], fill=PINK2)
+    elif acc == "pearls":
+        for k in range(6): d.rectangle([24 + k * 3, 40 + (1 if k in (0, 5) else 2 if k in (1, 4) else 3), 25 + k * 3, 41 + (1 if k in (0, 5) else 2 if k in (1, 4) else 3)], fill=(246, 242, 236))
+    elif acc == "scarf":
+        d.rectangle([24, 39, 40, 42], fill=PINK); d.rectangle([36, 42, 40, 50], fill=PINK); d.rectangle([25, 39, 39, 39], fill=PINK2)
+    elif acc == "bell":
+        d.rectangle([24, 39, 40, 41], fill=PINK); d.ellipse([29, 41, 35, 47], fill=GOLD); d.point([(30, 42)], fill=(255, 248, 200)); d.point([(32, 46)], fill=OUT)
+    head = v.get("head", "flower")
+    if head == "flower":
+        fx, fy = 47, 11
+        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)): d.rectangle([fx + dx - 1, fy + dy - 1, fx + dx + 1, fy + dy + 1], fill=PINK)
+        d.point([(fx, fy)], fill=GOLD)
+    elif head == "crown":
+        d.polygon([(26, 12), (26, 5), (29, 8), (32, 4), (35, 8), (38, 5), (38, 12)], fill=GOLD); d.point([(32, 8), (28, 9), (36, 9)], fill=PINK); d.line([(27, 11), (37, 11)], fill=(200, 150, 40))
+    elif head == "headbow":
+        d.polygon([(32, 10), (26, 6), (26, 14)], fill=PINK); d.polygon([(32, 10), (38, 6), (38, 14)], fill=PINK); d.rectangle([31, 9, 33, 11], fill=PINK2)
+    elif head == "crownflowers":
+        for fx in (23, 32, 41):
+            col = PINK if fx != 32 else (255, 255, 255)
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)): d.point([(fx + dx, 10 + dy)], fill=col)
+            d.point([(fx, 10)], fill=GOLD)
+    return im
+
 if __name__ == "__main__":
     import sys
     p, f, g = piggy(), fawn(), fawn(True)

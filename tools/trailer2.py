@@ -89,8 +89,8 @@ SPR = {c[0]: outline(pad(load(c[3]), 2), (0, 0, 0), 1) for c in CAST}
 BOSS = load("boss_shadow_1x")
 import trailer2_art as ART
 ROSE = (255, 150, 190)
-FAWN = ART.fawn_hd()
-FAWNS = ART.fawn_hd(True)
+FAWN = ART.fawn64()   # the 64x64 standard (V22/V23)
+FAWNS = ART.fawn64(True)
 PIG = ART.piggy()
 COIN = None
 def coin(s):
@@ -320,7 +320,7 @@ def sc_boss(t):
             d.rectangle([x0 + 8, y0 + 8, x0 + 8 + int((x1 - x0 - 16) * k), y0 + 36], fill=LIME)
             d.text((x1 + 24, y0 + 38), "POWER: %d%%" % int(k * 100) if k < 1 else "POWER: MAX", font=mono(30, True), fill=LIME, anchor="ls")
     return img
-FAWNL = rim(scaled(FAWNS, 5), ROSE, 6)
+FAWNL = rim(scaled(FAWNS, 10), ROSE, 6)
 def bolt(d, x0, y0, x1, y1, seed, w=10, col=(255, 255, 255)):
     r = random.Random(seed); pts = [(x0, y0)]; n = 7
     for k in range(1, n):
@@ -518,7 +518,7 @@ def sc_flash(t):
             if 0 < y < 1700 and 0 < x < W: img.paste(COIN, (int(x), int(y)), COIN)
     # her: the fawn stands tall on the right; him: kneeling on the left
     lvl = sum(t >= b for b in T["beg"])
-    fz = rim(scaled(FAWN, 3.5), ROSE, 4); paste_c(img, fz, 880, 1580 - (int(6 * abs(math.sin(u * 2))) if t < T["fine"] else 0))
+    fz = rim(scaled(FAWN, 7), ROSE, 4); paste_c(img, fz, 880, 1580 - (int(6 * abs(math.sin(u * 2))) if t < T["fine"] else 0))
     boss = rim(scaled(BOSS, 8), LIME, 4)   # full body, legs and all (the boss 11/1: "I have no legs")
     paste_c(img, boss, 220, 1580 - int((6 + lvl * 6) * abs(math.sin(u * (6 + lvl * 3)))))
     shown = [x for x in LINES if t >= x[0]]
