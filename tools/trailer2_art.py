@@ -37,7 +37,7 @@ def piggy():
     d.rounded_rectangle([26, 11, 42, 14], radius=1, fill=(90, 30, 50, 255))
     return _outline(_pad(im, 2), (60, 24, 40), 1)
 
-def fawn(shadow=False):
+def fawn(shadow=False, v=None):
     """60x80 fawn, real deer colours: warm chestnut coat, cream belly and muzzle, big dark doe eyes with long lashes and
     two catchlights, soft rosy inner ears, white dapples, a tiny black nose, a pink flower by one ear and a pink bow collar.
     shadow=True gives the shadow-realm version (same shapes, near-black palette), for the reveal before the flashback."""
@@ -49,18 +49,30 @@ def fawn(shadow=False):
         C, CD, CL, CR, BE = (176, 112, 66, 255), (132, 80, 44, 255), (206, 146, 92, 255), (236, 176, 150, 255), (246, 226, 196, 255)
         SPOT, EYEW, EYE, NOSE = (250, 240, 220, 255), (255, 255, 255, 255), (48, 30, 26, 255), (26, 16, 14, 255)
     PINK, PINK2, GOLD = (255, 140, 180, 255), (255, 190, 215, 255), (255, 220, 120, 255)
+    v = v or {}
+    if v.get("coat") and not shadow: C, CD, CL, CR, BE = v["coat"]
+    if v.get("acc_col"): PINK, PINK2 = v["acc_col"]
+    if v.get("eye"): EYE = v["eye"]
     # legs (slim) + hooves
     for x in (22, 34):
         d.rectangle([x, 62, x + 4, 76], fill=CD); d.rectangle([x, 75, x + 4, 78], fill=(40, 26, 22, 255))
     # body + cream belly + dapples
     d.ellipse([15, 40, 45, 66], fill=C); d.ellipse([21, 48, 39, 65], fill=BE)
-    for e in ([19, 46, 22, 49], [38, 44, 41, 47], [23, 42, 25, 44], [40, 52, 42, 54], [17, 54, 19, 56]): d.ellipse(e, fill=SPOT)
+    if v.get("spots", True):
+        for e in ([19, 46, 22, 49], [38, 44, 41, 47], [23, 42, 25, 44], [40, 52, 42, 54], [17, 54, 19, 56]): d.ellipse(e, fill=SPOT)
     # neck
     d.rectangle([26, 32, 34, 42], fill=C)
-    # collar: pink bow, on the chest
-    d.rectangle([23, 43, 37, 45], fill=PINK)
-    d.polygon([(30, 44), (24, 40), (24, 49)], fill=PINK); d.polygon([(30, 44), (36, 40), (36, 49)], fill=PINK)
-    d.rectangle([29, 43, 31, 45], fill=PINK2)
+    acc = v.get("acc", "bow")
+    if acc == "bow":      # pink bow on the chest
+        d.rectangle([23, 43, 37, 45], fill=PINK)
+        d.polygon([(30, 44), (24, 40), (24, 49)], fill=PINK); d.polygon([(30, 44), (36, 40), (36, 49)], fill=PINK)
+        d.rectangle([29, 43, 31, 45], fill=PINK2)
+    elif acc == "pearls":
+        for k in range(7): d.ellipse([22 + k * 2.6 - 1, 43 + abs(k - 3) * -1 + 2, 22 + k * 2.6 + 1, 43 + abs(k - 3) * -1 + 4], fill=(240, 236, 230, 255))
+    elif acc == "scarf":
+        d.rectangle([23, 42, 37, 47], fill=PINK); d.rectangle([33, 47, 37, 56], fill=PINK); d.rectangle([34, 44, 36, 46], fill=PINK2)
+    elif acc == "bell":
+        d.rectangle([23, 43, 37, 45], fill=PINK); d.ellipse([27, 45, 33, 51], fill=GOLD); d.point([(30, 50)], fill=(120, 80, 20, 255))
     # ears: big soft leaves, rosy inside, tilted out
     for cx, ang in ((11, -40), (49, 40)):
         e = Image.new("RGBA", (24, 13)); ed = ImageDraw.Draw(e)
@@ -72,20 +84,47 @@ def fawn(shadow=False):
     d.ellipse([13, 6, 47, 38], fill=C); d.ellipse([18, 8, 34, 18], fill=CL)
     d.ellipse([22, 22, 38, 41], fill=BE)
     d.ellipse([27, 32, 33, 37], fill=NOSE); d.point([(28, 33)], fill=(120, 100, 110, 255))     # glossy nose
-    for e in ([24, 8, 27, 11], [34, 10, 36, 12], [20, 13, 22, 15], [38, 15, 40, 17]): d.ellipse(e, fill=SPOT)
+    if v.get("spots", True):
+        for e in ([24, 8, 27, 11], [34, 10, 36, 12], [20, 13, 22, 15], [38, 15, 40, 17]): d.ellipse(e, fill=SPOT)
     # eyes: big doe eyes, two catchlights, lashes, blush
+    big_eyes = v.get("eyes", "big")
     for x0, side in ((16, -1), (34, 1)):
-        d.ellipse([x0, 16, x0 + 10, 27], fill=EYEW)
-        d.ellipse([x0 + 1, 17, x0 + 9, 26], fill=EYE)
-        d.rectangle([x0 + 3, 18, x0 + 5, 20], fill=(255, 255, 255, 255)); d.point([(x0 + 7, 23)], fill=(255, 255, 255, 255))
+        if big_eyes == "big":
+            d.ellipse([x0, 16, x0 + 10, 27], fill=EYEW); d.ellipse([x0 + 1, 17, x0 + 9, 26], fill=EYE)
+            d.rectangle([x0 + 3, 18, x0 + 5, 20], fill=(255, 255, 255, 255)); d.point([(x0 + 7, 23)], fill=(255, 255, 255, 255))
+        elif big_eyes == "sleepy":  # half-lidded, calm
+            d.ellipse([x0, 18, x0 + 10, 27], fill=EYEW); d.ellipse([x0 + 1, 19, x0 + 9, 26], fill=EYE)
+            d.rectangle([x0, 16, x0 + 10, 20], fill=C); d.rectangle([x0 + 3, 21, x0 + 4, 22], fill=(255, 255, 255, 255))
+        else:  # "button": smaller, rounder
+            d.ellipse([x0 + 1, 18, x0 + 9, 26], fill=EYE); d.rectangle([x0 + 3, 19, x0 + 4, 20], fill=(255, 255, 255, 255))
         lx = x0 if side < 0 else x0 + 10
         for k in range(3): d.line([(lx, 17 + k * 2), (lx + side * 3, 14 + k * 2)], fill=NOSE)
     d.ellipse([15, 27, 21, 30], fill=(255, 150, 160, 150)); d.ellipse([39, 27, 45, 30], fill=(255, 150, 160, 150))
-    # flower by the right ear
-    fx, fy = 44, 7
-    for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)): d.ellipse([fx + dx - 2, fy + dy - 2, fx + dx + 2, fy + dy + 2], fill=PINK)
-    d.ellipse([fx - 1, fy - 1, fx + 1, fy + 1], fill=GOLD)
+    head = v.get("head", "flower")
+    if head == "flower":
+        fx, fy = 44, 7
+        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)): d.ellipse([fx + dx - 2, fy + dy - 2, fx + dx + 2, fy + dy + 2], fill=PINK)
+        d.ellipse([fx - 1, fy - 1, fx + 1, fy + 1], fill=GOLD)
+    elif head == "crown":
+        d.polygon([(23, 8), (23, 1), (26, 5), (30, 0), (34, 5), (37, 1), (37, 8)], fill=GOLD); d.point([(30, 4), (26, 6), (34, 6)], fill=PINK)
+    elif head == "headbow":
+        d.polygon([(30, 6), (24, 2), (24, 10)], fill=PINK); d.polygon([(30, 6), (36, 2), (36, 10)], fill=PINK); d.rectangle([29, 5, 31, 7], fill=PINK2)
+    elif head == "crownflowers":
+        for fx in (22, 30, 38):
+            for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)): d.ellipse([fx + dx - 1, 5 + dy - 1, fx + dx + 1, 5 + dy + 1], fill=PINK if fx != 30 else (255, 255, 255, 255))
+            d.point([(fx, 5)], fill=GOLD)
     return _outline(_pad(im, 2), (40, 24, 20) if not shadow else (10, 6, 10), 1)
+
+DEER = [  # 8 takes for the boss to pick from (V25)
+    ("Chestnut", dict()),
+    ("Honey", dict(coat=((214, 160, 96, 255), (168, 116, 60, 255), (236, 196, 140, 255), (246, 196, 170, 255), (252, 238, 212, 255)), head="headbow")),
+    ("Cream", dict(coat=((232, 206, 168, 255), (190, 156, 112, 255), (246, 230, 204, 255), (246, 200, 190, 255), (255, 248, 236, 255)), acc="pearls", eyes="sleepy")),
+    ("Cocoa", dict(coat=((112, 70, 44, 255), (76, 44, 28, 255), (150, 100, 66, 255), (220, 150, 140, 255), (236, 214, 190, 255)), acc="scarf", head="crown", acc_col=((255, 120, 150, 255), (255, 180, 200, 255)))),
+    ("Rosewood", dict(coat=((190, 120, 110, 255), (140, 80, 76, 255), (220, 160, 150, 255), (250, 190, 190, 255), (252, 232, 226, 255)), head="crownflowers", acc="bell")),
+    ("Dun", dict(coat=((160, 142, 120, 255), (112, 96, 80, 255), (196, 180, 156, 255), (230, 190, 180, 255), (240, 232, 220, 255)), eyes="button", spots=False, acc_col=((120, 200, 255, 255), (190, 230, 255, 255)))),
+    ("Snow", dict(coat=((236, 236, 240, 255), (190, 190, 200, 255), (250, 250, 252, 255), (250, 200, 210, 255), (255, 255, 255, 255)), spots=False, head="headbow", acc="pearls", acc_col=((200, 160, 255, 255), (230, 210, 255, 255)))),
+    ("Sunset", dict(coat=((226, 134, 78, 255), (178, 92, 46, 255), (246, 176, 120, 255), (250, 200, 170, 255), (255, 238, 210, 255)), head="crown", acc="bow", acc_col=((255, 100, 140, 255), (255, 170, 190, 255)), eyes="big")),
+]
 
 if __name__ == "__main__":
     import sys
