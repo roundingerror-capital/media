@@ -2,7 +2,7 @@
 1080x1920, 30 fps, ~45.6 s. Cold open -> "I'm an AI trading bot" -> five roster cards -> the Boss (shadow realm, never named)
 -> VHS flashback "how it started" -> back to business -> end card (white glyphs, lime handle).
 Ad-safe: synthesized score only (tools/trailer2_score.py), no Gemini songs, no broker or app branding, no numbers, no fund size.
-The funder in the flashback is a fictional crowned piggy bank (Rules §3: no personal data about anyone, ever).
+The flashback: the boss begs his OWN piggy bank, then cracks it open (v2, 2026-11-01; Rules §3: no other person, real or implied).
 Usage: python3 tools/trailer2.py <out.mp4> <cover.jpg> <workdir>"""
 import os, sys, math, random, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -75,7 +75,7 @@ CAST = [  # name, role, line, sprite, accent
 SPR = {c[0]: outline(pad(load(c[3]), 2), (0, 0, 0), 1) for c in CAST}
 BOSS = load("boss_shadow_1x")
 def piggy():
-    """Original pixel art: THE HOUSEHOLD BANK, a crowned piggy bank (fictional; stands in for any real person)."""
+    """Original pixel art: the boss's own piggy bank (no crown: it stands in for nobody)."""
     im = Image.new("RGBA", (52, 46)); d = ImageDraw.Draw(im)
     P, PD, PL = (244, 150, 170, 255), (206, 104, 132, 255), (255, 196, 210, 255)
     d.ellipse([4, 14, 44, 40], fill=P); d.ellipse([10, 17, 30, 27], fill=PL)        # body + shine
@@ -85,8 +85,6 @@ def piggy():
     d.rectangle([33, 20, 35, 22], fill=(20, 20, 20, 255))                           # eye
     d.rectangle([18, 14, 28, 15], fill=(110, 40, 60, 255))                          # coin slot
     d.line([(2, 24), (0, 21), (3, 19)], fill=PD)                                    # tail
-    d.polygon([(16, 12), (16, 3), (20, 8), (24, 1), (28, 8), (32, 3), (32, 12)], fill=GOLD + (255,))  # crown
-    d.point([(24, 6), (20, 10), (28, 10)], fill=(255, 70, 90, 255))
     return outline(pad(im, 2), (40, 20, 10), 1)
 PIG = piggy()
 COIN = None
@@ -130,7 +128,8 @@ def sc_cold(t):
     return img
 CHART = []
 _r = random.Random(42); _v = 0
-for _i in range(60): _v += _r.gauss(.012, .05); CHART.append(_v)
+for _i in range(60): _v += _r.gauss(0, .06); CHART.append(_v)
+CHART = [v - CHART[-1] * i / 59 for i, v in enumerate(CHART)]  # zigzag that ends where it started: an illustration, never a performance line (Roz 11/1)
 def sc_bot(t):
     u = t - T["bot"]; img = Image.new("RGB", (W, H), BLACK); d = ImageDraw.Draw(img)
     n = int(min(1, u / 1.6) * len(CHART))
@@ -138,6 +137,7 @@ def sc_bot(t):
         lo, hi = min(CHART), max(CHART); pts = [(SAFE_L + i * (W - 2 * SAFE_L) / 59, 1650 - (v - lo) / (hi - lo) * 520) for i, v in enumerate(CHART[:n])]
         d.line(pts, fill=bl(LIME, .5), width=8); d.ellipse([pts[-1][0] - 12, pts[-1][1] - 12, pts[-1][0] + 12, pts[-1][1] + 12], fill=LIME)
     kicker(d, "WHO ARE WE?")
+    if n > 1: d.text((SAFE_L + 12, 1120), "chart: illustration, not fund performance", font=mono(24, True), fill=MUT, anchor="ls")
     if u > .05: d.text((SAFE_L + 12, 520), "I'M AN", font=archivo(110, 125, 900), fill=INK, anchor="ls")
     slam(d, "AI TRADING", 700, LIME, t, T["bot"] + .25, start=240)
     slam(d, "BOT.", 900, LIME, t, T["bot"] + .45, start=240)
@@ -270,6 +270,10 @@ def sc_flash(t):
     pig = scaled(PIG, 9)
     pb = 1170 - (int(10 * abs(math.sin(u * 9))) if T["fine"] <= t < T["fine"] + .6 else 0)
     paste_c(img, pig, 800, pb)
+    if t >= T["coins"]:  # cracked open
+        d = ImageDraw.Draw(img); cx0, cy0 = 800, pb - pig.height // 2
+        for k, (dx, dy) in enumerate([(-60, -90), (40, -70), (-20, 80), (70, 60), (-90, 20)]):
+            d.line([(cx0, cy0), (cx0 + dx, cy0 + dy), (cx0 + dx * 1.6 + (k % 2) * 20, cy0 + dy * 1.5)], fill=(40, 20, 10), width=8)
     # the boss, kneeling and begging (bob gets more desperate with each PLEASE)
     lvl = sum(t >= b for b in T["beg"]); boss = scaled(BOSS, 9)
     boss = boss.crop((0, 0, boss.width, int(boss.height * .82)))
@@ -280,9 +284,9 @@ def sc_flash(t):
             s = [44, 64, 96][i]; txt = ["please.", "please.", "PLEASE."][i]
             bubble(img, SAFE_L + 12 + i * 70, 470 + i * 120 - (i == 2) * 10, txt, max(8, int(s * min(1, pop(t, tb, .15) or .01))), tail=(300, 1100))
     if t >= T["ask"] and t < T["fine"]:
-        bubble(img, SAFE_L + 12, 470, "Can I have the money so the bots can trade for real?", 58, tail=(300, 1100))
+        bubble(img, SAFE_L + 12, 470, "Piggy… can I crack you open so the bots can trade for real?", 58, tail=(300, 1100), maxw=560)
         if t >= T["fancy"]:
-            bubble(img, SAFE_L + 12, 760, "…and we can be BIG BOY FANCY?", 64, tail=(300, 1100))
+            bubble(img, SAFE_L + 12, 840, "…and we can be BIG BOY FANCY?", 64, tail=(300, 1100), maxw=520)
     if t >= T["fine"]:
         bubble(img, 470, 560, "…fine.", 90, tail=(760, 1020), maxw=360)
     if t >= T["coins"]:  # coin shower
@@ -292,7 +296,7 @@ def sc_flash(t):
             if 0 < y < 1700: img.paste(COIN, (x, y), COIN)
     img = vhs(img, t, "HOW IT STARTED")
     d = ImageDraw.Draw(img)
-    d.text((SAFE_L + 12, 1440), "THE BOSS  vs.  THE HOUSEHOLD BANK", font=fit("THE BOSS  vs.  THE HOUSEHOLD BANK", SAFE_R - SAFE_L - 24, 40, wdth=110, wght=900), fill=(255, 240, 200), anchor="ls")
+    d.text((SAFE_L + 12, 1440), "THE BOSS  vs.  HIS OWN PIGGY BANK", font=fit("THE BOSS  vs.  HIS OWN PIGGY BANK", SAFE_R - SAFE_L - 24, 40, wdth=110, wght=900), fill=(255, 240, 200), anchor="ls")
     return img
 def sc_biz(t):
     u = t - T["biz"]; img = Image.new("RGB", (W, H), BLACK); d = ImageDraw.Draw(img)
