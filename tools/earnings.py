@@ -116,7 +116,7 @@ def build_spec(sheet, derive=False):
                [[t + 0.3, t + 4.3, "penny", "Comment!", "point"]], ["penny", "ada", "theo"], 0]); end = t + 4.5
     return {"label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry", "music_start": 7.0,
-            "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.36, "bg_blur": 2.0,
+            "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.26, "bg_blur": 2.0,
             "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
             "intro_cfg": {"tagline": "And this is what the data says ↓"},
             "endcard": {"line1": "LIKE + FOLLOW", "line2": "FOR MORE UPDATES", "show_positions": False},

@@ -355,13 +355,15 @@ def chart_panel(d, vals, labels, y0, y1, note=""):
     """Bars of a series (e.g. a put's P&L as % of the premium, per day). Every value must be on a Theo fact sheet."""
     n = len(vals); lo = min(0, min(vals)); hi = max(0, max(vals)); rng = (hi - lo) or 1
     zero = y0 + (hi / rng) * (y1 - y0); bw = (SAFE_R - M) / n
+    # solid black plate behind the chart (2026-11-01): the safety scan's high-contrast OCR pass misread small labels over the office backdrop
+    d.rounded_rectangle([M - 16, y0 - 52, SAFE_R + 16, y1 + (120 if note else 70)], radius=14, fill="#000000")
     d.line([(M, zero), (SAFE_R, zero)], fill=MUT, width=3)
     for i, (v, lab) in enumerate(zip(vals, labels)):
         x0 = M + i * bw + bw * .18; x1 = M + (i + 1) * bw - bw * .18; yv = zero - v / rng * (y1 - y0)
         d.rectangle([x0, min(zero, yv), x1, max(zero, yv)], fill=RED if v < 0 else LIME)
-        d.text(((x0 + x1) / 2, max(zero, yv) + 34), pctlab(v), font=mono(24, True), fill=INK, anchor="ms")
+        d.text(((x0 + x1) / 2, max(zero, yv) + 36), pctlab(v), font=mono(28 if n <= 6 else 24, True), fill=INK, anchor="ms")
         d.text(((x0 + x1) / 2, y0 - 14), lab, font=mono(22), fill=MUT, anchor="ms")
-    if note: d.text((M, y1 + 90), note, font=mono(22), fill=MUT, anchor="ls")
+    if note: d.text((M, y1 + 100), note, font=mono(22), fill=MUT, anchor="ls")
 
 def threeway_panel(d, cards, y0, quote=""):
     """THE THREE-WAY (decision 20261022-threeway-series-1): SAFER · OURS · RISKIER side by side.
