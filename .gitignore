@@ -1,3 +1,4 @@
 __pycache__/
 *.pyc
-tools/assets/lib/   # asset renders regenerate from tools/assets.py; media never goes to git before approval
+# asset renders regenerate from tools/assets.py; media never goes to git before approval
+tools/assets/lib/
