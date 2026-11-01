@@ -364,7 +364,9 @@ def fawn_v27(shadow=False, v=None):
     # head: wide brow and cheeks that taper to a long muzzle
     _sphere(lambda d: d.ellipse([15, 11, 49, 35], fill=255), (15, 11, 49, 35), RC, body, bands=B)
     _sphere(lambda d: d.polygon([(17, 26), (47, 26), (37, 40), (27, 40)], fill=255), (17, 26, 47, 40), RC, body, bands=B, rim=False)
-    _sphere(lambda d: d.polygon([(26, 31), (38, 31), (36, 41), (28, 41)], fill=255), (26, 31, 38, 41), RB, body, bands=(.04, .16, .55, 1.1), rim=False)   # muzzle: kept light, no grey
+    MID = [tuple((a + b) // 2 for a, b in zip(RC[k], RB[k])) for k in range(5)]   # halfway between coat and muzzle: the blend ring
+    _sphere(lambda d: d.ellipse([25, 29, 39, 43], fill=255), (25, 29, 39, 43), MID, body, bands=(.05, .2, .6, 1.1), rim=False)
+    _sphere(lambda d: d.ellipse([27, 31, 37, 42], fill=255), (27, 31, 37, 42), RB, body, bands=(.04, .16, .55, 1.1), rim=False)   # muzzle: soft oval, no straight line
     bd = ImageDraw.Draw(body)
     SP = (255, 250, 242) if not shadow else (84, 70, 82); FR = (176, 120, 80) if not shadow else (70, 50, 62)
     spots = v.get("spots", "rows")
@@ -395,8 +397,14 @@ def fawn_v27(shadow=False, v=None):
                     if i == len(pts) - 1: col = AT
                     d.point([(X(x), y)], fill=col)
     EYE = (30, 20, 18) if not shadow else (8, 4, 8)
-    for x0 in (19, 38):   # big dark eyes, white dot, lashes
-        d.ellipse([x0, 21, x0 + 7, 30], fill=EYE); d.rectangle([x0 + 2, 23, x0 + 3, 24], fill=(255, 255, 255)); d.point([(x0 + 5, 27)], fill=(255, 255, 255))
+    IRIS, IRIS2, RIM = ((150, 98, 58), (186, 132, 82), (62, 36, 24)) if not shadow else (EYE, EYE, EYE)
+    for x0 in (19, 38):   # big eyes: light brown iris, dark rim, the pupil set inward (a soft gaze to the middle), catchlights
+        inward = 1 if x0 < 32 else -1
+        d.ellipse([x0, 21, x0 + 7, 30], fill=RIM); d.ellipse([x0 + 1, 22, x0 + 6, 29], fill=IRIS)
+        d.rectangle([x0 + 2, 27, x0 + 5, 28], fill=IRIS2)                                                        # lighter lower iris
+        px0 = x0 + (3 if inward > 0 else 2); d.rectangle([px0, 23, px0 + 2, 27], fill=EYE)                       # pupil, shifted toward the nose
+        cx = px0 - 1 if inward > 0 else px0 + 2; d.rectangle([cx, 23, cx + 1, 24], fill=(255, 255, 255))         # catchlight on the outer edge of the pupil
+        d.point([(px0 + (2 if inward > 0 else 0), 27)], fill=(255, 255, 255))
         lx = x0 - 1 if x0 < 32 else x0 + 8; sd = -1 if x0 < 32 else 1
         d.line([(lx, 22), (lx + sd * 2, 20)], fill=OUT); d.line([(lx, 25), (lx + sd * 2, 24)], fill=OUT)
     NO = (56, 36, 30) if not shadow else EYE
@@ -416,13 +424,15 @@ def fawn_v27(shadow=False, v=None):
         for x, col in ((28, (230, 60, 90)), (32, (90, 170, 240)), (36, (230, 60, 90))): d.rectangle([x - 1, 9, x, 10], fill=col); d.point([(x - 1, 9)], fill=(255, 255, 255))
     if v.get("jewels", True):
         G0, G1, G2, G3 = ((150, 100, 24), (214, 166, 48), (248, 214, 104), (255, 246, 200)) if not shadow else ((60, 50, 40), (90, 76, 60), (110, 96, 80), (130, 116, 100))
-        # gold necklace: a thin chain dipping in a soft V where the neck meets the chest, a small drop pendant
-        for x, y in ((28, 43), (29, 44), (30, 45), (31, 45), (33, 45), (34, 45), (35, 44), (36, 43)): d.point([(x, y)], fill=G1 if (x + y) % 2 else G2)
-        d.point([(32, 46)], fill=G1); d.point([(31, 47)], fill=G3); d.point([(32, 47)], fill=G2); d.point([(33, 47)], fill=G1); d.point([(32, 48)], fill=G0)   # tiny drop
-        # gold hoop earrings hanging under each ear
-        for ex in (10, 52):   # under the ear's lower edge, hanging free
-            d.point([(ex, 25), (ex + 1, 25)], fill=G2); d.point([(ex - 1, 26), (ex + 2, 26)], fill=G1); d.point([(ex - 1, 27), (ex + 2, 27)], fill=G1); d.point([(ex, 28), (ex + 1, 28)], fill=G0)
-            d.point([(ex - 1, 26) if ex < 32 else (ex + 2, 26)], fill=G3)
+        # gold choker: a snug band where the neck meets the head, a tiny charm in the middle
+        d.line([(28, 41), (36, 41)], fill=G2); d.line([(28, 42), (36, 42)], fill=G1); d.point([(28, 42), (36, 42)], fill=G0)
+        for x in (29, 31, 33, 35): d.point([(x, 41)], fill=G3 if x < 32 else G2)                                 # light catches the left
+        d.point([(32, 43)], fill=G1); d.point([(32, 44)], fill=G0)
+        # gold studs: three along each long ear's lower edge
+        for ex, ey in ((13, 24), (10, 23), (7, 21)):
+            for x in (ex, 64 - ex - 1):
+                d.point([(x, ey)], fill=G2); d.point([(x, ey + 1)], fill=G0)
+            d.point([(ex, ey)], fill=G3)
     return im
 V27 = [  # rev 2 (11/1): same cream fawn, deer ears, new antlers and arms, no accessories; takes vary the coat pattern only
     ("Dappled rows", dict(spots="rows", belly="oval")),
