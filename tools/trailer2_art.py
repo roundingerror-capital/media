@@ -314,6 +314,90 @@ def fawn64(shadow=False, v=None):
             d.point([(fx, 10)], fill=GOLD)
     return im
 
+# ---------------------------------------------------------------- V27: a real fawn's build (the boss 2026-11-01: "deers don't have heads like that... very thin and delicate")
+CREAM = ((232, 206, 168, 255), (190, 156, 112, 255), (255, 248, 236, 255))
+def fawn_v27(shadow=False, v=None):
+    """64x64 standard grid. Head: a tapered deer face (wide brow and cheeks, narrowing to a long muzzle), not a circle.
+    Body: a thin, delicate torso on a slim neck, tiny arms, long thin legs. Thin 1 px antlers, the V26 crown, cream coat, big eyes."""
+    v = v or {}
+    im = Image.new("RGBA", (64, 64))
+    coat = v.get("coat", CREAM); C, BE = coat[0][:3], coat[2][:3]; IN = v.get("inner", (240, 186, 176, 255))[:3]
+    if shadow: C, BE, IN = (40, 28, 36), (54, 42, 50), (62, 40, 56)
+    RC, RB, RI = _ramp(C), _ramp(BE), _ramp(IN)
+    if shadow:
+        RC = [(14, 8, 12), (24, 16, 22), (40, 28, 36), (58, 44, 54), (78, 62, 74)]; RB = [(22, 14, 20), (34, 24, 32), (54, 42, 50), (70, 56, 66), (90, 74, 86)]; RI = RB
+    OUT = (74, 52, 36) if not shadow else (6, 3, 6)
+    acc_col = v.get("acc_col", ((255, 140, 180, 255), (255, 196, 216, 255))); PINK, PINK2 = acc_col[0][:3], acc_col[1][:3]
+    body = Image.new("RGBA", (64, 64)); B = (.22, .42, .86, 1.1); B2 = (.3, .55, .92, 1.1)
+    # ears: long leaves, out and up
+    for poly, box in (([(20, 22), (6, 14), (9, 8), (17, 9), (27, 18)], (6, 8, 27, 22)), ([(44, 22), (58, 14), (55, 8), (47, 9), (37, 18)], (37, 8, 58, 22))):
+        _sphere(lambda d, p=poly: d.polygon(p, fill=255), box, RC, body, bands=B, rim=False)
+    for poly, box in (([(19, 19), (10, 14), (12, 11), (23, 17)], (10, 11, 23, 19)), ([(45, 19), (54, 14), (52, 11), (41, 17)], (41, 11, 54, 19))):
+        _sphere(lambda d, p=poly: d.polygon(p, fill=255), box, RI, body, bands=B2, rim=False)
+    # legs first (behind), thin, with hooves
+    bd = ImageDraw.Draw(body)
+    for x in (27, 35): bd.rectangle([x, 54, x + 2, 61], fill=RC[1]); bd.rectangle([x, 60, x + 2, 61], fill=RC[0])
+    # slim neck + delicate torso + belly
+    bd.rectangle([29, 37, 35, 46], fill=RC[2])
+    _sphere(lambda d: d.ellipse([23, 42, 41, 58], fill=255), (23, 42, 41, 58), RC, body, bands=B)
+    _sphere(lambda d: d.ellipse([27, 46, 37, 57], fill=255), (27, 46, 37, 57), RB, body, bands=B2, rim=False)
+    bd = ImageDraw.Draw(body)
+    bd.ellipse([20, 47, 24, 53], fill=RC[2]); bd.ellipse([40, 47, 44, 53], fill=RC[2]); bd.rectangle([21, 52, 23, 53], fill=RC[1]); bd.rectangle([41, 52, 43, 53], fill=RC[1])   # tiny arms
+    # head: wide brow and cheeks that taper to a long muzzle
+    _sphere(lambda d: d.ellipse([15, 11, 49, 35], fill=255), (15, 11, 49, 35), RC, body, bands=B)
+    _sphere(lambda d: d.polygon([(17, 26), (47, 26), (37, 40), (27, 40)], fill=255), (17, 26, 47, 40), RC, body, bands=B, rim=False)
+    _sphere(lambda d: d.polygon([(26, 31), (38, 31), (36, 41), (28, 41)], fill=255), (26, 31, 38, 41), RB, body, bands=B2, rim=False)   # muzzle, lighter
+    bd = ImageDraw.Draw(body)
+    if v.get("spots", True):
+        SP = RC[4] if not shadow else (84, 70, 82)
+        for (x, y) in ((22, 15), (33, 13), (42, 16), (26, 48), (38, 50)): bd.point([(x, y)], fill=SP)
+    a = body.split()[3].filter(ImageFilter.MaxFilter(3)); o = Image.new("RGBA", (64, 64), OUT + (255,)); o.putalpha(a)
+    im.alpha_composite(o); im.alpha_composite(body); d = ImageDraw.Draw(im)
+    if v.get("antlers", True):   # one 1 px beam each side, one short tine, a lighter tip; drawn after the outline so it stays a hair
+        AN, AT = ((120, 84, 50), (170, 130, 86)) if not shadow else ((70, 56, 66), (104, 88, 100))
+        for sx, x0 in ((-1, 22), (1, 42)):
+            d.line([(x0, 11), (x0 + sx, 7), (x0 + sx * 2, 3)], fill=AN); d.line([(x0 + sx, 7), (x0 + sx * 3, 5)], fill=AN)
+            d.point([(x0 + sx * 2, 3), (x0 + sx * 3, 5)], fill=AT)
+    EYE = (30, 20, 18) if not shadow else (8, 4, 8)
+    for x0 in (19, 38):   # big dark eyes set on the sides of the brow, white dot, lashes
+        d.ellipse([x0, 21, x0 + 7, 30], fill=EYE); d.rectangle([x0 + 2, 23, x0 + 3, 24], fill=(255, 255, 255)); d.point([(x0 + 5, 27)], fill=(255, 255, 255))
+        lx = x0 - 1 if x0 < 32 else x0 + 8; sd = -1 if x0 < 32 else 1
+        d.line([(lx, 22), (lx + sd * 2, 20)], fill=OUT); d.line([(lx, 25), (lx + sd * 2, 24)], fill=OUT)
+    d.rectangle([30, 37, 33, 39], fill=EYE); d.point([(30, 37)], fill=(140, 120, 120))   # nose
+    d.point([(31, 40), (32, 40)], fill=OUT)
+    d.rectangle([18, 30, 21, 31], fill=(238, 160, 164) if not shadow else (80, 44, 62)); d.rectangle([43, 30, 46, 31], fill=(238, 160, 164) if not shadow else (80, 44, 62))
+    acc = v.get("acc", "bow")
+    if acc == "bow":
+        d.polygon([(32, 45), (27, 42), (27, 48)], fill=PINK); d.polygon([(32, 45), (37, 42), (37, 48)], fill=PINK); d.rectangle([31, 44, 33, 46], fill=PINK2)
+    elif acc == "pearls":
+        for k in range(5): d.rectangle([27 + k * 2.5, 43 + (0 if k in (0, 4) else 1), 28 + k * 2.5, 44 + (0 if k in (0, 4) else 1)], fill=(250, 246, 240)); d.point([(int(27 + k * 2.5), 43 + (0 if k in (0, 4) else 1))], fill=(255, 255, 255))
+    elif acc == "scarf":
+        d.rectangle([27, 42, 37, 44], fill=PINK); d.rectangle([34, 44, 37, 50], fill=PINK); d.point([(28, 42), (35, 46)], fill=PINK2)
+    elif acc == "bell":
+        d.rectangle([27, 42, 37, 43], fill=PINK); d.ellipse([30, 43, 34, 47], fill=(255, 220, 120)); d.point([(31, 44)], fill=(255, 248, 200)); d.point([(32, 46)], fill=OUT)
+    elif acc == "flower":
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)): d.point([(32 + dx, 44 + dy)], fill=PINK)
+        d.point([(32, 44)], fill=(255, 220, 120))
+    if v.get("crown", True):
+        G0, G1, G2, G3 = (120, 82, 18), (196, 146, 36), (244, 200, 72), (255, 236, 160)
+        crown = [(25, 13), (25, 4), (28, 8), (30, 2), (32, 6), (34, 2), (36, 8), (39, 4), (39, 13)]
+        d.polygon(crown, fill=G1); d.polygon(crown, outline=G0)
+        d.polygon([(26, 12), (26, 6), (28, 9), (30, 5), (31, 7), (31, 12)], fill=G2); d.polygon([(34, 12), (34, 7), (36, 10), (38, 6), (38, 12)], fill=(170, 120, 28))
+        d.line([(26, 6), (26, 11)], fill=G3); d.point([(30, 3), (34, 3), (25, 5), (39, 5)], fill=(255, 255, 255))
+        d.rectangle([25, 11, 39, 12], fill=G0); d.rectangle([26, 11, 38, 11], fill=G2)
+        for x, col in ((28, (230, 60, 90)), (32, (90, 170, 240)), (36, (230, 60, 90))): d.rectangle([x - 1, 9, x, 10], fill=col); d.point([(x - 1, 9)], fill=(255, 255, 255))
+    return im
+V27 = [  # 8 takes, all cream, same eyes, same crown and antlers; the rest varies
+    ("Bow", dict(acc="bow")),
+    ("Pearls", dict(acc="pearls")),
+    ("Scarf", dict(acc="scarf")),
+    ("Bell", dict(acc="bell")),
+    ("Flower", dict(acc="flower")),
+    ("No spots", dict(acc="bow", spots=False)),
+    ("Rosy ears", dict(acc="bow", inner=(255, 160, 170, 255), acc_col=((255, 110, 150, 255), (255, 180, 200, 255)))),
+    ("Blue bow", dict(acc="bow", acc_col=((120, 190, 255, 255), (190, 225, 255, 255)))),
+]
+
 if __name__ == "__main__":
     import sys
     p, f, g = piggy(), fawn(), fawn(True)
