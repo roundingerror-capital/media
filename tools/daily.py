@@ -276,8 +276,14 @@ def cold_open_frame(S, fr, cover, pts):
     line = [(x, 1300 + (y - 260) * 0.35) for x, y in pts[:n]]
     if len(line) > 1: d.line(line, fill=col, width=14)
     sc = 1 + 0.6 * max(0, 1 - (u - 0.1) / 0.15)
-    big = co["big"]; f = fit(big, int((W - 2 * M) * min(1.0, sc / 1.6 + 0.4)), 400, wdth=125, wght=900)
-    d.text((W // 2, 720), big, font=f, fill=col, anchor="ms", stroke_width=10, stroke_fill="#000000" if win else "#FFFFFF")
+    big = co["big"]; pm = big.startswith("\u00b1"); num = big[1:] if pm else big   # a leading \u00b1 is drawn smaller, with a gap: OCR read "\u00b113.3%" as "413.3%" (2026-11-01)
+    f = fit(num, int((W - 2 * M - (160 if pm else 0)) * min(1.0, sc / 1.6 + 0.4)), 400, wdth=125, wght=900)
+    sw = 10; sf = "#000000" if win else "#FFFFFF"
+    if pm:
+        pf = archivo(int(f.size * .62), 125, 900); pw = d.textlength("\u00b1", font=pf); nw = d.textlength(num, font=f); x0 = W // 2 - (pw + 34 + nw) / 2
+        d.text((x0, 720 - int(f.size * .14)), "\u00b1", font=pf, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf)
+        d.text((x0 + pw + 34, 720), num, font=f, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf)
+    else: d.text((W // 2, 720), big, font=f, fill=col, anchor="ms", stroke_width=sw, stroke_fill=sf)
     if co.get("line"): d.text((W // 2, 400), co["line"], font=fit(co["line"], W - 2 * M, 96, wdth=125, wght=900), fill=INK, anchor="ms")
     if u > 0.45:
         sh = co.get("shout", "WAIT, WHAT?!"); f2 = fit(sh, W - 2 * M, int(110 * (1 + max(0, .25 - (u - .45)))), wdth=125, wght=900)
