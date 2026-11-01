@@ -22,7 +22,7 @@ SAFE_Y = 850
 CX = (M + SAFE_R) // 2            # centre line for text below SAFE_Y
 EXPLAIN.XR = SAFE_R
 EXPLAIN.SUBS = False
-LOGOS = False  # platform glyphs on the end card; off until all three brand pages are read and recorded (Roz, 2026-10-31)
+LOGOS = True  # END CARD STANDARD (the boss 2026-11-01, "until a major rebrand"): solid WHITE Instagram, TikTok and YouTube glyphs (logos.MONO) on black, lime handle. Never the full-colour app icons.
 def follow_block(img, y):
     """End card only: FOLLOW @roundingerror.capital + the real Instagram / TikTok / YouTube logos (tools/logos.py),
     centred left of the button column. y = baseline of the handle line. Returns the bottom y."""
