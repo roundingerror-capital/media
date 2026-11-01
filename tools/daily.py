@@ -60,12 +60,14 @@ def river_teal(im):
             if s > 0.18:
                 r, g, b = (int(c * 255) for c in colorsys.hsv_to_rgb(0.49, min(1, s * .85), v)); px[x, y] = (r, g, b, a)
     return im
-SP = {n: Image.open(os.path.join(HERE, "sprites", f"{n}_sprite_1x.png")).convert("RGBA") for n in ("theo", "penny", "ada")}
+SP = {n: Image.open(os.path.join(HERE, "sprites", f"{n}_sprite_1x.png")).convert("RGBA") for n in ("theo", "penny", "ada", "kit", "roz")}  # the five active staff (Ops employees E-0001..E-0005)
 SP["ada"] = river_teal(SP["ada"])
 # eye boxes on the 1x sprites (x0, y0, x1, y1 inclusive), lid colour sample, closed-line row
 EYES = {"penny": ([(12, 20, 14, 23), (26, 20, 28, 23)], (8, 22), 22),
         "theo": ([(13, 13, 17, 17), (24, 13, 28, 17)], (12, 11), 16),
-        "ada": ([(8, 10, 12, 15), (24, 10, 28, 15)], (9, 8), 13)}
+        "ada": ([(8, 10, 12, 15), (24, 10, 28, 15)], (9, 8), 13),
+        "kit": ([(15, 8, 19, 13), (34, 8, 38, 13)], (24, 9), 11),
+        "roz": ([(12, 10, 17, 16), (28, 10, 33, 16)], (10, 12), 13)}
 LASH = (26, 26, 26, 255)
 
 def sprite_state(name, blink, t):
@@ -140,14 +142,15 @@ def bubble(d, xc, y, txt):
     d.text((bx + 24, y + 52), txt, font=f, fill="#000000", anchor="ls")
 
 XS = {1: [0.5], 2: [0.3, 0.7], 3: [0.2, 0.5, 0.8]}
-BLINK = {"penny": (2.7, 0.3), "theo": (3.6, 1.1), "ada": (2.2, 0.7)}
+BLINK = {"penny": (2.7, 0.3), "theo": (3.6, 1.1), "ada": (2.2, 0.7), "kit": (3.1, 1.6), "roz": (4.2, 0.9)}
 BASE = 1690
 
 def char_layer(img, d, S, t, cast, lines, text_bottom):
     bpm = S["bpm"]; ph = t * bpm / 60
     hpx = S.get("_hpx") or (430 if len(cast) < 3 else 380)
+    xs = S.get("_xs") or XS[len(cast)]   # per-scene placement override (earnings casting varies it per video)
     for i, n in enumerate(cast):
-        xc = int(W * XS[len(cast)][i]); per, off = BLINK[n]
+        xc = int(W * xs[i]); per, off = BLINK[n]
         blink = ((t + off) % per) < 0.12
         talk = [(ts, te, pose) for ts, te, w, _, pose in lines if w == n and ts <= t < te]
         sx = 1 - 0.03 * math.sin(2 * math.pi * ph / 2); sy = 1 + 0.035 * math.sin(2 * math.pi * ph / 2)
@@ -174,7 +177,7 @@ def char_layer(img, d, S, t, cast, lines, text_bottom):
         img.paste(big, (xc - big.width // 2 + dx, top), big)
     for ts, te, w, ln, _ in lines:
         if ts <= t < te and w in cast:
-            xc = int(W * XS[len(cast)][cast.index(w)])
+            xc = int(W * xs[cast.index(w)])
             y = max(text_bottom + 24, BASE - hpx - 150)
             bubble(d, xc, y, ln)
 
@@ -437,8 +440,10 @@ def scene_frame(S, t, heads_override=None):
     S["_hpx"] = None
     if vz:  # worked example (explain.py): characters shrink to the bottom band so the steps have room
         y = EXPLAIN.draw(d, vz, t - t0, y); S["_hpx"] = 250
+    S["_xs"] = (S.get("cast_x") or {}).get(k)
+    if (S.get("cast_h") or {}).get(k) and not vz: S["_hpx"] = S["cast_h"][k]
     char_layer(img, d, S, t, cast, lines, y - 20)
-    S["_hpx"] = None
+    S["_hpx"] = None; S["_xs"] = None
     # safe layout (2026-10-31): no header, no follow bar, no top-right pill on story frames; the apps already show our name + Follow there
     img = meme_layer(img, S, t)
     # outro-off videos have no end card: a bigger CTA holds through the last 2.5 s. Loops never get it (T-069: an end pill says "this is the end";

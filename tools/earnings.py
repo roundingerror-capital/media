@@ -18,13 +18,76 @@ Sheet fields read (every number on screen comes from here, nothing is typed by h
   company.one_liner           optional, what the company does, with its source on the sheet
 Usage: python3 tools/earnings.py <sheet.json> <out_dir> [--derive]
 """
-import json, os, sys, re, datetime
+import json, os, sys, re, datetime, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 W_, L_, OR = "#F2F2EE", "#C8F03C", "#FF8A5B"
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLATES = os.path.join(os.path.dirname(HERE), "..", "work", "interest")
 ST = os.path.normpath(os.path.join(HERE, "..", "..", "work", "interest", "plate_standup_clean.png"))
 PN = os.path.normpath(os.path.join(HERE, "..", "..", "work", "interest", "plate_penny.png"))
+
+# ---------------------------------------------------------------- CASTING (the boss 2026-11-01)
+# "cycle through active staff randomly on every slide; no two videos repeat the same staff combo or catchphrases;
+#  placement a bit different." Active staff = Ops employees with status "active" (E-0001..E-0005; the boss E-0000 is
+# an Easter egg, never cast). Lines are in each one's voice (Ops employees.personality), no numbers, no picks, no hype
+# about outcomes. A ledger (tools/casting_ledger.json) remembers every combo and line used, per month, so a batch never repeats.
+STAFF = ["theo", "penny", "ada", "kit", "roz"]
+POSE = {"theo": ["nod", "brow"], "penny": ["jump", "point", "wave"], "ada": ["thumbs", "spin"], "kit": ["spin", "wave", "nod"], "roz": ["brow", "nod"]}
+LINES = {   # bubble lines (<= 22 chars, no digits: the scan reads every number)
+    "theo": ["Numbers, not vibes.", "History. Not a forecast.", "The math doesn't care.", "Calm down.", "Past moves only.", "Noted. Moving on.",
+             "Read the chart.", "No adjectives, please.", "That is the whole story.", "Dry facts. Enjoy.", "Interesting. Moving on.", "As one does."],
+    "penny": ["Big one?!", "Earnings szn!", "Save this one.", "Plot twist?!", "Wait for it...", "Comment below!", "Episode drop!", "Receipts, not vibes!",
+              "Link in bio, besties.", "Okay but WHY?!", "Tell a friend!", "This one's spicy!"],
+    "ada": ["All green!", "Data's fresh!", "Checked twice!", "Pipelines flowing!", "Ooh, a big bar!", "Every row verified!", "So clean!", "Fresh from the dam!",
+            "Data says: humble.", "Look at those bars!", "Tiny bars, big feels!", "Numbers are happy!"],
+    "kit": ["Boss fight incoming.", "New run. Same rules.", "Save point reached.", "Respawn with the rule.", "Read the patch notes.", "Hard mode unlocked.",
+            "That's a boss, not a bug.", "Level up the rules.", "Checkpoint saved.", "No cheat codes here."],
+    "roz": ["Not advice. Promise.", "Read the fine print.", "Shell first.", "Hypothetical. Noted.", "Careful counts.", "Slow on purpose.",
+            "Past isn't promise.", "Footnote: no picks.", "I'll allow it.", "Careful is cool."],
+}
+XS_POOL = {1: [[.5], [.32], [.68]], 2: [[.3, .7], [.22, .62], [.38, .78], [.26, .74]], 3: [[.2, .5, .8], [.18, .45, .74], [.26, .54, .82]]}
+LEDGER = os.path.join(HERE, "casting_ledger.json")
+
+def _ledger(month):
+    try: L = json.load(open(LEDGER))
+    except Exception: L = {}
+    return L, L.setdefault(month, {"combos": [], "lines": [], "hooks": [], "by_ticker": {}})
+
+def cast_video(ticker, month, n_scenes, sizes, save=True):
+    """Pick a cast per scene for one video. sizes = how many characters each scene shows. Returns
+    {casts: [[names]], lines: [[name, line, pose]] per scene (one or two), xs: [[x...]], flips} and records it in the ledger.
+    The same ticker in the same month gets the same casting back (re-renders stay stable)."""
+    L, M = _ledger(month)
+    if ticker in M["by_ticker"]: return M["by_ticker"][ticker]
+    r = random.Random(f"{ticker}-{month}")
+    for attempt in range(400):
+        casts = []; prev = None
+        for k, sz in enumerate(sizes):
+            while True:
+                c = r.sample(STAFF, sz)
+                if c != prev and (prev is None or set(c) != set(prev)): break
+            casts.append(c); prev = c
+        combo = "|".join(",".join(c) for c in casts); hook = ",".join(sorted(casts[0]))
+        if combo in M["combos"]: continue
+        if hook in M["hooks"] and attempt < 300: continue          # the opening pair differs from every other video when possible
+        used = set(M["lines"]); picked = []; ok = True
+        for k, c in enumerate(casts):
+            speakers = c[:2] if k == 0 else [r.choice(c)]
+            row = []
+            for who in speakers:
+                pool = [l for l in LINES[who] if l not in used]
+                if not pool: pool = LINES[who][:]                   # pool spent this month: allow repeats (never inside one batch of 15)
+                ln = r.choice(pool); used.add(ln); row.append([who, ln, r.choice(POSE[who])])
+            picked.append(row)
+        if not ok: continue
+        xs = [r.choice(XS_POOL[len(c)]) for c in casts]
+        out = {"casts": casts, "lines": picked, "xs": xs}
+        if save:
+            M["combos"].append(combo); M["hooks"].append(hook); M["lines"] += [ln for row in picked for _, ln, _ in row]; M["by_ticker"][ticker] = out
+            json.dump(L, open(LEDGER, "w"), indent=1)
+        return out
+    raise RuntimeError("casting: no unique combo left this month")
+
 TAGS = ["#earnings", "#optionstrading", "#stockmarket", "#thewheel", "#aitrading"]  # exactly 5 (Posts rule)
 
 def pct(v):
@@ -114,7 +177,21 @@ def build_spec(sheet, derive=False):
                [[t + 3.2, t + 6.3, "ada", "Data says: humble.", "thumbs"]], ["theo", "ada"], 1 if hold else -1]); t += 6.5
     sc.append([t, t + 4.5, "YOUR TURN", [["Holding through", W_], ["earnings?", L_]], ["Tell us below."],
                [[t + 0.3, t + 4.3, "penny", "Comment!", "point"]], ["penny", "ada", "theo"], 0]); end = t + 4.5
-    return {"label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
+    # casting: random active staff per slide, unique per video this month (the ledger), varied placement
+    month = n["report"]["date"][:7]; sizes = [2, 2] + ([2] if pt else []) + [2, 3]
+    cv = cast_video(T, month, len(sc), sizes, save=not test)
+    cast_x = {}
+    for k, scn in enumerate(sc):
+        t0, t1 = scn[0], scn[1]; c = cv["casts"][k]; rows = cv["lines"][k]
+        if k == 0: tl = [[t0 + 0.4, t0 + 2.2], [t0 + 2.4, t1 - 0.2]]
+        elif k == len(sc) - 1: tl = [[t0 + 0.3, t1 - 0.2]]
+        else: tl = [[t1 - 3.0, t1 - 0.2]]
+        if k == len(sc) - 1 and not any(w == c[0] for w, _, _ in rows): rows = [[c[0], rows[0][1], rows[0][2]]] if rows[0][0] not in c else rows
+        scn[5] = [[a, b, w, ln, pose] for (a, b), (w, ln, pose) in zip(tl, rows)]
+        if k == len(sc) - 1 and scn[5]: scn[5][0][3] = "Comment!" if scn[5][0][2] == "penny" else scn[5][0][3]
+        scn[6] = c; cast_x[k] = cv["xs"][k]
+    shades_who = next((w for w in cv["casts"][1] if w in ("theo", "penny", "ada", "kit", "roz")), "theo")
+    return {"cast_x": cast_x, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry", "music_start": 7.0,
             "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.26, "bg_blur": 2.0,
             "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
@@ -122,7 +199,7 @@ def build_spec(sheet, derive=False):
             "endcard": {"line1": "LIKE + FOLLOW", "line2": "FOR MORE UPDATES", "show_positions": False},
             "scenes": sc, "charts": charts, "visuals": visuals,
             "memes": [{"t": 0.2, "dur": 2.0, "kind": "pov", "text": f"POV: {T} reports {day}"},
-                      {"t": 5.0, "dur": 1.6, "kind": "shades", "who": "theo"}],
+                      {"t": 5.0, "dur": 1.6, "kind": "shades", "who": shades_who}],
             "_test": test}
 
 def caption(sheet):
