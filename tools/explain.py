@@ -52,7 +52,7 @@ def book(d, v, u, y):
             d.text((x0 + 330, y + 48), "hidden from you", font=mono(30, True), fill="#3A3A3A", anchor="ls")
         y += rh
     if not reveal:
-        d.text((x0, y + 40), "Your app shows you THIS line. Only this.", font=mono(32, True), fill=AMB, anchor="ls")
+        d.text((x0, y + 40), v.get("top_line", "Many apps show you only this line."), font=mono(32, True), fill=AMB, anchor="ls")  # Roz 2026-10-29: no claim about every app
     elif fills and u > step_t + len(fills) * per + 0.3:
         d.text((x0, y + 44), f"Average fill {v['avg']}  vs  top {v['top']}", font=mono(34, True), fill=INK, anchor="ls")
         d.text((x0, y + 96), v["diff"], font=archivo(54, 110, 900), fill=RED, anchor="ls")
@@ -144,15 +144,15 @@ def outcomes(d, v, u, y):
 
 def roll(d, v, u, y):
     """A roll is two trades. v: {left:[tag, value, sub], right:[tag, value, sub], net:[label, value, color], after, note}."""
-    cw = (W - 2 * M - 120) // 2; ch = 330
+    cw = (XR - M - 120) // 2; ch = 330  # inside XR (safe layout: the app button column sits right of it)
     for i, (side, at) in enumerate(((v["left"], 0.0), (v["right"], 1.2))):
         a = fade(u, at, at + 0.3); x0 = M + i * (cw + 120)
         col = RED if side[1].startswith(("−", "-")) else LIME
         d.rectangle([x0, y, x0 + cw, y + ch], fill=PANEL, outline=blend(col, a) if a else LINE, width=4)
         if a:
-            d.text((x0 + cw // 2, y + 64), side[0], font=mono(28, True), fill=blend(INK, a), anchor="ms")
-            d.text((x0 + cw // 2, y + 190), side[1], font=archivo(80, 110, 900), fill=blend(col, a), anchor="ms")
-            d.text((x0 + cw // 2, y + 262), side[2], font=mono(24), fill=blend(MUT, a), anchor="ms")
+            d.text((x0 + cw // 2, y + 64), side[0], font=_fitm(side[0], cw - 24, 28), fill=blend(INK, a), anchor="ms")
+            d.text((x0 + cw // 2, y + 190), side[1], font=fit(side[1], cw - 30, 80, wdth=110, wght=900), fill=blend(col, a), anchor="ms")
+            d.text((x0 + cw // 2, y + 262), side[2], font=_fitm(side[2], cw - 24, 24, False), fill=blend(MUT, a), anchor="ms")
     if u > 1.2: d.text(((M + XR) // 2, y + ch // 2 + 30), "+", font=archivo(90, 110, 900), fill=INK, anchor="ms")
     y += ch + 40
     if u > 2.4:
