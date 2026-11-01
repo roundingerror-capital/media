@@ -67,11 +67,23 @@ def render(path, T):
     for tc in T["cards"]: add(whoosh(), tc - .25); add(kick(1.3), tc); add(tone(root * 16, .3, "saw", .07, 6), tc)
     add(kick(1.4), T["team"]); add(tone(root * 4, 1.2, "saw", .08, 1.5), T["team"])
     # the boss: silence + drone, three booms, ting on the aviators, a regal brass stab
-    t = ts(T["rew"] - T["above"])
+    t = ts(T["no1"] - T["above"])
     add((np.sin(2 * np.pi * 41.2 * t) + .5 * np.sin(2 * np.pi * 61.7 * t + np.sin(2 * np.pi * .3 * t))) * .22 * np.minimum(1, t / 1.0), T["above"])
     for k, tb in enumerate(T["booms"]): add(boom(.8 + .15 * k), tb)
     add(ting(), T["glint"]); add(ting() * .7, T["glint"] + .18)
     for iv in (0, 4, 7, 12): add(tone(110 * 2 ** (iv / 12), 2.4, "saw", .05, .8), T["boss"] + .1)
+    # "THE BOSS IS #1.": hit + gold brass; "YET...": a hard stop, one low hit, a ting
+    add(boom(.9), T["no1"] + .35); add(kick(1.5), T["no1"] + .35)
+    for iv in (0, 4, 7, 12, 16): add(tone(146.8 * 2 ** (iv / 12), 1.3, "saw", .045, 1.2), T["no1"] + .35)
+    add(boom(.6), T["yet"]); add(ting() * .8, T["yet"] + .9)
+    # power rankings (glass): whoosh as the new #1 drops in, riser while her bar fills, crack, then shatter + boom
+    add(whoosh(.4), T["slide"] - .1); add(kick(1.2), T["slide"] + .3)
+    add(riser(T["crack"] - T["fill"]) * 1.1, T["fill"])
+    tt = ts(T["crack"] - T["fill"]); add(np.sin(2 * np.pi * np.cumsum(220 + 880 * tt / tt[-1]) / SR) * .12 * (tt / tt[-1]), T["fill"])
+    nz = rng.standard_normal(int(.12 * SR)); add(np.diff(nz, prepend=0) * np.exp(-np.arange(len(nz)) / SR * 30) * .9, T["crack"])
+    nz = rng.standard_normal(int(1.2 * SR)); add(np.diff(nz, prepend=0) * np.exp(-np.arange(len(nz)) / SR * 4) * .7, T["shatter"])
+    for k in range(14): add(tone(rng.uniform(2000, 6000), .5, "sin", .08, 6), T["shatter"] + k * .04)
+    add(boom(1.0), T["shatter"])
     # rewind: tape stop
     add(tape(.7, True), T["rew"]); add(whoosh(.7) * .8, T["rew"])
     # flashback: wobbly music box (VHS vibe) + plinks on each please, a "?" on the ask, coins on yes
@@ -81,7 +93,9 @@ def render(path, T):
     for k, tb in enumerate(T["beg"]): add(tone(330 * 2 ** (k * 4 / 12), .18, "sq", .06, 10), tb)
     add(tone(392, .12, "sq", .05, 12), T["ask"]); add(tone(523, .2, "sq", .05, 10), T["ask"] + .12)
     add(tone(660, .14, "sq", .05, 10), T["fancy"]); add(tone(880, .25, "sq", .05, 8), T["fancy"] + .14)
-    add(tone(196, .6, "saw", .06, 4), T["fine"])
+    add(tone(1046, .3, "tri", .06, 6), T["what"]); add(tone(988, .3, "tri", .06, 6), T["what"] + .14)      # her: soft bells
+    add(tone(1318, .45, "tri", .07, 5), T["why"])
+    add(tone(784, .5, "tri", .06, 4), T["fine"]); add(tone(196, .6, "saw", .06, 4), T["fine"] + .1)
     for k in range(12): add(coin(), T["coins"] + k * .09 + rng.uniform(0, .04))
     # fast-forward: tape start, then the groove comes back bigger
     add(tape(.7, False), T["ff"]); add(whoosh(.7) * .8, T["ff"])
