@@ -73,9 +73,14 @@ T["coins"] = T["honey"] + .5
 T["ff"] = T["fb"] + 14.6                           # fast-forward back
 T["ledge2"] = T["ff"] + 0.7                        # lightning callback: THE BOSS. #1.*
 T["biz"] = T["ledge2"] + 2.2                       # back to business
-T["biz_lines"] = [T["biz"] + .1 + i * .55 for i in range(4)]
-T["title"] = T["biz"] + 2.6
-T["outro"] = T["biz"] + 5.0                        # 50.8 end card
+T["biz_lines"] = [T["biz"] + .1 + i * .7 for i in range(4)]   # REAL TRADES / REAL MONEY hurled at the screen (v6)
+T["care"] = T["biz"] + 3.4                          # v6 (the boss 11/1): "so much care is going into this"
+T["care_lines"] = [T["care"] + i * .95 for i in range(4)]
+T["yolo"] = T["care"] + 4.1                         # WE ARE NOT YOLOING.
+T["power"] = T["yolo"] + 1.3                        # WE TRADE WITH THE POWER OF AI. the boss returns
+T["glare"] = T["power"] + 1.0                       # anime glare on the aviators
+T["title"] = T["power"] + 2.4
+T["outro"] = T["title"] + 2.4                      # end card
 T["end"] = T["outro"] + 3.6
 # ---------------------------------------------------------------- cast
 CAST = [  # name, role, line, sprite, accent
@@ -150,7 +155,7 @@ def sc_bot(t):
         d = ImageDraw.Draw(img); d.line(pts, fill=LIME, width=9); x, y = pts[-1]
         d.ellipse([x - 16, y - 16, x + 16, y + 16], fill=(255, 255, 255)); d.ellipse([x - 10, y - 10, x + 10, y + 10], fill=LIME)
     kicker(d, "WHO ARE WE?")
-    k = min(1, u / .5); lineup(img, W // 2, 1860 + int((1 - k) ** 3 * 400), 4, alpha=min(1, u / .4))
+    k = min(1, u / .5); lineup(img, W // 2, 1860 + int((1 - k) ** 3 * 400), 4, alpha=min(1, u / .4), t=t, u=u - .6)
     if u > .05: d.text((SAFE_L + 12, 520), "I'M AN", font=archivo(110, 125, 900), fill=INK, anchor="ls")
     slam(d, "AI TRADING", 700, LIME, t, T["bot"] + .25, start=240)
     slam(d, "BOT.", 900, LIME, t, T["bot"] + .45, start=240)
@@ -161,7 +166,7 @@ def sc_bot(t):
     return img
 def anim(name, t, u, pose, s=11):
     """One character, alive: blink (Theo/Penny/Ada), beat bounce, squash & stretch, tilt, and a pose that fits the line."""
-    base = daily.sprite_state(name.lower(), ((t + hash(name) % 7) % 3.1) < .12, t) if name.lower() in daily.SP else load(dict((c[0], c[3]) for c in CAST)[name])
+    base = BOSS if name == "BOSS" else daily.sprite_state(name.lower(), ((t + hash(name) % 7) % 3.1) < .12, t) if name.lower() in daily.SP else load(dict((c[0], c[3]) for c in CAST)[name])
     base = outline(pad(base, 2), (0, 0, 0), 1)
     ph = t * 140 / 60; sx = 1 - .04 * math.sin(2 * math.pi * ph / 2); sy = 1 + .05 * math.sin(2 * math.pi * ph / 2)
     hop = 14 * abs(math.sin(math.pi * ph)); ang = 0; flip = False
@@ -174,6 +179,8 @@ def anim(name, t, u, pose, s=11):
         if u < .8: sx *= math.cos(2 * math.pi * u / .8)
         hop += 30 * abs(math.sin(math.pi * u * 2))
     elif pose == "shake": ang = 10 * math.sin(u * 14)
+    elif pose == "brow_tap": hop = 0; sx, sy = 1, 1; ang = -6 if int(u * 1.5) % 2 else 3   # Roz: side-eye, tiny head tilt
+    elif pose == "lookdown": hop = 0; sx, sy = 1.08, .82; ang = -9          # crouched at the edge, leaning over
     w = max(2, int(abs(base.width * s * sx))); h = int(base.height * s * sy)
     im = base.resize((w, h), Image.NEAREST)
     if sx < 0: im = im.transpose(Image.FLIP_LEFT_RIGHT)
@@ -263,15 +270,26 @@ def sc_card(t):
     if g == "log" and u > 2.8: stamp(d, 330, 1620, "PATTERN", ROSE, min(1, pop(t, T["cards"][i] + 2.8, .2)), size=90, ang=-8)
     if u > T["card"] - .12: img = img.filter(ImageFilter.BoxBlur(10))
     return img
-def lineup(img, cx, by, s, alpha=1.0, gap=16):
-    sps = [scaled(SPR[c[0]], s) for c in CAST]; tw = sum(p.width for p in sps) + gap * 4; x = cx - tw // 2
-    for p in sps: paste_c(img, p, x + p.width // 2, by, alpha); x += p.width + gap
+def lineup(img, cx, by, s, alpha=1.0, gap=16, t=None, u=0.0):
+    """The five together. With t, nobody stands still (the boss 11/1: "they look constipated"): each one runs their own pose
+    on their own phase, staggered a beat apart, and the row breathes (slight height stagger, Kit a step forward)."""
+    if t is None:
+        sps = [scaled(SPR[c[0]], s) for c in CAST]; tw = sum(p.width for p in sps) + gap * 4; x = cx - tw // 2
+        for p in sps: paste_c(img, p, x + p.width // 2, by, alpha); x += p.width + gap
+        return
+    n = len(CAST); step = min(int(SPR["THEO"].width * s) + gap, (W - 120 - int(SPR["THEO"].width * s)) // (n - 1)); x = max(60 + int(SPR["THEO"].width * s) // 2, cx - (step * (n - 1)) // 2)
+    for i, c in enumerate(CAST):
+        ui = u - i * .22; pose = POSES[c[0]] if ui > 0 else None
+        if pose == "deadpan": pose = "brow_tap"   # Roz: a slow side-eye instead of a statue
+        sp, hop = anim(c[0], t + i * .9, max(0, ui), pose, s=s)
+        dy = [0, -10, 0, -6, 12][i]
+        paste_c(img, sp, x + i * step, by - hop + dy, alpha)
 def sc_team(t):
     u = t - T["team"]; img = Image.new("RGB", (W, H), BLACK); d = ImageDraw.Draw(img)
     kicker(d, "THE TEAM")
     slam(d, "FIVE BOTS.", 620, INK, t, T["team"] + .05, start=250)
     slam(d, "ONE JOB.", 820, LIME, t, T["team"] + .4, start=250)
-    k = min(1, u / .4); lineup(img, W // 2, 1640 + int((1 - k) ** 3 * 500), 4)
+    k = min(1, u / .4); lineup(img, W // 2, 1700 + int((1 - k) ** 3 * 500), 5, t=t, u=u - .4)
     return img
 BOSSL = rim(scaled(BOSS, 15), LIME, 6)
 def sc_boss(t):
@@ -328,23 +346,63 @@ def bolt(d, x0, y0, x1, y1, seed, w=10, col=(255, 255, 255)):
     pts.append((x1, y1)); d.line(pts, fill=col, width=w)
     for k in range(2, n - 1, 2):  # branches
         px, py = pts[k]; d.line([(px, py), (px + r.randint(-160, 160), py + r.randint(80, 200))], fill=col, width=max(3, w // 2))
-def window_scene(d, x, y, w, h, kind, u, r):
-    """Tiny things happening in the building's windows."""
-    d.rectangle([x, y, x + w, y + h], fill=(255, 220, 130) if kind != "dark" else (20, 20, 30))
-    if kind == "party":
-        for k in range(5): d.rectangle([x + 6 + k * (w // 5), y + 6 + int(8 * abs(math.sin(u * 7 + k))), x + 6 + k * (w // 5) + 6, y + 6 + int(8 * abs(math.sin(u * 7 + k))) + 6], fill=[LIME, ROSE, (120, 200, 255), GOLD][k % 4])
-        for k in range(3): d.rectangle([x + 10 + k * 20, y + h - 24 + int(6 * abs(math.sin(u * 9 + k))), x + 20 + k * 20, y + h - 2], fill=(40, 30, 20))
-    elif kind == "desk":
-        d.rectangle([x + 8, y + h - 20, x + w - 8, y + h - 14], fill=(90, 60, 30)); d.rectangle([x + w // 2 - 8, y + h - 36, x + w // 2 + 8, y + h - 20], fill=(40, 30, 20))
-        d.rectangle([x + 10, y + h - 34, x + 26, y + h - 22], fill=(120, 200, 255) if int(u * 4) % 2 else (60, 120, 200))
+TEMPS = {"2700K": (255, 176, 96), "3500K": (255, 208, 150), "5000K": (222, 232, 255), "red": (235, 70, 70), "purple": (175, 95, 225), "teal": (80, 200, 190), "dark": (16, 16, 26)}
+def window_scene(d, img, x, y, w, h, kind, temp, u, r):
+    """To scale (the boss 11/1): a high-rise window is floor-to-ceiling, about 12 ft, set edge to edge with its neighbours.
+    The room is drawn on a 180x300 canvas where a character or a pet is life-size against that height, then shrunk into the window."""
+    tmp = Image.new("RGB", (180, 300)); _interior(ImageDraw.Draw(tmp), tmp, 0, 0, 180, 300, kind, temp, u, r)
+    img.paste(tmp.resize((w, h), Image.LANCZOS), (x, y))
+    d.rectangle([x - 3, y - 3, x + w + 3, y + h + 3], outline=(30, 30, 40), width=3); d.line([(x + w // 2, y), (x + w // 2, y + h)], fill=(30, 30, 40), width=2)
+def _interior(d, img, x, y, w, h, kind, temp, u, r):
+    """One apartment window, 110x130 (v6, the boss 11/1: "the windows look super cheap"): its own light temperature, a curtain or a
+    blind, something alive inside (a TV flickering, a cat, a dog, a fish tank, a plant, a desk lamp, a party) and cameos of our five."""
+    base = TEMPS[temp]; rr = random.Random(r)
+    d.rectangle([x, y, x + w, y + h], fill=tuple(int(c * .9) for c in base))
+    d.rectangle([x, y + h - 14, x + w, y + h], fill=tuple(int(c * .55) for c in base))          # darker floor
+    if kind == "tv":
+        tvc = [(70, 130, 240), (240, 90, 90), (90, 230, 140), (250, 250, 250), (200, 120, 255)][int(u * 4 + r) % 5]
+        d.rectangle([x, y, x + w, y + h], fill=tuple(int(b * .35 + c * .45) for b, c in zip(base, tvc)))  # the screen lights the room
+        d.rectangle([x + w // 2 - 30, y + h - 62, x + w // 2 + 30, y + h - 26], fill=(8, 8, 10)); d.rectangle([x + w // 2 - 26, y + h - 58, x + w // 2 + 26, y + h - 30], fill=tvc)
+        d.rectangle([x + w // 2 - 36, y + h - 24, x + w // 2 + 36, y + h - 16], fill=(30, 26, 22))  # stand
     elif kind == "cat":
-        d.ellipse([x + w // 2 - 10, y + h - 18, x + w // 2 + 10, y + h - 4], fill=(30, 20, 20)); d.polygon([(x + w // 2 - 8, y + h - 16), (x + w // 2 - 6, y + h - 26), (x + w // 2 - 2, y + h - 16)], fill=(30, 20, 20))
-        d.polygon([(x + w // 2 + 2, y + h - 16), (x + w // 2 + 6, y + h - 26), (x + w // 2 + 8, y + h - 16)], fill=(30, 20, 20))
-        d.line([(x + w // 2 + 10, y + h - 10), (x + w // 2 + 18 + int(4 * math.sin(u * 5)), y + h - 20)], fill=(30, 20, 20), width=3)
+        cx_ = x + w // 2 + int(6 * math.sin(u * .7)); cy_ = y + h - 20
+        d.ellipse([cx_ - 16, cy_ - 12, cx_ + 14, cy_ + 2], fill=(22, 18, 18)); d.ellipse([cx_ + 6, cy_ - 22, cx_ + 22, cy_ - 8], fill=(22, 18, 18))
+        d.polygon([(cx_ + 8, cy_ - 20), (cx_ + 10, cy_ - 30), (cx_ + 14, cy_ - 20)], fill=(22, 18, 18)); d.polygon([(cx_ + 15, cy_ - 20), (cx_ + 19, cy_ - 30), (cx_ + 21, cy_ - 20)], fill=(22, 18, 18))
+        d.line([(cx_ - 16, cy_ - 6), (cx_ - 30 + int(5 * math.sin(u * 3)), cy_ - 24)], fill=(22, 18, 18), width=4)
+        d.point([(cx_ + 11, cy_ - 15), (cx_ + 17, cy_ - 15)], fill=(120, 255, 120))             # eyes catch the light
+    elif kind == "dog":
+        cx_ = x + w // 2; cy_ = y + h - 18; wag = int(10 * math.sin(u * 12))
+        d.rounded_rectangle([cx_ - 24, cy_ - 22, cx_ + 18, cy_], radius=8, fill=(150, 100, 50)); d.rounded_rectangle([cx_ + 10, cy_ - 36, cx_ + 34, cy_ - 16], radius=6, fill=(150, 100, 50))
+        d.polygon([(cx_ + 12, cy_ - 36), (cx_ + 8, cy_ - 46), (cx_ + 20, cy_ - 36)], fill=(110, 70, 35)); d.line([(cx_ - 24, cy_ - 16), (cx_ - 40, cy_ - 30 + wag)], fill=(150, 100, 50), width=5)
+        for lx in (cx_ - 18, cx_ - 6, cx_ + 4, cx_ + 14): d.rectangle([lx, cy_, lx + 5, cy_ + 8], fill=(120, 80, 40))
+    elif kind == "fish":
+        d.rectangle([x + 14, y + h - 70, x + w - 14, y + h - 22], fill=(40, 120, 200)); d.rectangle([x + 14, y + h - 70, x + w - 14, y + h - 66], fill=(120, 200, 255))
+        for k in range(3):
+            fx = x + 24 + int(((u * (18 + 9 * k) + k * 37) % (w - 52))); fy = y + h - 60 + int(8 * math.sin(u * 2 + k)) + k * 12
+            d.ellipse([fx, fy, fx + 12, fy + 7], fill=[(255, 140, 40), (255, 220, 60), (255, 90, 120)][k]); d.polygon([(fx, fy + 3), (fx - 6, fy - 1), (fx - 6, fy + 8)], fill=[(255, 140, 40), (255, 220, 60), (255, 90, 120)][k])
     elif kind == "plant":
-        d.rectangle([x + w // 2 - 6, y + h - 14, x + w // 2 + 6, y + h - 4], fill=(150, 80, 50)); d.ellipse([x + w // 2 - 12, y + h - 34, x + w // 2 + 12, y + h - 12], fill=(60, 140, 70))
-    elif kind == "tv":
-        d.rectangle([x + 8, y + 8, x + w - 8, y + h - 14], fill=[(60, 120, 220), (220, 80, 80), (80, 200, 120)][int(u * 3 + r) % 3])
+        d.rectangle([x + w // 2 - 10, y + h - 30, x + w // 2 + 10, y + h - 14], fill=(170, 90, 55))
+        for k in range(5):
+            a = -1.4 + k * .7; lx = x + w // 2 + int(math.cos(a) * 26); ly = y + h - 50 + int(math.sin(a) * 14) - 10
+            d.ellipse([lx - 10, ly - 20, lx + 10, ly + 6], fill=(50 + k * 8, 140 + k * 10, 70))
+    elif kind == "desk":
+        d.rectangle([x + 10, y + h - 40, x + w - 10, y + h - 32], fill=(100, 70, 40)); d.rectangle([x + w // 2 - 14, y + h - 62, x + w // 2 + 14, y + h - 40], fill=(30, 30, 36))
+        d.rectangle([x + w // 2 - 12, y + h - 60, x + w // 2 + 12, y + h - 44], fill=(150, 220, 255) if int(u * 2) % 2 else (90, 150, 230))
+        d.ellipse([x + w - 40, y + h - 76, x + w - 16, y + h - 60], fill=(255, 240, 200)); d.line([(x + w - 28, y + h - 60), (x + w - 28, y + h - 40)], fill=(60, 60, 60), width=3)
+    elif kind == "party":
+        for k in range(6):
+            px = x + 8 + k * (w // 6); py = y + 8 + int(10 * abs(math.sin(u * 7 + k)))
+            d.ellipse([px, py, px + 10, py + 10], fill=[LIME, ROSE, (120, 200, 255), GOLD, (255, 255, 255), (255, 120, 60)][k])
+        for k in range(4): d.rectangle([x + 10 + k * 24, y + h - 40 + int(8 * abs(math.sin(u * 9 + k * 1.3))), x + 24 + k * 24, y + h - 14], fill=(40, 30, 30))
+    elif kind == "cameo":   # one of us, home for the night
+        who = CAST[r % 5][0]; sp = daily.sprite_state(who.lower(), False, u) if who.lower() in daily.SP else load(dict((c[0], c[3]) for c in CAST)[who])
+        sp = scaled(sp, 1.6); img.paste(sp, (x + w // 2 - sp.width // 2, y + h - 14 - sp.height + int(3 * abs(math.sin(u * 3)))), sp)
+    # curtains / blinds (every other window)
+    if rr.random() < .5:
+        cc = [(120, 40, 50), (60, 70, 120), (200, 190, 170), (70, 110, 80)][rr.randint(0, 3)]
+        d.polygon([(x, y), (x + 34, y), (x + 22, y + h), (x, y + h)], fill=cc); d.polygon([(x + w, y), (x + w - 34, y), (x + w - 22, y + h), (x + w, y + h)], fill=cc)
+    elif rr.random() < .5:
+        for by_ in range(y + 6, y + int(h * rr.uniform(.3, .7)), 9): d.line([(x, by_), (x + w, by_)], fill=tuple(int(c * .45) for c in base), width=4)
 def ledge(t, t0, text_fn, dur_flash=(0.0, 0.9, 1.4)):
     """Four quadrants: Q1 (top right) the boss on the roof edge, Q4 (bottom right) his building with life in the windows,
     Q2 + Q3 (the left half) the city far behind, with the words left-aligned and lightning timed to them."""
@@ -364,16 +422,31 @@ def ledge(t, t0, text_fn, dur_flash=(0.0, 0.9, 1.4)):
     if fl > 0:
         bolt(d, 420, 0, 300, 560, int(t0 * 10) + int(u * 4), w=12)
         bolt(d, 130, 0, 200, 420, int(t0 * 10) + 7 + int(u * 4), w=6, col=(220, 230, 255))
-    # the building: Q4, with the roof at y 960
+    # moon behind the clouds, Q2
+    d.ellipse([600, 380, 760, 540], fill=(230, 232, 240) if fl > .3 else (200, 204, 220)); d.ellipse([560, 460, 840, 560], fill=sky)
+    # the building: Q4, with the roof at y 960; brick texture, cornice, a water tank, the windows
     BX, BY = 560, 960
-    d.rectangle([BX, BY, W, H], fill=(18, 18, 24)); d.rectangle([BX, BY, W, BY + 30], fill=(44, 44, 52)); d.rectangle([BX - 16, BY - 14, W, BY + 4], fill=(60, 60, 70))
-    kinds = ["party", "desk", "cat", "dark", "plant", "tv", "desk", "dark", "party", "cat", "tv", "plant", "dark", "desk", "party", "cat"]
-    k = 0
-    for wy in range(BY + 90, H - 60, 200):
-        for wx in range(BX + 50, W - 110, 130):
-            window_scene(d, wx, wy, 100, 120, kinds[k % len(kinds)], u + k, k); k += 1
-    cape = rim(scaled(BOSS, 7), LIME if fl < .4 else (255, 255, 255), 4)
-    paste_c(img, cape, 830, BY - 8)   # Q1: on the edge
+    d.rectangle([BX, BY, W, H], fill=(24, 22, 30))
+    for yy in range(BY + 40, H, 18): d.line([(BX, yy), (W, yy)], fill=(20, 18, 26), width=2)
+    d.rectangle([BX, BY, W, BY + 34], fill=(50, 48, 60)); d.rectangle([BX - 18, BY - 16, W, BY + 6], fill=(72, 70, 84)); d.rectangle([BX - 18, BY - 16, W, BY - 10], fill=(96, 94, 110))
+    d.rectangle([BX + 10, BY - 120, BX + 100, BY - 16], fill=(40, 38, 48)); d.polygon([(BX, BY - 120), (BX + 110, BY - 120), (BX + 55, BY - 150)], fill=(60, 58, 70))   # water tank
+    kinds = ["tv", "cat", "cameo", "dark", "fish", "party", "desk", "dog", "cameo", "plant", "tv", "cameo", "cat", "desk", "cameo", "tv", "dog", "cameo"]
+    temps = ["5000K", "2700K", "3500K", "dark", "teal", "purple", "3500K", "2700K", "5000K", "2700K", "red", "3500K", "2700K", "5000K", "2700K", "purple", "3500K", "red"]
+    k = 0   # floor-to-ceiling glass, edge to edge: 5 bays per floor, a thin slab between floors
+    for wy in range(BY + 50, H, 172):
+        d.rectangle([BX, wy - 18, W, wy - 4], fill=(58, 56, 68))      # floor slab
+        for wx in range(BX + 14, W - 60, 98):
+            kd = kinds[(k * 7) % len(kinds)]; tp = "dark" if kd == "dark" else temps[(k * 5) % len(temps)]
+            if kd != "dark": window_scene(d, img, wx, wy, 92, 150, kd, tp, u + k * .7, k)
+            else: d.rectangle([wx, wy, wx + 92, wy + 150], fill=(14, 14, 22)); d.rectangle([wx - 3, wy - 3, wx + 95, wy + 153], outline=(30, 30, 40), width=3)
+            k += 1
+    # the boss, crouched at the corner of the roof, looking down over the edge (the boss 11/1: Batman animated series, not a statue)
+    sp, _ = anim("BOSS", t, u, "lookdown", s=4)   # foreground perspective, but to scale with the 12 ft windows below
+    sp = sp.transpose(Image.FLIP_LEFT_RIGHT)   # faces the street below, right edge of the roof
+    cape = rim(sp, LIME if fl < .4 else (255, 255, 255), 4)
+    if fl > .3:   # lightning: his long shadow thrown back across the roof
+        d.polygon([(W - 260, BY - 14), (W - 120, BY - 14), (BX + 160, BY + 30), (BX + 20, BY + 30)], fill=(12, 12, 18))
+    paste_c(img, cape, W - 150, BY - 12)
     text_fn(d, u, fl); return img
 def sc_no1(t):
     def txt(d, u, fl):
@@ -402,6 +475,33 @@ def sc_yet(t):
         f = fit(ln, SAFE_R - SAFE_L, 140, wdth=125, wght=900)
         d.text((SAFE_L + 12, 900 + i * 160), ln, font=f, fill=bl(ROSE if i else INK, a2), anchor="ls")
     return img
+def cloaked(img, cx, by, v):
+    """THE REAL BOSS, first appearance (the boss 11/1): a hooded cloak, nobody can see who is inside, a pink-purple aura glowing
+    behind her. Emperor energy. No face, no name, no relationship on screen."""
+    aura = Image.new("RGBA", (W, H), (0, 0, 0, 0)); ad = ImageDraw.Draw(aura); pulse = 1 + .08 * math.sin(v * 5)
+    for i, (col, rad) in enumerate(((ROSE, 520), ((200, 90, 255), 400), ((255, 120, 220), 280))):
+        rr = int(rad * pulse); ad.ellipse([cx - rr, by - 560 - rr // 2, cx + rr, by - 560 + rr // 2 + 300], fill=col + (70 + 40 * i,))
+    img = Image.alpha_composite(img.convert("RGBA"), aura.filter(ImageFilter.GaussianBlur(70))).convert("RGB"); d = ImageDraw.Draw(img)
+    r = random.Random(4)
+    for i in range(40):   # sparks drifting up through the glow
+        x = cx + r.randint(-420, 420); y = (by - r.randint(0, 900) - int(v * r.randint(120, 320))) % 1900
+        if y < by: d.rectangle([x, y, x + 5, y + 5], fill=[ROSE, (220, 140, 255), (255, 255, 255)][i % 3])
+    top = by - 720; hw = 330
+    cloak = Image.new("RGBA", (W, H), (0, 0, 0, 0)); cd = ImageDraw.Draw(cloak)
+    body = [(cx - 150, top + 230), (cx - 190, top + 300), (cx - 230, top + 470), (cx - hw, by), (cx + hw, by), (cx + 230, top + 470), (cx + 190, top + 300), (cx + 150, top + 230)]
+    cd.polygon(body, fill=(255, 120, 210, 255)); cd.ellipse([cx - 150, top + 10, cx + 150, top + 300], fill=(255, 120, 210, 255))   # rim light shape
+    rimmed = cloak.split()[3].filter(ImageFilter.MaxFilter(13))
+    img.paste(Image.new("RGB", (W, H), (255, 130, 215)), (0, 0), rimmed); d = ImageDraw.Draw(img)
+    for (ax, sgn) in ((cx - 60, -1), (cx + 60, 1)):   # two hairline antler tips poke through the hood: a hint, nothing more
+        d.line([(ax, top + 40), (ax + sgn * 18, top - 30), (ax + sgn * 10, top - 70)], fill=(232, 206, 168), width=7)
+        d.line([(ax + sgn * 16, top - 22), (ax + sgn * 44, top - 46)], fill=(232, 206, 168), width=6)
+    d.polygon(body, fill=(44, 16, 62)); d.ellipse([cx - 150, top + 10, cx + 150, top + 300], fill=(54, 20, 76))
+    d.polygon([(cx, top - 10), (cx - 80, top + 60), (cx + 80, top + 60)], fill=(54, 20, 76))                         # the hood's peak
+    d.ellipse([cx - 92, top + 110, cx + 92, top + 300], fill=(4, 1, 8))                                                  # the hollow: nothing to see
+    d.arc([cx - 98, top + 100, cx + 98, top + 306], 200, 340, fill=(120, 60, 160), width=6)                              # hood edge catches the aura
+    for i in range(6): d.line([(cx - 150 + i * 60, top + 330), (cx - 260 + i * 104, by)], fill=(66, 28, 92), width=7)  # folds
+    d.polygon([(cx - 130, top + 300), (cx + 130, top + 300), (cx + 60, top + 420), (cx - 60, top + 420)], fill=(36, 12, 52))   # mantle shadow
+    return img
 def _row(img, d, y, rank, name, k, col, crack=0.0):
     x0, x1 = SAFE_L + 12, W - M
     d.rounded_rectangle([x0, y, x1, y + 150], radius=14, outline=col, width=4)
@@ -429,7 +529,7 @@ def sc_rank(t):
         cd.polygon([(W // 2 - 70, 900), (W // 2 + 70, 900), (W // 2 + 420, 1880), (W // 2 - 420, 1880)], fill=int(90 * min(1, v / .4)))
         img = Image.composite(Image.new("RGB", (W, H), (80, 40, 60)), img, cone.filter(ImageFilter.GaussianBlur(40))); d = ImageDraw.Draw(img)
         e = 1 - (1 - min(1, v / 1.0)) ** 3
-        paste_c(img, FAWNL, W // 2, int(2700 - (2700 - 1880) * e))
+        img = cloaked(img, W // 2, int(2700 - (2700 - 1880) * e), v); d = ImageDraw.Draw(img)
     kicker(d, "POWER RANKINGS · UPDATED")
     # rows: the boss starts at #1; the new #1 drops in and pushes him to #2
     sl = 0 if t < T["slide"] else min(1, (t - T["slide"]) / .35)
@@ -538,26 +638,94 @@ def sc_flash(t):
     d = ImageDraw.Draw(img)
     d.text((SAFE_L + 12, 1440), "THE BOSS  vs.  THE REAL BOSS", font=fit("THE BOSS  vs.  THE REAL BOSS", SAFE_R - SAFE_L - 24, 40, wdth=110, wght=900), fill=(255, 240, 200), anchor="ls")
     return img
+def hurl(d, img, s_, y, col, t, t0, start=150):
+    """A line thrown at the viewer: starts huge and blurry from beyond the screen, slams to size with a trail and a flash."""
+    u = t - t0
+    if u < 0: return img
+    k = min(1, u / .22); e = 1 - (1 - k) ** 3; sc = 1 + 2.6 * (1 - e); a = min(1, u / .08)
+    f0 = fit(s_, SAFE_R - SAFE_L, start, wdth=125, wght=900)
+    for g, ga in ((1.9, .12), (1.45, .22), (1.15, .35)):   # the trail
+        if k < 1:
+            f = archivo(int(f0.size * min(sc * g, 4.5)), 125, 900); d.text((SAFE_L + 12 - int((sc * g - 1) * 180), y + int((sc * g - 1) * 60)), s_, font=f, fill=bl(col, ga * (1 - k)), anchor="ls")
+    f = archivo(int(f0.size * sc), 125, 900)
+    d.text((SAFE_L + 12 - int((sc - 1) * 180), y + int((sc - 1) * 60)), s_, font=f, fill=bl(col, a), anchor="ls")
+    if k >= 1 and u < .9: d.text((SAFE_L + 12, y), s_, font=f0, fill=col, anchor="ls")
+    return img
+def dash_bg(d, u, seed):
+    """Procedural dashboards and charts flipping past (illustrations: no axis numbers), plus tally marks piling up: iteration after iteration."""
+    r = random.Random(int(u * 6) + seed)
+    for p in range(4):
+        x0 = SAFE_L + (p % 2) * 420; y0 = 1190 + (p // 2) * 196; x1, y1 = x0 + 380, y0 + 180
+        d.rectangle([x0, y0, x1, y1], fill=(10, 12, 10), outline=(40, 46, 30), width=2)
+        kind = r.randint(0, 2)
+        if kind == 0:
+            pts = [(x0 + 16 + i * (x1 - x0 - 32) / 11, y1 - 20 - r.randint(0, 120)) for i in range(12)]; d.line(pts, fill=bl(LIME, .8), width=4)
+        elif kind == 1:
+            for i in range(9): hh = r.randint(10, 130); d.rectangle([x0 + 16 + i * 40, y1 - 16 - hh, x0 + 44 + i * 40, y1 - 16], fill=bl(LIME if r.random() > .4 else ORANGE, .8))
+        else:
+            for i in range(4): d.rounded_rectangle([x0 + 16, y0 + 16 + i * 40, x0 + 16 + r.randint(80, 330), y0 + 44 + i * 40], radius=6, fill=bl(INK, .35))
+    n = int(u * 46)   # tally marks
+    for i in range(min(n, 240)):
+        g, j = divmod(i, 5); gx = SAFE_L + 12 + (g % 12) * 70; gy = 1600 + (g // 12) * 56
+        if j < 4: d.line([(gx + j * 12, gy), (gx + j * 12, gy + 40)], fill=bl(INK, .7), width=4)
+        else: d.line([(gx - 6, gy + 34), (gx + 44, gy + 6)], fill=bl(LIME, .9), width=4)
 def sc_biz(t):
     u = t - T["biz"]; img = Image.new("RGB", (W, H), BLACK); d = ImageDraw.Draw(img)
-    kicker(d, "BACK TO BUSINESS")
+    if t < T["care"]:
+        kicker(d, "BACK TO BUSINESS")
+        rows = [("REAL TRADES.", INK), ("REAL MONEY.", LIME), ("EVERY NUMBER CHECKED.", INK), ("EVERY POST AUDITED.", INK)]
+        y = 600
+        for (s_, c), tb in zip(rows, T["biz_lines"]):
+            img = hurl(d, img, s_, y, c, t, tb, start=170 if "REAL" in s_ else 120); y += 230 if "REAL" in s_ else 170
+        hit = [tb for tb in T["biz_lines"] if 0 <= t - tb < .12]
+        if hit: img = Image.blend(img, Image.new("RGB", (W, H), (255, 255, 255)), .6 * (1 - (t - hit[0]) / .12))
+        if any(0 <= t - tb < .35 for tb in T["biz_lines"]): img = shift(img, *shake(t, 22))
+        return img
+    if t < T["power"]:
+        v = t - T["care"]; kicker(d, "HOW MUCH CARE GOES IN")
+        dash_bg(d, v, 3)
+        lines = [("ITERATION AFTER ITERATION.", INK), ("DASHBOARDS, REBUILT.", INK), ("STRATEGY, STRESS-TESTED.", INK), ("BACKTESTED ON YEARS OF DATA.", LIME)]
+        y = 500
+        for (s_, c), tb in zip(lines, T["care_lines"]):
+            if t >= tb: slam(d, s_, y, c, t, tb, start=96)
+            y += 124
+        if t >= T["yolo"]:
+            k = min(1, pop(t, T["yolo"], .2)); d.text((SAFE_L + 12, 975), "WE ARE", font=archivo(64, 125, 900), fill=INK, anchor="ls")
+            stamp(d, (SAFE_L + SAFE_R) // 2 + 20, 1095, "NOT YOLOING.", (255, 92, 70), k, size=96, ang=-6)
+            if t - T["yolo"] < .12: img = Image.blend(img, Image.new("RGB", (W, H), (255, 60, 40)), .5 * (1 - (t - T["yolo"]) / .12))
+            if t - T["yolo"] < .3: img = shift(img, *shake(t, 16))
+        return img
     if t < T["title"]:
-        rows = [("REAL TRADES.", INK), ("REAL MONEY.", INK), ("EVERY NUMBER CHECKED.", LIME), ("EVERY POST AUDITED.", LIME)]
-        y = 560
-        for (s, c), tb in zip(rows, T["biz_lines"]):
-            if t >= tb: slam(d, s, y, c, t, tb, start=150)
-            y += 200
-        hit = [tb for tb in T["biz_lines"] if 0 <= t - tb < .1]
-        if hit: img = Image.blend(img, Image.new("RGB", (W, H), (255, 255, 255)), .5 * (1 - (t - hit[0]) / .1))
-        if any(0 <= t - tb < .3 for tb in T["biz_lines"]): img = shift(img, *shake(t, 12))
+        v = t - T["power"]; kicker(d, "HOW MUCH CARE GOES IN")
+        cone = Image.new("L", (W, H), 0); ImageDraw.Draw(cone).polygon([(W // 2 - 80, 0), (W // 2 + 80, 0), (W // 2 + 470, 1860), (W // 2 - 470, 1860)], fill=int(120 * min(1, v / .35)))
+        img = Image.composite(Image.new("RGB", (W, H), (70, 78, 44)), img, cone.filter(ImageFilter.GaussianBlur(40))); d = ImageDraw.Draw(img)
+        slam(d, "WE TRADE", 560, INK, t, T["power"] + .05, start=190)
+        slam(d, "WITH THE", 740, INK, t, T["power"] + .2, start=190)
+        slam(d, "POWER OF AI.", 940, LIME, t, T["power"] + .4, start=190)
+        e = 1 - (1 - min(1, v / .9)) ** 3; by = int(2700 - (2700 - 1880) * e); sp = rim(scaled(BOSS, 13), LIME, 6)
+        paste_c(img, sp, W // 2, by); d = ImageDraw.Draw(img)
+        g = t - T["glare"]   # anime glare: a white sheen sweeps the aviators, then a four-point sparkle
+        if 0 <= g < .8:
+            gy = by - int(sp.height * .69); lw = int(sp.width * .34)
+            sweep = Image.new("RGBA", (W, H), (0, 0, 0, 0)); sd = ImageDraw.Draw(sweep); sx = W // 2 - lw - 60 + int((2 * lw + 120) * min(1, g / .45))
+            sd.polygon([(sx, gy - 34), (sx + 40, gy - 34), (sx + 10, gy + 34), (sx - 30, gy + 34)], fill=(255, 255, 255, 230))
+            lens = Image.new("L", (W, H), 0); ImageDraw.Draw(lens).rectangle([W // 2 - lw, gy - 36, W // 2 + lw, gy + 36], fill=255)
+            sweep.putalpha(ImageChops.multiply(sweep.split()[3], lens)); img = Image.alpha_composite(img.convert("RGBA"), sweep).convert("RGB"); d = ImageDraw.Draw(img)
+            if g > .3:
+                r_ = int(110 * max(0, 1 - abs(g - .5) / .3)); gx = W // 2 + int(sp.width * .12)
+                if r_ > 0:
+                    d.polygon([(gx, gy - r_), (gx + 14, gy - 14), (gx + r_, gy), (gx + 14, gy + 14), (gx, gy + r_), (gx - 14, gy + 14), (gx - r_, gy), (gx - 14, gy - 14)], fill=(255, 255, 255))
+                    d.polygon([(gx, gy - r_ // 2), (gx + 8, gy - 8), (gx + r_ // 2, gy), (gx + 8, gy + 8), (gx, gy + r_ // 2), (gx - 8, gy + 8), (gx - r_ // 2, gy), (gx - 8, gy - 8)], fill=LIME)
+            if g < .1: img = Image.blend(img, Image.new("RGB", (W, H), (255, 255, 255)), .4 * (1 - g / .1))
         return img
     v = t - T["title"]
+    kicker(d, "ROUNDING ERROR CAPITAL")
     a = fade(v, 0, .2)
     d.text((SAFE_L + 12, 560), "OPTIONS,", font=fit("OPTIONS,", SAFE_R - SAFE_L, 160, wdth=125, wght=900), fill=bl(INK, a), anchor="ls")
     d.text((SAFE_L + 12, 720), "EXPLAINED BY", font=fit("EXPLAINED BY", SAFE_R - SAFE_L, 160, wdth=125, wght=900), fill=bl(INK, a), anchor="ls")
     slam(d, "THE BOTS THAT TRADE THEM.", 860, LIME, t, T["title"] + .35, start=120)
     paste_c(img, scaled(BOSS, 7), W - 150, 1780, alpha=0.10)  # Easter egg: the boss at 10%, as always
-    lineup(img, W // 2 - 60, 1780, 4)
+    lineup(img, W // 2 - 60, 1780, 4, t=t, u=v)
     return img
 def frame(t):
     if t < T["meet"]: img = COVER_IMG.copy()
@@ -584,7 +752,7 @@ def make_cover(path):
     d.text((SAFE_L + 12, 640), "MEET", font=fit("MEET", SAFE_R - SAFE_L, 330, wdth=125, wght=900), fill=INK, anchor="ls")
     d.text((SAFE_L + 12, 830), "THE FUND.", font=fit("THE FUND.", SAFE_R - SAFE_L, 330, wdth=125, wght=900), fill=LIME, anchor="ls")
     d.text((SAFE_L + 12, 920), "I'm an AI trading bot. Meet the team.", font=mono(36, True), fill=INK, anchor="ls")
-    lineup(img, W // 2, 1420, 4); paste_c(img, scaled(BOSS, 6), W - 120, 1420, alpha=0.10)
+    lineup(img, W // 2, 1420, 4, t=1.3, u=1.3); paste_c(img, scaled(BOSS, 6), W - 120, 1420, alpha=0.10)
     nfa(img).save(path, quality=92); return path
 def build(out_mp4, cover_jpg, workdir):
     global COVER_IMG

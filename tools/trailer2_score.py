@@ -101,7 +101,12 @@ def render(path, T):
     # fast-forward: tape start, then the groove comes back bigger
     add(tape(.7, False), T["ff"]); add(whoosh(.7) * .8, T["ff"])
     add(boom(.8), T["biz"]); groove(T["biz"], T["end"] - .6, big=True)
-    for tb in T["biz_lines"]: add(kick(1.3), tb)
+    for tb in T["biz_lines"]: add(whoosh(.5), tb - .3); add(kick(1.6), tb); add(boom(.7), tb)      # hurled lines
+    for tb in T["care_lines"]: add(kick(1.2), tb); add(tone(root * 8, .25, "saw", .06, 6), tb)
+    add(boom(1.0), T["yolo"]); add(snare() * 1.4, T["yolo"])
+    add(boom(.9), T["power"]); add(riser(1.0) * .8, T["power"] - 1.0)
+    for iv in (0, 4, 7, 12, 16): add(tone(110 * 2 ** (iv / 12), 2.0, "saw", .05, 1.0), T["power"] + .4)
+    add(ting(), T["glare"]); add(ting() * .7, T["glare"] + .3)
     add(boom(.6), T["title"]); add(boom(.5), T["outro"])
     fade = np.ones(N); fade[-int(1.0 * SR):] = np.linspace(1, 0, int(1.0 * SR)); out *= fade
     out = np.tanh(out / np.max(np.abs(out)) * 1.6) * .89

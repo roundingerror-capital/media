@@ -35,12 +35,26 @@ def when(rep):
     tm = rep.get("timing", ""); tm = {"after close": "after the close", "before open": "before the open"}.get(tm, tm)
     return day, tm
 
-def straddle(n):
+def straddle(n, need=True):
     em = n.get("expected_move")  # Theo JOB E layout (2026-10-31): expected_move {pct, strike, expiry, spot, quote_time}
     if em and em.get("pct") is not None: return {"pct_of_spot": em["pct"], **em}
     for k, v in n.items():
         if k.startswith("straddle_") and isinstance(v, dict) and "pct_of_spot" in v: return v
-    raise KeyError("no expected move on the sheet (expected_move.pct or straddle_<exp>.pct_of_spot)")
+    if need: raise KeyError("no expected move on the sheet (expected_move.pct or straddle_<exp>.pct_of_spot)")
+    return None
+
+def asof(n):
+    """'as of Fri 10/30 close' from the sheet's quote time (Theo's expected_move.quote_time or straddle at)."""
+    x = straddle(n, False) or {}; q = x.get("quote_time") or x.get("at") or ""
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", q)
+    if not m: return ""
+    dd = datetime.date(int(m[1]), int(m[2]), int(m[3])); return f"as of {dd.strftime('%a')} {dd.month}/{dd.day}" + (" close" if "close" in q.lower() or "3:59" in q else "")
+
+def holding(sheet):
+    for src in (sheet.get("wording_holding"), sheet.get("what_happened", ""), sheet.get("wording", "")):
+        for ln in re.split(r"(?<=\.)\s+", src or ""):
+            if ln.strip().startswith("The fund holds"): return ln.strip()
+    return ""
 
 def normalize(sheet):
     """Accept both sheet layouts: the RDDT sheet (last_8_next_day_moves/move_pct, summary) and Theo's JOB E preview
@@ -60,6 +74,7 @@ def normalize(sheet):
 def put_test(n, derive):
     pt = n.get("put_test")
     if pt: return pt, False
+    if straddle(n, False) is None: return None, False   # no expected move, no strike to test
     # Not on the sheet: arithmetic on the sheet's own numbers (like the paid-twice interest math), stamped HYPOTHETICAL.
     # A put struck the implied move below the close before the report: did the next-day close stay above it?
     x = straddle(n)["pct_of_spot"]; mv = [m["move_pct"] for m in n["last_8_next_day_moves"]]
@@ -68,17 +83,18 @@ def put_test(n, derive):
             "note": "arithmetic on the sheet's last-8 moves and expected move; ask Theo to put put_test on the sheet (D-20261031-earnings-d2-1)"}, derive
 
 def build_spec(sheet, derive=False):
-    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); x = straddle(n)["pct_of_spot"]
-    moves = n["last_8_next_day_moves"]; s = n["summary"]
+    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"])
+    xs = straddle(n, False); x = xs["pct_of_spot"] if xs else None; ao = asof(n)
+    moves = n["last_8_next_day_moves"]; s = n["summary"]; N = len(moves)
     labels = [f"{int(m['report'][5:7])}/{m['report'][2:4]}" for m in moves]
-    hold = sheet.get("wording_holding") or next((ln.strip() for ln in re.split(r"(?<=\.)\s+", sheet.get("wording", "")) if ln.startswith("The fund holds")), "")
+    hold = holding(sheet)
     pt, test = put_test(n, derive)
     one = (sheet.get("company") or {}).get("one_liner")
     sc = [
         [0.0, 4.5, f"EARNINGS PREVIEW · {T}", [[f"{T} reports", W_], [f"{day}, {tm}.", L_]],
-         [f"Options price about a {pct(x)} move."] + ([one] if one else []),
+         ([f"Options priced a move of about {pct(x)}" + (f" ({ao})." if ao else ".")] if x else [f"Average move, last {N} reports: {pct(s['average_size_of_move_pct'])}."]) + ([one] if one else []),
          [[0.4, 2.2, "penny", "Big one?!", "jump"], [2.4, 4.3, "theo", "Let's look back.", "nod"]], ["penny", "theo"], 0],
-        [4.5, 13.0, "LAST 8 REPORTS · NEXT-DAY MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
+        [4.5, 13.0, f"LAST {N} REPORTS · NEXT-DAY MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
          [f"Median {pct(s['median_size_pct'])}. Close before vs close after."],
          [[10.6, 12.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
     charts = {1: {"vals": [m["move_pct"] for m in moves], "labels": labels, "note": "Past moves. Not a prediction."}}
@@ -88,8 +104,8 @@ def build_spec(sheet, derive=False):
                   [[t + 6.6, t + 9.3, "theo", "Past moves. No promise.", "brow"]], ["theo", "ada"], 0])
         visuals[2] = {"kind": "calc", "two_line": True, "hypo": True, "every": 1.5, "size": 1.0,
                       "stamp": "TEMPLATE TEST" if test else "HYPOTHETICAL",
-                      "rows": [["Reports where the stock stayed above it", f"{pt['held']} of 8", L_],
-                               ["Reports where it broke through", f"{pt['broke']} of 8", OR],
+                      "rows": [["Reports where the stock stayed above it", f"{pt['held']} of {N}", L_],
+                               ["Reports where it broke through", f"{pt['broke']} of {N}", OR],
                                ["Worst next-day drop", f"−{pct(abs(pt['worst_drop_pct']))}", OR]],
                       "total": ["Hypothetical. No trade was made.", "", W_]}
         t += 9.5
@@ -101,7 +117,7 @@ def build_spec(sheet, derive=False):
     return {"label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry", "music_start": 7.0,
             "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.36, "bg_blur": 2.0,
-            "cold_open": {"big": f"±{pct(x)}", "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
+            "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
             "intro_cfg": {"tagline": "And this is what the data says ↓"},
             "endcard": {"line1": "LIKE + FOLLOW", "line2": "FOR MORE UPDATES", "show_positions": False},
             "scenes": sc, "charts": charts, "visuals": visuals,
@@ -110,17 +126,18 @@ def build_spec(sheet, derive=False):
             "_test": test}
 
 def caption(sheet):
-    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); x = straddle(n)["pct_of_spot"]; s = n["summary"]
-    hold = next((ln.strip() for ln in re.split(r"(?<=\.)\s+", sheet.get("wording", "")) if ln.startswith("The fund holds")), "")
+    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); s = n["summary"]; N = len(n["last_8_next_day_moves"])
+    xs = straddle(n, False); ao = asof(n); hold = holding(sheet)
+    em = f"The options market priced a move of about {pct(xs['pct_of_spot'])}{' ' + ao if ao else ''}. " if xs else ""
     pt, _ = put_test(n, False); mid = ""
-    if pt: mid = f" Hypothetical: a put {pct(pt['strike_pct_below'])} below the prior close would have stayed above water in {pt['held']} of those 8. Not a trade, not a plan."
-    return (f"I'm an AI trading bot. {T} reports {day} {tm}. The options market prices about a {pct(x)} move. "
-            f"Last 8 reports: up {s['up']}, down {s['down']}, average move {pct(s['average_size_of_move_pct'])}.{mid} {hold} "
+    if pt: mid = f" Hypothetical: a put {pct(pt['strike_pct_below'])} below the prior close stayed above water in {pt['held']} of those {N}. Not a trade, not a plan."
+    return (f"I'm an AI trading bot. {T} reports {day} {tm}. {em}"
+            f"Last {N} reports: up {s['up']}, down {s['down']}, average move {pct(s['average_size_of_move_pct'])}.{mid} {hold} Holding through earnings? 👇 "
             f"Not financial advice. " + " ".join(TAGS)).replace("  ", " ")
 
 def card(sheet, sheet_id, mp4_blob=None, cover_blob=None):
     sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; d = n["report"]["date"]
-    return {"id": f"posts/{d}-earnings-{T.lower()}", "title": f"Earnings preview · {T}", "series": "Earnings", "stage": "brainstorm",
+    return {"id": f"{d}-earnings-{T.lower()}", "title": f"Earnings preview · {T}", "series": "Earnings", "stage": "brainstorm",
             "kind": "event", "post_by": (datetime.date.fromisoformat(d) - datetime.timedelta(days=2)).isoformat(),
             "caption": caption(sheet), "hashtags": TAGS, "networks": ["instagram", "tiktok", "youtube"],
             "media": {"music": "Original song: Hold to Expiry · Rounding Error original", "ai_label": True},
@@ -130,11 +147,12 @@ def card(sheet, sheet_id, mp4_blob=None, cover_blob=None):
 def cover(sheet, out_jpg):
     from PIL import Image, ImageDraw
     import daily; from make_reel import W, H, archivo, mono, fit
-    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); x = straddle(n)["pct_of_spot"]
+    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); xs = straddle(n, False); N = len(n["last_8_next_day_moves"])
+    big = f"\u00b1{pct(xs['pct_of_spot'])}?" if xs else f"{pct(n['summary']['average_size_of_move_pct'])}"
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     d.text((daily.M, 420), f"EARNINGS PREVIEW · {day.upper()}", font=mono(34, True), fill=daily.LIME, anchor="ls")
     d.text((daily.M, 640), T, font=archivo(260, 125, 900), fill=daily.INK, anchor="ls")
-    d.text((daily.M, 860), f"±{pct(x)}?", font=archivo(200, 125, 900), fill=daily.LIME, anchor="ls")
+    d.text((daily.M, 860), big, font=archivo(200, 125, 900), fill=daily.LIME, anchor="ls")
     d.text((daily.M, 960), "what the last 8 reports say", font=fit("what the last 8 reports say", daily.SAFE_R - daily.M, 64, wdth=110, wght=800), fill=daily.INK, anchor="ls")
     s = daily.sprite_state("penny", False, 0); h = 520; s = s.resize((int(s.width * h / s.height), h), Image.NEAREST); img.paste(s, (W // 2 - s.width // 2, 1700 - h), s)
     s = daily.sprite_state("theo", False, 0); h = 440; s = s.resize((int(s.width * h / s.height), h), Image.NEAREST); img.paste(s, (W // 2 + 180, 1700 - h), s)
