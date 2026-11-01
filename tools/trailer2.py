@@ -89,8 +89,8 @@ SPR = {c[0]: outline(pad(load(c[3]), 2), (0, 0, 0), 1) for c in CAST}
 BOSS = load("boss_shadow_1x")
 import trailer2_art as ART
 ROSE = (255, 150, 190)
-FAWN = ART.fawn64()   # the 64x64 standard (V22/V23)
-FAWNS = ART.fawn64(True)
+FAWN = ART.fawn64(v=ART.V26)   # the 64x64 standard (V22/V23), V26 take
+FAWNS = ART.fawn64(True, v=ART.V26)
 PIG = ART.piggy()
 COIN = None
 def coin(s):
