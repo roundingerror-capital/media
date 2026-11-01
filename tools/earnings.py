@@ -67,7 +67,7 @@ def normalize(sheet):
         med = mv[k // 2] if k % 2 else (mv[k // 2 - 1] + mv[k // 2]) / 2
         n["summary"] = {"up": n.get("up_days", sum(1 for m in n["last_8_next_day_moves"] if m["move_pct"] > 0)),
                         "down": n.get("down_days", sum(1 for m in n["last_8_next_day_moves"] if m["move_pct"] < 0)),
-                        "average_size_of_move_pct": n.get("avg_abs_move_pct", round(sum(mv) / k, 1)), "median_size_pct": round(med, 1)}
+                        "average_size_of_move_pct": n.get("avg_abs_move_pct", round(sum(mv) / k, 1)), "median_size_pct": None}   # not on Theo's sheet: not shown
     if "ticker" not in sheet: sheet["ticker"] = n["ticker"]
     return sheet
 
@@ -95,7 +95,7 @@ def build_spec(sheet, derive=False):
          ([f"Options priced a move of about {pct(x)}" + (f" ({ao})." if ao else ".")] if x else [f"Average move, last {N} reports: {pct(s['average_size_of_move_pct'])}."]) + ([one] if one else []),
          [[0.4, 2.2, "penny", "Big one?!", "jump"], [2.4, 4.3, "theo", "Let's look back.", "nod"]], ["penny", "theo"], 0],
         [4.5, 13.0, f"LAST {N} REPORTS · NEXT-DAY MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
-         [f"Median {pct(s['median_size_pct'])}. Close before vs close after."],
+         [(f"Median {pct(s['median_size_pct'])}. " if s.get("median_size_pct") is not None else "") + "Close before vs close after the report."],
          [[10.6, 12.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
     charts = {1: {"vals": [m["move_pct"] for m in moves], "labels": labels, "note": "Past moves. Not a prediction."}}
     visuals = {}; t = 13.0
