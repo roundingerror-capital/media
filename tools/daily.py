@@ -360,20 +360,42 @@ def pctlab(v):
     t = f"{int(v):+d}%" if float(v).is_integer() else f"{float(v):+.1f}%"
     return t.replace("-", "\u2212")
 
-def chart_panel(d, vals, labels, y0, y1, note=""):
-    """Bars of a series (e.g. a put's P&L as % of the premium, per day). Every value must be on a Theo fact sheet."""
-    n = len(vals); lo = min(0, min(vals)); hi = max(0, max(vals)); rng = (hi - lo) or 1
-    zero = y0 + (hi / rng) * (y1 - y0); bw = (SAFE_R - M) / n
-    # solid black plate behind the chart (2026-11-01): the safety scan's high-contrast OCR pass misread small labels over the office backdrop
-    d.rounded_rectangle([M - 16, y0 - 52, SAFE_R + 16, y1 + (120 if note else 70)], radius=14, fill="#000000")
-    d.line([(M, zero), (SAFE_R, zero)], fill=MUT, width=3)
+def chart_panel(d, vals, labels, y0, y1, note="", k=1.0, avg=None, title=""):
+    """Bars of a series (e.g. next-day moves after each report). Every value must be on a Theo fact sheet.
+    Redesign 2026-11-02 (the boss: "the black chart looks terrible"), per the dataviz rules: a dark card with a quiet border and a
+    title, a recessive zero line, slim bars with rounded ends at the data side (anchored to the baseline), lime up / coral down,
+    value labels in ink just past each bar end, dates under the plot, an optional dashed +/- average band, bars grow in (k 0..1)."""
+    img = d._image; n = len(vals); lo = min(0, min(vals)); hi = max(0, max(vals)); rng = (hi - lo) or 1
+    if avg: lo, hi = min(lo, -avg), max(hi, avg); rng = hi - lo
+    px0, px1 = M - 20, SAFE_R + 20; top = y0 - (64 if title else 30); bot = y1 + (150 if note else 110)
+    card = Image.new("RGBA", img.size, (0, 0, 0, 0)); cd = ImageDraw.Draw(card)
+    cd.rounded_rectangle([px0, top, px1, bot], radius=22, fill=(14, 16, 18, 238), outline=(46, 50, 56, 255), width=2)
+    base = img.convert("RGBA"); base.alpha_composite(card); img.paste(base.convert("RGB")); d = ImageDraw.Draw(img)
+    if title: d.text((M, top + 40), title + ("  ·  - - - average size" if avg else ""), font=mono(20, True), fill=MUT, anchor="ls")
+    plot0, plot1 = y0 + 48, y1 - 20   # headroom: the tallest bar's label stays under the title
+    Y = lambda v: plot0 + (hi - v) / rng * (plot1 - plot0)
+    zero = Y(0); bw = (SAFE_R - M) / n
+    if avg:   # dashed average band, recessive
+        for yy in (Y(avg), Y(-avg)):
+            for x in range(M, SAFE_R, 18): d.line([(x, yy), (x + 9, yy)], fill=(70, 74, 80), width=2)
+    d.line([(M, zero), (SAFE_R, zero)], fill=(120, 124, 128), width=2)
     for i, (v, lab) in enumerate(zip(vals, labels)):
-        x0 = M + i * bw + bw * .18; x1 = M + (i + 1) * bw - bw * .18; yv = zero - v / rng * (y1 - y0)
-        d.rectangle([x0, min(zero, yv), x1, max(zero, yv)], fill=RED if v < 0 else LIME)
-        lab_v = pctlab(v).lstrip("+")   # up bars drop the "+": the bar above the line says it, and OCR read "+2.9%" as "42.9%" (2026-11-01)
-        d.text(((x0 + x1) / 2, max(zero, yv) + 36), lab_v, font=mono(28 if n <= 6 else 24, True), fill=INK, anchor="ms")
-        d.text(((x0 + x1) / 2, y0 - 14), lab, font=mono(22), fill=MUT, anchor="ms")
-    if note: d.text((M, y1 + 100), note, font=mono(22), fill=MUT, anchor="ls")
+        ki = max(0.0, min(1.0, k * (n + 2) / n - i * .12 * k)) if k < 1 else 1.0
+        ki = 1 - (1 - ki) ** 3
+        cx = M + (i + .5) * bw; w2 = bw * .26; yv = zero + (Y(v) - zero) * ki
+        col = LIME_T if v >= 0 else (255, 107, 91)
+        if abs(yv - zero) >= 2:
+            yt, yb = min(zero, yv), max(zero, yv); r = min(8, int((yb - yt) / 2))
+            d.rounded_rectangle([cx - w2, yt, cx + w2, yb], radius=r, fill=col)
+            if v >= 0: d.rectangle([cx - w2, yb - r, cx + w2, yb], fill=col)   # square at the baseline, round at the data end
+            else: d.rectangle([cx - w2, yt, cx + w2, yt + r], fill=col)
+        if ki >= .98:
+            lab_v = pctlab(v).lstrip("+")   # up bars drop the "+" (OCR read "+2.9%" as "42.9%", 2026-11-01)
+            ty = yv - 14 if v >= 0 else yv + 40
+            d.text((cx, ty), lab_v, font=mono(30 if n <= 6 else 24, True), fill=INK, anchor="ms")
+        d.text((cx, plot1 + 88), lab, font=mono(22), fill=MUT, anchor="ms")   # dates sit below the lowest value label
+    if note: d.text((M, bot - 26), note, font=mono(20), fill=MUT, anchor="ls")
+    return d
 
 def threeway_panel(d, cards, y0, quote=""):
     """THE THREE-WAY (decision 20261022-threeway-series-1): SAFER · OURS · RISKIER side by side.
@@ -436,7 +458,7 @@ def scene_frame(S, t, heads_override=None):
         threeway_panel(d, tw["cards"], y + 10, tw.get("quote", "")); y += 660
     ch = (S.get("charts") or {}).get(k)
     if ch:
-        chart_panel(d, ch["vals"], ch["labels"], y + 70, y + 330, ch.get("note", "")); y += 430  # +70: the bar labels sit above y0, clear of the last body line (earnings template, 2026-11-01)
+        d = chart_panel(d, ch["vals"], ch["labels"], y + 110, y + 480, ch.get("note", ""), k=fade(t, t0 + .3, t0 + 1.5), avg=ch.get("avg"), title=ch.get("title", "")); y += 660
     vz = (S.get("visuals") or {}).get(k)
     S["_hpx"] = None
     if vz:  # worked example (explain.py): characters shrink to the bottom band so the steps have room
