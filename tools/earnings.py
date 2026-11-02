@@ -225,30 +225,23 @@ def card(sheet, sheet_id, mp4_blob=None, cover_blob=None):
             "theo_check": {"sheet": sheet_id, "status": "sourced", "note": "every number on screen is a field of this sheet (tools/earnings.py)"},
             "files": [b for b in (mp4_blob, cover_blob) if b], "penny_reply": "Earnings master template (tools/earnings.py). Brainstorm draft: no Roz until the boss says ready for review."}
 
-def cover(sheet, out_jpg):
-    from PIL import Image, ImageDraw
-    import daily; from make_reel import W, H, archivo, mono, fit
-    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); xs = straddle(n, False); N = len(n["last_8_next_day_moves"])
-    big = f"\u00b1{pct(xs['pct_of_spot'])}?" if xs else f"{pct(n['summary']['average_size_of_move_pct'])}"
-    img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
-    d.text((daily.M, 420), f"EARNINGS PREVIEW · {day.upper()}", font=mono(34, True), fill=daily.LIME, anchor="ls")
-    d.text((daily.M, 640), T, font=archivo(260, 125, 900), fill=daily.INK, anchor="ls")
-    if big.startswith("\u00b1"):   # the sign smaller and apart from the digits, so the scan's OCR reads the figure (not "4" + figure)
-        pf = archivo(120, 125, 900); d.text((daily.M, 830), "\u00b1", font=pf, fill=daily.LIME, anchor="ls")
-        d.text((daily.M + d.textlength("\u00b1", font=pf) + 30, 860), big[1:], font=archivo(200, 125, 900), fill=daily.LIME, anchor="ls")
-    else: d.text((daily.M, 860), big, font=archivo(200, 125, 900), fill=daily.LIME, anchor="ls")
-    d.text((daily.M, 960), "what the last 8 reports say", font=fit("what the last 8 reports say", daily.SAFE_R - daily.M, 64, wdth=110, wght=800), fill=daily.INK, anchor="ls")
-    s = daily.sprite_state("penny", False, 0); h = 520; s = s.resize((int(s.width * h / s.height), h), Image.NEAREST); img.paste(s, (W // 2 - s.width // 2, 1700 - h), s)
-    s = daily.sprite_state("theo", False, 0); h = 440; s = s.resize((int(s.width * h / s.height), h), Image.NEAREST); img.paste(s, (W // 2 + 180, 1700 - h), s)
-    img = daily.nfa(img); img.save(out_jpg, quality=92); return out_jpg
+def cover(sheet, out_jpg, derive=False):
+    """Cover: layout x background x the video's own opening cast, varied per video (tools/earn_covers.py)."""
+    import earn_covers
+    sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; month = n["report"]["date"][:7]
+    pt, test = put_test(n, derive); sizes = [2, 2] + ([2] if pt else []) + [2, 3]
+    cv = cast_video(T, month, len(sizes), sizes, save=not test)
+    L, Mo = _ledger(month); layout, bg = earn_covers.pick(T, month, Mo)
+    if not test: json.dump(L, open(LEDGER, "w"), indent=1)
+    return earn_covers.cover(sheet, out_jpg, cv["casts"][0], layout, bg)
 
 def render(sheet, out_dir, derive=False):
     import daily, subprocess
     sheet = normalize(sheet); os.makedirs(out_dir, exist_ok=True); T = sheet["ticker"].lower()
-    S = build_spec(sheet, derive); cj = cover(sheet, os.path.join(out_dir, f"earnings_{T}_cover.jpg"))
+    S = build_spec(sheet, derive); cj = cover(sheet, os.path.join(out_dir, f"earnings_{T}_cover.jpg"), derive)
     raw = os.path.join(out_dir, f"earnings_{T}_raw.mp4"); out = os.path.join(out_dir, f"earnings_{T}.mp4")
     daily.build(S, raw, cj, workdir=out_dir)
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", raw, "-c:v", "libx264", "-preset", "slow", "-crf", "23", "-tune", "animation", "-pix_fmt", "yuv420p",
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", raw, "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-tune", "animation", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", out], check=True); os.remove(raw)
     open(os.path.join(out_dir, f"earnings_{T}_caption.txt"), "w").write(caption(sheet))
     return out, cj, S

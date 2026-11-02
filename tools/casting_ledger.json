@@ -579,6 +579,32 @@
      ]
     ]
    }
+  },
+  "covers": {
+   "PLTR": {
+    "layout": "stack",
+    "bg": "black"
+   },
+   "SHOP": {
+    "layout": "coaster",
+    "bg": "skyline"
+   },
+   "APO": {
+    "layout": "band",
+    "bg": "office"
+   },
+   "AMD": {
+    "layout": "bignum",
+    "bg": "lime"
+   },
+   "ANET": {
+    "layout": "bignum",
+    "bg": "black"
+   },
+   "UBER": {
+    "layout": "band",
+    "bg": "lime"
+   }
   }
  }
 }
