@@ -188,5 +188,6 @@ KINDS = {"book": book, "gap": gap, "calc": calc, "outcomes": outcomes, "roll": r
 
 def draw(d, v, u, y):
     """Draw the scene's worked example; u = seconds since the scene started. Optional step chip on top."""
+    if v.get("instant"): u = 99.0   # sentence loops (the boss 2026-11-02): frame 1 shows the finished result, no reveal
     if v.get("step"): y = _step(d, y, v["step"][0], v["step"][1], v["step"][2], fade(u, 0, 0.25))
     return KINDS[v["kind"]](d, v, u, y)

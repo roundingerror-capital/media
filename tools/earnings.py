@@ -211,11 +211,13 @@ def build_spec(sheet, derive=False):
         t0, t1 = scn[0], scn[1]; c = cv["casts"][k]; rows = cv["lines"][k]
         if k == 0: tl = [[t0 + 0.4, t0 + 2.2], [t0 + 2.4, t1 - 0.2]]
         elif k == len(sc) - 1: tl = [[t0 + 0.3, t1 - 0.2]]
-        else: tl = [[t1 - 3.0, t1 - 0.2]]
+        elif k == 1: tl = [[t0 + 3.9, t1 - 0.2]]   # the boss 2026-11-02: no dead air after Kit's cart lands (~t0+3.6); the line lands with a zoom
+        else: tl = [[t0 + 1.2, t1 - 0.2]]          # middle slides: react right after the headline, not 3 s before the slide ends
         if k == len(sc) - 1 and not any(w == c[0] for w, _, _ in rows): rows = [[c[0], rows[0][1], rows[0][2]]] if rows[0][0] not in c else rows
         scn[5] = [[a, b, w, ln, pose] for (a, b), (w, ln, pose) in zip(tl, rows)]
         if k == len(sc) - 1 and scn[5]: scn[5][0][3] = "Comment!" if scn[5][0][2] == "penny" else scn[5][0][3]
         scn[6] = c; cast_x[k] = cv["xs"][k]
+        if k == 1 and scn[5]: twist = {"t": scn[5][0][0], "dur": 1.3, "kind": "zoom", "text": scn[5][0][3].upper(), "y": 330}   # "PLOT TWIST?!" punch-in with the bubble
     shades_who = next((w for w in cv["casts"][1] if w in ("theo", "penny", "ada", "kit", "roz")), "theo")
     return {"cast_x": cast_x, "cast_h": {1: 220}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry_long", "music_start": 8.0,
@@ -227,7 +229,7 @@ def build_spec(sheet, derive=False):
             "memes": [{"t": 0.2, "dur": 2.0, "kind": "pov", "text": f"POV: {T} reports {day}"},
                       {"t": 4.8, "dur": 1.6, "kind": "pov", "text": "POV: you held through earnings", "y": 330},
                       {"t": 6.8, "dur": 1.2, "kind": "zoom", "text": "HOLD ON", "y": 330},   # as the cart flies off the end
-                      {"t": 5.0, "dur": 1.6, "kind": "shades", "who": shades_who}],
+                      {"t": 5.0, "dur": 1.6, "kind": "shades", "who": shades_who}, twist],
             "_test": test}
 
 def caption(sheet):
