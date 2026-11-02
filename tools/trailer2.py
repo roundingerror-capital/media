@@ -44,44 +44,44 @@ def pad(sp, p):
 def rim(sp, col=LIME, w=5):
     sp = pad(sp, w + 2); return outline(sp, col, w)
 # ---------------------------------------------------------------- timeline
-T = dict(meet=0.6, fund=1.25, bot=2.5, roster=5.4, card=3.6)
+T = dict(meet=0.5, fund=1.1, bot=2.2, roster=4.7, card=2.9)   # v7: 60 s cut
 T["cards"] = [T["roster"] + i * T["card"] for i in range(5)]
 T["team"] = T["roster"] + 5 * T["card"]          # 20.0 lineup
-T["above"] = T["team"] + 1.9                       # 21.9 "and above them all"
-T["booms"] = [T["above"] + 1.0, T["above"] + 1.6, T["above"] + 2.2]
+T["above"] = T["team"] + 1.6                       # 21.9 "and above them all"
+T["booms"] = [T["above"] + .8, T["above"] + 1.3, T["above"] + 1.8]
 T["boss"] = T["booms"][-1]                         # 24.1 reveal
-T["glint"] = T["boss"] + 1.3
-T["no1"] = T["boss"] + 3.2                         # 27.3 "THE BOSS IS #1."
-T["yet"] = T["no1"] + 1.5                          # 28.8 "YET... THERE IS ALWAYS ONE ABOVE."
-T["rank"] = T["yet"] + 2.4                         # 31.2 power rankings: a new #1 appears
+T["glint"] = T["boss"] + 1.1
+T["no1"] = T["boss"] + 2.7                         # 27.3 "THE BOSS IS #1."
+T["yet"] = T["no1"] + 1.4                          # 28.8 "YET... THERE IS ALWAYS ONE ABOVE."
+T["rank"] = T["yet"] + 2.0                         # 31.2 power rankings: a new #1 appears
 T["slide"] = T["rank"] + .45                       # new row drops in, the boss moves to #2
 T["fill"] = T["rank"] + 1.0                        # her bar starts filling
 T["crack"] = T["rank"] + 2.1                       # the bar cracks
 T["shatter"] = T["rank"] + 2.45                    # ...and breaks
-T["rew"] = T["rank"] + 3.6                         # 34.8 rewind
-T["fb"] = T["rew"] + 0.7                           # 35.5 flashback plays
-T["beg"] = [T["fb"] + .5, T["fb"] + 1.0, T["fb"] + 1.5]
-T["what"] = T["fb"] + 2.3                          # her: "...what now?"
-T["ask"] = T["fb"] + 3.2                           # him: the money
-T["why"] = T["fb"] + 5.0                           # her: "Why? So you can look online for fake points?"
-T["hypo"] = T["fb"] + 6.9                          # him: "They're not fake. They're... hypothetical."
-T["askbots"] = T["fb"] + 8.6                       # her: "Did you ask the bots?"
-T["botsaid"] = T["fb"] + 9.8                       # him: "The bots said to ask you."
-T["fine"] = T["fb"] + 11.4                         # her: "...fine."
-T["honey"] = T["fb"] + 12.5                        # her: "ok honey, here..."
+T["rew"] = T["rank"] + 3.1                         # 34.8 rewind
+T["fb"] = T["rew"] + 0.6                           # 35.5 flashback plays
+T["beg"] = [T["fb"] + .4, T["fb"] + .8, T["fb"] + 1.2]
+T["what"] = T["fb"] + 1.9                          # her: "...what now?"
+T["ask"] = T["fb"] + 2.7                           # him: the money
+T["why"] = T["fb"] + 4.3                           # her: "Why? So you can look online for fake points?"
+T["hypo"] = T["fb"] + 5.9                          # him: "They're not fake. They're... hypothetical."
+T["askbots"] = T["fb"] + 7.3                       # her: "Did you ask the bots?"
+T["botsaid"] = T["fb"] + 8.3                       # him: "The bots said to ask you."
+T["fine"] = T["fb"] + 9.6                         # her: "...fine."
+T["honey"] = T["fb"] + 10.2                        # her: "ok honey, here..."
 T["coins"] = T["honey"] + .5
-T["ff"] = T["fb"] + 14.6                           # fast-forward back
-T["ledge2"] = T["ff"] + 0.7                        # lightning callback: THE BOSS. #1.*
-T["biz"] = T["ledge2"] + 2.2                       # back to business
-T["biz_lines"] = [T["biz"] + .1 + i * .7 for i in range(4)]   # REAL TRADES / REAL MONEY hurled at the screen (v6)
-T["care"] = T["biz"] + 3.4                          # v6 (the boss 11/1): "so much care is going into this"
-T["care_lines"] = [T["care"] + i * .95 for i in range(4)]
-T["yolo"] = T["care"] + 4.1                         # WE ARE NOT YOLOING.
-T["power"] = T["yolo"] + 1.3                        # WE TRADE WITH THE POWER OF AI. the boss returns
-T["glare"] = T["power"] + 1.0                       # anime glare on the aviators
-T["title"] = T["power"] + 2.4
-T["outro"] = T["title"] + 2.4                      # end card
-T["end"] = T["outro"] + 3.6
+T["ff"] = T["fb"] + 11.8                           # fast-forward back
+T["ledge2"] = T["ff"] + 0.6                        # lightning callback: THE BOSS. #1.*
+T["biz"] = T["ledge2"] + 1.9                       # back to business
+T["biz_lines"] = [T["biz"] + .1 + i * .55 for i in range(4)]   # REAL TRADES / REAL MONEY hurled at the screen (v6)
+T["care"] = T["biz"] + 2.6                          # v6 (the boss 11/1): "so much care is going into this"
+T["care_lines"] = [T["care"] + i * .8 for i in range(4)]
+T["yolo"] = T["care"] + 3.5                         # WE ARE NOT YOLOING.
+T["power"] = T["yolo"] + 1.1                        # WE TRADE WITH THE POWER OF AI. the boss returns
+T["glare"] = T["power"] + .9                       # anime glare on the aviators
+T["title"] = T["power"] + 1.9
+T["outro"] = T["title"] + 2.0                      # end card
+T["end"] = T["outro"] + 3.0
 # ---------------------------------------------------------------- cast
 CAST = [  # name, role, line, sprite, accent
     ("THEO", "THE TRADER", "Sells the options. Follows the Rules. Never panics.", "theo_sprite_1x", (226, 170, 100)),
@@ -96,7 +96,9 @@ import trailer2_art as ART
 ROSE = (255, 150, 190)
 FAWN = ART.fawn_v27()   # the 64x64 standard (V22/V23), V27 cream
 FAWNS = ART.fawn_v27(True)
-PIG = ART.piggy()
+import assets as ASSETS
+PIG = ASSETS.get("PIG-02")   # v7 (the boss 11/2): the lucky gold piggy from the asset library
+BLDG = ASSETS.get("BLD-03-F5", 1.0)   # BLD-03 flavor 5, the gothic one (umber brick, pediments, crenellated parapet, night)
 COIN = None
 def coin(s):
     im = Image.new("RGBA", (9, 9)); d = ImageDraw.Draw(im); d.ellipse([0, 0, 8, 8], fill=GOLD + (255,), outline=(170, 120, 20, 255)); d.point([(3, 2), (2, 3)], fill=(255, 240, 180, 255))  # plain coin: no marks the OCR reads as digits
@@ -424,29 +426,23 @@ def ledge(t, t0, text_fn, dur_flash=(0.0, 0.9, 1.4)):
         bolt(d, 130, 0, 200, 420, int(t0 * 10) + 7 + int(u * 4), w=6, col=(220, 230, 255))
     # moon behind the clouds, Q2
     d.ellipse([600, 380, 760, 540], fill=(230, 232, 240) if fl > .3 else (200, 204, 220)); d.ellipse([560, 460, 840, 560], fill=sky)
-    # the building: Q4, with the roof at y 960; brick texture, cornice, a water tank, the windows
+    # the building: Q4 = the top 3-4 floors of BLD-03-F5 from the asset library (the boss 11/2: "use only the top levels")
     BX, BY = 560, 960
-    d.rectangle([BX, BY, W, H], fill=(24, 22, 30))
-    for yy in range(BY + 40, H, 18): d.line([(BX, yy), (W, yy)], fill=(20, 18, 26), width=2)
-    d.rectangle([BX, BY, W, BY + 34], fill=(50, 48, 60)); d.rectangle([BX - 18, BY - 16, W, BY + 6], fill=(72, 70, 84)); d.rectangle([BX - 18, BY - 16, W, BY - 10], fill=(96, 94, 110))
-    d.rectangle([BX + 10, BY - 120, BX + 100, BY - 16], fill=(40, 38, 48)); d.polygon([(BX, BY - 120), (BX + 110, BY - 120), (BX + 55, BY - 150)], fill=(60, 58, 70))   # water tank
-    kinds = ["tv", "cat", "cameo", "dark", "fish", "party", "desk", "dog", "cameo", "plant", "tv", "cameo", "cat", "desk", "cameo", "tv", "dog", "cameo"]
-    temps = ["5000K", "2700K", "3500K", "dark", "teal", "purple", "3500K", "2700K", "5000K", "2700K", "red", "3500K", "2700K", "5000K", "2700K", "purple", "3500K", "red"]
-    k = 0   # floor-to-ceiling glass, edge to edge: 5 bays per floor, a thin slab between floors
-    for wy in range(BY + 50, H, 172):
-        d.rectangle([BX, wy - 18, W, wy - 4], fill=(58, 56, 68))      # floor slab
-        for wx in range(BX + 14, W - 60, 98):
-            kd = kinds[(k * 7) % len(kinds)]; tp = "dark" if kd == "dark" else temps[(k * 5) % len(temps)]
-            if kd != "dark": window_scene(d, img, wx, wy, 92, 150, kd, tp, u + k * .7, k)
-            else: d.rectangle([wx, wy, wx + 92, wy + 150], fill=(14, 14, 22)); d.rectangle([wx - 3, wy - 3, wx + 95, wy + 153], outline=(30, 30, 40), width=3)
-            k += 1
+    sc_ = 1.9; crop = BLDG.crop((0, 84, 300, 84 + 30 + 58 * 4))   # the parapet and the top four floors only
+    bld = crop.resize((int(crop.width * sc_), int(crop.height * sc_)), Image.NEAREST)
+    img.paste(bld, (BX - 30, BY - 46), bld)
+    fog = Image.new("RGBA", (W, H), (0, 0, 0, 0)); fd = ImageDraw.Draw(fog); fy0 = BY - 46 + bld.height - 110
+    for yy in range(fy0, H, 4): fd.rectangle([BX - 30, yy, W, yy + 4], fill=(6, 8, 14, int(255 * min(1, (yy - fy0) / 200))))   # the floors below vanish into the night: we are way up
+    img.paste(fog, (0, 0), fog); d = ImageDraw.Draw(img)
+    if fl > .3:   # lightning flash brightens the facade
+        fl_ = Image.new("RGBA", bld.size, (200, 210, 255, int(90 * fl))); fl_.putalpha(Image.composite(fl_.split()[3], Image.new("L", bld.size, 0), bld.split()[3])); img.paste(fl_, (BX - 30, BY - 46), fl_); d = ImageDraw.Draw(img)
     # the boss, crouched at the corner of the roof, looking down over the edge (the boss 11/1: Batman animated series, not a statue)
     sp, _ = anim("BOSS", t, u, "lookdown", s=4)   # foreground perspective, but to scale with the 12 ft windows below
     sp = sp.transpose(Image.FLIP_LEFT_RIGHT)   # faces the street below, right edge of the roof
     cape = rim(sp, LIME if fl < .4 else (255, 255, 255), 4)
     if fl > .3:   # lightning: his long shadow thrown back across the roof
         d.polygon([(W - 260, BY - 14), (W - 120, BY - 14), (BX + 160, BY + 30), (BX + 20, BY + 30)], fill=(12, 12, 18))
-    paste_c(img, cape, W - 150, BY - 12)
+    paste_c(img, cape, W - 150, BY - 2)
     text_fn(d, u, fl); return img
 def sc_no1(t):
     def txt(d, u, fl):
@@ -619,8 +615,9 @@ def sc_flash(t):
     # her: the fawn stands tall on the right; him: kneeling on the left
     lvl = sum(t >= b for b in T["beg"])
     fz = rim(scaled(FAWN, 7), ROSE, 4); paste_c(img, fz, 880, 1580 - (int(6 * abs(math.sin(u * 2))) if t < T["fine"] else 0))
-    boss = rim(scaled(BOSS, 8), LIME, 4)   # full body, legs and all (the boss 11/1: "I have no legs")
-    paste_c(img, boss, 220, 1580 - int((6 + lvl * 6) * abs(math.sin(u * (6 + lvl * 3)))))
+    boss = rim(scaled(BOSS, 8), ROSE if t >= T["what"] else LIME, 4)   # v7: his rim turns rose the moment she answers; he is in love
+    by_ = 1580 - int((6 + lvl * 6) * abs(math.sin(u * (6 + lvl * 3)))); paste_c(img, boss, 220, by_)
+
     shown = [x for x in LINES if t >= x[0]]
     him = [x for x in shown if x[1] == "him"]; her = [x for x in shown if x[1] == "her"]
     if him:
@@ -629,7 +626,13 @@ def sc_flash(t):
                 bubble(img, SAFE_L + 12 + i * 24, 450 + i * 100, x[2], max(8, int(x[3] * min(1, pop(t, x[0], .15) or .01))), tail=(230, 1130))
         else:
             x = him[-1]; bubble(img, SAFE_L + 12, 450, x[2], max(8, int(x[3] * min(1, pop(t, x[0], .15) or .01))), tail=(230, 1130), maxw=470)
-    img = vhs(img, t, "HOW IT STARTED")
+    img = vhs(img, t, "HOW IT STARTED"); d = ImageDraw.Draw(img)
+    if t >= T["what"]:   # v7: he is in love. Drawn after the tape look so the pink stays pink: hearts drift from him to her, rose glints in the aviators, blush
+        for i in range(10):
+            ph = (u * .45 + i * .31) % 1.0; hx = 260 + int(ph * 520) + int(30 * math.sin(u * 3 + i)); hy = int(1200 - ph * 560 - 40 * math.sin(ph * 3.14)); hs = 14 + (i % 3) * 6
+            daily._heart(d, hx, hy, hs, (255, 110, 165) if i % 2 else (255, 165, 200))
+        for gx in (190, 250): d.ellipse([gx - 9, by_ - 312, gx + 9, by_ - 294], fill=(255, 130, 185)); d.point((gx - 3, by_ - 307), fill=(255, 255, 255))   # rose glints in the aviators
+        d.ellipse([140, by_ - 266, 192, by_ - 246], fill=(255, 120, 150)); d.ellipse([252, by_ - 266, 304, by_ - 246], fill=(255, 120, 150))   # blush
     if her:  # her bubble is drawn after the tape look so the pink stays pink
         x = her[-1]; sz = max(8, int(x[3] * min(1, pop(t, x[0], .15) or .01)))
         y1 = bubble(img, 600, 600, x[2], sz, col=(255, 182, 210), bg=(120, 30, 70), tail=(840, 1000), maxw=350)
@@ -682,9 +685,9 @@ def sc_biz(t):
         if any(0 <= t - tb < .35 for tb in T["biz_lines"]): img = shift(img, *shake(t, 22))
         return img
     if t < T["power"]:
-        v = t - T["care"]; kicker(d, "HOW MUCH CARE GOES IN")
+        v = t - T["care"]; kicker(d, "A PASSION PROJECT")
         dash_bg(d, v, 3)
-        lines = [("ITERATION AFTER ITERATION.", INK), ("DASHBOARDS, REBUILT.", INK), ("STRATEGY, STRESS-TESTED.", INK), ("BACKTESTED ON YEARS OF DATA.", LIME)]
+        lines = [("HUNDREDS OF ITERATIONS.", INK), ("DASHBOARDS. RULES. PIXELS.", INK), ("POWERED BY AI.", LIME), ("MADE BY A HUMAN WHO LOVES THIS.", ROSE)]
         y = 500
         for (s_, c), tb in zip(lines, T["care_lines"]):
             if t >= tb: slam(d, s_, y, c, t, tb, start=96)
@@ -696,7 +699,7 @@ def sc_biz(t):
             if t - T["yolo"] < .3: img = shift(img, *shake(t, 16))
         return img
     if t < T["title"]:
-        v = t - T["power"]; kicker(d, "HOW MUCH CARE GOES IN")
+        v = t - T["power"]; kicker(d, "A PASSION PROJECT")
         cone = Image.new("L", (W, H), 0); ImageDraw.Draw(cone).polygon([(W // 2 - 80, 0), (W // 2 + 80, 0), (W // 2 + 470, 1860), (W // 2 - 470, 1860)], fill=int(120 * min(1, v / .35)))
         img = Image.composite(Image.new("RGB", (W, H), (70, 78, 44)), img, cone.filter(ImageFilter.GaussianBlur(40))); d = ImageDraw.Draw(img)
         slam(d, "WE TRADE", 560, INK, t, T["power"] + .05, start=190)
@@ -761,7 +764,7 @@ def build(out_mp4, cover_jpg, workdir):
     wav = os.path.join(workdir, "trailer2.wav"); SCORE.render(wav, T)
     n = int(T["end"] * FPS)
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
-        "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "17",
+        "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "slow", "-crf", "17", "-tune", "animation",
         "-c:a", "aac", "-b:a", "192k", "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out_mp4], stdin=subprocess.PIPE)
     for i in range(n): p.stdin.write(frame(i / FPS).tobytes())
     p.stdin.close(); p.wait(); return out_mp4
