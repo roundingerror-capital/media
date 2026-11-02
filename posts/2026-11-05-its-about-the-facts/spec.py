@@ -25,12 +25,25 @@ def _theo_render():
 _R = {}
 def render_panel(img, d, u, y):
     """Slide 1: the finished render in a cinema frame with RTX badges, a lens flare sweep and film grain."""
-    x0, x1 = M, W - M; top = y + 20; h = 640; bot = top + h
+    x0, x1 = M, W - M; top = y + 20; h = 720; bot = top + h
     d.rounded_rectangle([x0, top, x1, bot], radius=22, fill=(8, 8, 10)); d.rounded_rectangle([x0, top, x1, bot], radius=22, outline=(60, 60, 64), width=3)
     if "im" not in _R: _R["im"] = _theo_render()
-    im = _R["im"]; sc = min((x1 - x0 - 80) / im.width, (h - 120) / im.height); im = im.resize((int(im.width * sc), int(im.height * sc)), Image.BICUBIC)
+    im = _R["im"]
+    if os.path.exists(RENDER_IMG):   # the AI image fills the frame (cover-crop), slow push-in like a movie still
+        z = 1.0 + 0.06 * min(1, u / 5.0); W0, H0 = x1 - x0, h
+        bg = im.resize((int(im.width * max(W0 / im.width, H0 / im.height)), int(im.height * max(W0 / im.width, H0 / im.height))), Image.BICUBIC)
+        bg = bg.crop((bg.width // 2 - W0 // 2, bg.height // 2 - H0 // 2, bg.width // 2 + W0 // 2, bg.height // 2 + H0 // 2)).filter(ImageFilter.GaussianBlur(24))
+        bg = Image.blend(bg, Image.new("RGBA", bg.size, (0, 0, 0, 255)), 0.45)
+        fg = im.resize((int(im.width * H0 / im.height * z), int(H0 * z)), Image.BICUBIC)
+        fg = fg.crop((fg.width // 2 - min(fg.width, W0) // 2, fg.height // 2 - H0 // 2, fg.width // 2 + min(fg.width, W0) // 2, fg.height // 2 + H0 // 2))
+        bg.paste(fg, (W0 // 2 - fg.width // 2, 0), fg); im = bg
+        mask = Image.new("L", im.size, 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, im.width - 1, im.height - 1], radius=22, fill=255); im.putalpha(mask)
+        px, py = x0, top
+    else:
+        sc = min((x1 - x0 - 80) / im.width, (h - 120) / im.height); im = im.resize((int(im.width * sc), int(im.height * sc)), Image.BICUBIC)
+        px, py = (x0 + x1) // 2 - im.width // 2, top + 60
     a = min(1, u / 0.5)
-    tmp = Image.new("RGBA", img.size); tmp.paste(im, ((x0 + x1) // 2 - im.width // 2, top + 60), im)
+    tmp = Image.new("RGBA", img.size); tmp.paste(im, (px, py), im)
     if a < 1: tmp.putalpha(tmp.split()[3].point(lambda v: int(v * a)))
     img.alpha_composite(tmp) if img.mode == "RGBA" else img.paste(tmp, (0, 0), tmp)
     d = ImageDraw.Draw(img)
@@ -116,7 +129,7 @@ SPEC = dict(label="CONCEPT", end=29.5, bpm=132, root=49.0, seed=1105, mel=3, cha
    [(26.0, 28.0, "penny", "Fine. Sixty-four pixels it is.", "point"), (28.2, 29.4, "theo", "Plenty.", "nod")], ["penny", "theo", "ada"], 0),
  ],
  charts={0: {"draw": progress_panel}, 1: {"draw": render_panel}, 2: {"draw": intervention}, 4: {"draw": explosion}},
- cast_x={2: [0.16, 0.36], 1: [0.25, 0.75]}, cast_h={1: 250, 2: 330, 4: 330},
+ cast_x={2: [0.16, 0.36], 1: [0.25, 0.75]}, cast_h={1: 230, 2: 330, 4: 330},
  memes=[{"t": 0.3, "dur": 2.0, "kind": "pov", "text": "POV: Penny found the render button"},
         {"t": 7.9, "dur": 1.4, "kind": "zoom", "text": "…THAT'S ME?", "y": 330},
         {"t": 19.2, "dur": 0.9, "kind": "zoom"},
