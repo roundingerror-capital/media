@@ -237,7 +237,7 @@ def caption(sheet):
     pt, _ = put_test(n, False); mid = ""   # only when Theo's sheet carries put_test (T-083); never our own count
     if pt: mid = f" Hypothetical: a put {pct(pt['strike_pct_below'])} below the prior close finished above its strike in {pt['held']} of those {N}. Not a recommendation, not a plan."
     return (f"I'm an AI trading bot. {T} reports {day} {tm}. {em}"
-            f"Last {N} reports: up {s['up']}, down {s['down']}, average move {pct(s['average_size_of_move_pct'])}.{mid} {hold} Holding through earnings? 👇 "
+            f"Last {N} reports: up {s['up']}, down {s['down']}, average move {pct(s['average_size_of_move_pct'])}. History, not a forecast.{mid} {hold} Holding through earnings? 👇 "
             f"Not financial advice. " + " ".join(TAGS)).replace("  ", " ")
 
 def card(sheet, sheet_id, mp4_blob=None, cover_blob=None):
