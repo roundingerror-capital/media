@@ -36,10 +36,11 @@ def css_for(meta, cls, blob):
         out.append(f"@keyframes {name}{{{''.join(kf)}}} .{name}{{background-position:0 -{m['row'] * CELL}px;animation-name:{name};animation-duration:{total * 100}ms}}")
     return "\n".join(out)
 
-def board_html(set_code, set_name, meta, blob, w=1240, cols=10, note=""):
-    rows = (len(meta) + cols - 1) // cols; cell_w = (w - 64 - (cols - 1) * 8) // cols; cell_h = CELL + 44
+def board_html(set_code, set_name, meta, blob, w=1240, cols=10, note="", header="HOLIDAY ASSETS", idrange=None, api=None, version="V2.03"):
+    rows = (len(meta) + cols - 1) // cols; cell_w = (w - 64 - (cols - 1) * 8) // cols; cell_h = CELL + 58
     h = 32 + 70 + 18 + rows * (cell_h + 8) + 60
     cls = "s" + set_code.lower()
+    idrange = idrange or f"HOL-{set_code}-01..{len(meta):02d}"; api = api or f'holiday_assets.frames("HOL-{set_code}-NN")'
     cells = []
     for m in meta:
         name = cls + m["id"].replace("-", "")
@@ -51,7 +52,7 @@ def board_html(set_code, set_name, meta, blob, w=1240, cols=10, note=""):
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>HOL-{set_code} {html.escape(set_name)} assets</title>
+<title>{html.escape(idrange)} {html.escape(set_name)}</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -63,12 +64,12 @@ def board_html(set_code, set_name, meta, blob, w=1240, cols=10, note=""):
 </style>
 </helmet>
 <div style="width: {w}px; height: {h}px; box-sizing: border-box; padding: 32px; outline: 10px solid #C8F03C; outline-offset: -10px; background: #000000; color: #F2F2EE; font-family: 'Archivo', 'Helvetica Neue', sans-serif; display: flex; flex-direction: column; gap: 14px">
-<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 1px; color: #9A9A94"><span>&#8776; ROUNDING ERROR &#183; HOLIDAY ASSETS</span><span>HOL-{set_code}-01..{len(meta):02d} &#183; V2.03 &#183; {K}&#215; preview, 1 tick = 100 ms</span></div>
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 1px; color: #9A9A94"><span>&#8776; ROUNDING ERROR &#183; {header}</span><span>{idrange} &#183; {version} &#183; {K}&#215; preview, 1 tick = 100 ms</span></div>
 <div style="display: flex; align-items: baseline; gap: 14px"><h1 style="margin: 0; font-size: 34px; font-weight: 900; font-stretch: 125%; letter-spacing: -1px">{html.escape(set_name)}</h1><span style="font-size: 16px; font-weight: 700; color: #C9C9C2">{html.escape(note)}</span></div>
 <div style="display: grid; grid-template-columns: repeat({cols}, minmax(0, 1fr)); gap: 8px">
 {"".join(cells)}
 </div>
-<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: #9A9A94"><span>holiday_assets.frames("HOL-{set_code}-NN") &#183; every frame its own drawing &#183; signs blank, no digits, no brands</span><span>@roundingerror.capital</span></div>
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: #9A9A94"><span>{api} &#183; every frame its own drawing &#183; signs blank, no digits, no brands</span><span>@roundingerror.capital</span></div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{w},"height":{h}}}}}'>
@@ -80,6 +81,9 @@ renderVals() {{ return {{}}; }}
 </html>
 ''', h
 
+PROP_NOTES = {"OFFICE": "Desk life: screens stay blank, the duck debugs.", "FOOD": "Pizza, bagels, ramen, the coffee to go.", "TECH": "Gadgets that blink; nothing branded.",
+              "TOOLS": "Hard hats to blowtorches, plus the fire extinguisher.", "SPORT": "Balls, bats, boards and board games.", "TOYS": "Bears, blocks, bubbles and a jack-in-the-box.",
+              "STREET": "NYC: hydrant, taxi, water tower, the rat with the slice.", "FANTASY": "Kit's studio: swords, potions, chests and runes.", "MUSIC": "Instruments and the party kit.", "FINANCE": "The desk: bull, bear, bell, ticker tape, arrows. Symbols only, never a figure."}
 NOTES = {"NYD": "The ball, the clock, the pop, the confetti. No year digits anywhere.", "MLK": "A day of service: the podium, the dove, the vigil candle, the open book, the blank placard.",
          "PRES": "Stovepipe, tricorne, quill and parchment, cherry pie, the obelisk and the dome.", "GF": "The spring long weekend: tulips, eggs, chicks, rain boots and the first sprout.",
          "MEM": "Poppies, the folded flag, the bugle, then the grill, the cooler and the lawn chair.", "JUN": "Red, black, green and gold: drums, bells, lanterns, red velvet and strawberry soda.",
@@ -94,6 +98,26 @@ if __name__ == "__main__":
             for aid in HA.ids(code):
                 fr, tk = HA.frames(aid); items.append((aid, HA.title(aid), fr, tk))
             build_sheet(items, os.path.join(out, "sheets", f"{code}.png"), os.path.join(out, "sheets", f"{code}.json")); print(code, "ok")
+    elif cmd == "prop_sheets":
+        import props
+        for code, name in props.FAMILIES:
+            items = []
+            for pid in props.ids(code):
+                fr, tk = props.frames(pid); items.append((pid, props.title(pid), fr, tk))
+            build_sheet(items, os.path.join(out, "sheets", f"PROP_{code}.png"), os.path.join(out, "sheets", f"PROP_{code}.json")); print(code, "ok")
+    elif cmd == "prop_boards":
+        import props
+        blobs = json.load(open(os.path.join(out, "blobs.json"))); cj = json.load(open(sys.argv[3])); os.makedirs(os.path.join(out, "project"), exist_ok=True)
+        written = []
+        for i, (code, name) in enumerate(props.FAMILIES):
+            meta = json.load(open(os.path.join(out, "sheets", f"PROP_{code}.json")))["items"]; first, last = meta[0]["id"], meta[-1]["id"]
+            src, h = board_html(code, name, meta, blobs["PROP_" + code], note=PROP_NOTES.get(code, ""), header="RANDOM PROPS", idrange=f"{first}..{last[5:]}", api=f'props.frames("{first}")', version="V2.03")
+            fn = f"PROP{code}V2_03.dc.html"; open(os.path.join(out, "project", fn), "w").write(src)
+            cj["boards"][fn] = {"title": f"{first}..{last} · {name} · 50 animated props · V2.03", "page": "props", "x": (i % 2) * 1320, "y": (i // 2) * (h + 120), "w": 1240, "h": h}
+            if fn not in cj["order"]: cj["order"].append(fn)
+            written.append(fn)
+        cj["notes"]["prop_title"] = {"kind": "title1", "page": "props", "x": 0, "y": -300, "maxW": 2560, "text": "Random props V2.03 (2026-11-02) · 500 props for the cast's shenanigans · PROP-001..500 · hand-held scale on the 64 grid"}
+        json.dump(cj, open(sys.argv[3], "w"), indent=1); print(json.dumps(written))
     elif cmd == "boards":
         blobs = json.load(open(os.path.join(out, "blobs.json"))); cj = json.load(open(sys.argv[3])); os.makedirs(os.path.join(out, "project"), exist_ok=True)
         x, y = 0, 0; written = []
