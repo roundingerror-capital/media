@@ -321,11 +321,11 @@ def meme_layer(img, S, t):
     for m in S.get("memes", []):
         u = t - m["t"]
         if u < 0 or u > m.get("dur", 1.5): continue
-        k = m["kind"]
+        k = m["kind"]; my = m.get("y", 0)   # per-meme vertical offset (earnings chart slides move the band under the chart, 2026-11-02)
         if k == "pov":
             f = fit(m["text"], SAFE_R - M - 20, 64, wdth=100, wght=900); a = min(1, u / 0.12)
-            d.rectangle([0, 900, W, 1020], fill=(255, 255, 255))
-            d.text((CX, 982), m["text"], font=f, fill="#000000", anchor="ms")
+            d.rectangle([0, 900 + my, W, 1020 + my], fill=(255, 255, 255))
+            d.text((CX, 982 + my), m["text"], font=f, fill="#000000", anchor="ms")
         elif k == "zoom":
             z = 1 + 0.07 * min(1, u / 0.12); cx, cy = (M + SAFE_R) // 2, H // 2  # small punch-in: a big zoom pushed the headline under the app header (2026-10-31)
             box = (int(cx - W / z / 2), int(cy - H / z / 2), int(cx + W / z / 2), int(cy + H / z / 2))
@@ -335,18 +335,18 @@ def meme_layer(img, S, t):
             img.paste(im2); d = ImageDraw.Draw(img)
             if m.get("text"):
                 f = fit(m["text"], SAFE_R - M - 20, 110, wdth=125, wght=900)
-                d.text((CX, 1000), m["text"], font=f, fill=(255, 255, 255), anchor="ms", stroke_width=8, stroke_fill="#000000")
+                d.text((CX, 1000 + my), m["text"], font=f, fill=(255, 255, 255), anchor="ms", stroke_width=8, stroke_fill="#000000")
         elif k == "twopanel":
-            d.rectangle([0, 860, W, 1120], fill=(0, 0, 0))
+            d.rectangle([0, 860 + my, W, 1120 + my], fill=(0, 0, 0))
             for i, (lab, val) in enumerate(((m["a"], m["a2"]), (m["b"], m["b2"]))):
                 if u < i * 0.6: continue
-                y = 950 + i * 120
+                y = 950 + my + i * 120
                 d.text((M, y), lab, font=archivo(52, 100, 900), fill=INK, anchor="ls")
                 d.text((SAFE_R, y), val, font=archivo(64, 100, 900), fill=m.get("a2c", "#EB2626") if i == 0 else m.get("b2c", LIME), anchor="rs")
         elif k == "freeze":
             g = img.convert("L").convert("RGB"); img.paste(Image.blend(g, Image.new("RGB", (W, H), (40, 30, 20)), 0.25)); d = ImageDraw.Draw(img)
             f = fit(m["text"], SAFE_R - M - 20, 84, wdth=110, wght=900)
-            d.rectangle([0, 900, W, 1040], fill=(0, 0, 0)); d.text((CX, 995), m["text"], font=f, fill=(255, 255, 255), anchor="ms")
+            d.rectangle([0, 900 + my, W, 1040 + my], fill=(0, 0, 0)); d.text((CX, 995 + my), m["text"], font=f, fill=(255, 255, 255), anchor="ms")
     return img
 def meme_sfx(S, offset):
     """(time, kind) list for the beat: boom on shades/zoom, scratch on freeze, pop on pov/twopanel. offset = seconds before the story starts."""
@@ -458,7 +458,8 @@ def scene_frame(S, t, heads_override=None):
         threeway_panel(d, tw["cards"], y + 10, tw.get("quote", "")); y += 660
     ch = (S.get("charts") or {}).get(k)
     if ch:
-        d = chart_panel(d, ch["vals"], ch["labels"], y + 110, y + 480, ch.get("note", ""), k=fade(t, t0 + .3, t0 + 1.5), avg=ch.get("avg"), title=ch.get("title", "")); y += 660
+        if ch.get("draw"): y = ch["draw"](img, d, t - t0, y); d = ImageDraw.Draw(img)   # a spec-supplied chart style (tools/earnings.py chart styles)
+        else: d = chart_panel(d, ch["vals"], ch["labels"], y + 110, y + 480, ch.get("note", ""), k=fade(t, t0 + .3, t0 + 1.5), avg=ch.get("avg"), title=ch.get("title", "")); y += 660
     vz = (S.get("visuals") or {}).get(k)
     S["_hpx"] = None
     if vz:  # worked example (explain.py): characters shrink to the bottom band so the steps have room
