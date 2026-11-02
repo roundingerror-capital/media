@@ -130,3 +130,68 @@ if __name__ == "__main__":
             written.append(fn)
         cj["notes"]["hol_title"] = {"kind": "title1", "page": "holidays", "x": 0, "y": -300, "maxW": 2560, "text": "Holiday assets V2.03 (2026-11-02) · 10 market-closed days × 50 animated props · HOL-<SET>-NN · one drawing per frame"}
         json.dump(cj, open(sys.argv[3], "w"), indent=1); print(json.dumps(written))
+
+# ---------------------------------------------------------------- scenes (one board per scene, 2x looping preview)
+def scene_sheet(sid, out_png):
+    import scenes
+    fr, tk = scenes.frames_1x(sid); k = 2; w, h = fr[0].width * k, fr[0].height * k
+    sheet = Image.new("RGBA", (w * len(fr), h), (0, 0, 0, 0))
+    for i, im in enumerate(fr): sheet.paste(scaled(im, k), (i * w, 0))
+    sheet.save(out_png, optimize=True); return len(fr), tk, w, h
+
+def scene_board(sid, title, note, blob, n, ticks, w, h):
+    total = sum(ticks); acc = 0; kf = []
+    for i, t in enumerate(ticks): kf.append(f"{acc / total * 100:.2f}%{{background-position:-{i * w}px 0}}"); acc += t
+    kf.append(f"100%{{background-position:-{(n - 1) * w}px 0}}"); name = "sc" + sid.replace("-", "")
+    bw, bh = 540, 700
+    return f'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{sid} {html.escape(title)}</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=IBM+Plex+Mono:wght@400;500;600;700&amp;display=swap">
+<style>body{{margin:0;background:#000000}}
+.{name}{{width:{w}px;height:{h}px;background-image:url({blob});background-repeat:no-repeat;image-rendering:pixelated;animation:{name} {total * 100}ms step-end infinite}}
+@keyframes {name}{{{''.join(kf)}}}
+</style>
+</helmet>
+<div style="width: {bw}px; height: {bh}px; box-sizing: border-box; padding: 32px; outline: 10px solid #C8F03C; outline-offset: -10px; background: #000000; color: #F2F2EE; font-family: 'Archivo', 'Helvetica Neue', sans-serif; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 1px; color: #9A9A94"><span>&#8776; ROUNDING ERROR &#183; LOOPING SCENES</span><span>{sid} &#183; V2.03 &#183; 135&#215;240 &#8594; 8&#215;</span></div>
+<div style="flex: 1; display: flex; justify-content: center; align-items: center; background: #0E1018"><div class="{name}" role="img" aria-label="{html.escape(title)}"></div></div>
+<div style="display: flex; align-items: baseline; gap: 14px"><h1 style="margin: 0; font-size: 34px; font-weight: 900; font-stretch: 125%; letter-spacing: -1px">{sid}</h1><span style="font-size: 20px; font-weight: 800">{html.escape(title)}</span></div>
+<p style="margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; color: #C9C9C2">{html.escape(note)} {n} frames &#215; {ticks[0]} ticks, every frame its own drawing; the video dims it like a plate.</p>
+<div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: #9A9A94"><span>spec["bg"] = "{sid}" &#183; scenes.frame("{sid}", t)</span><span>@roundingerror.capital</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{bw},"height":{bh}}}}}'>
+class Component extends DCLogic {{
+renderVals() {{ return {{}}; }}
+}}
+</script>
+</body>
+</html>
+'''
+
+if __name__ == "__main__" and sys.argv[1] in ("scene_sheets", "scene_boards"):
+    import scenes
+    cmd, out = sys.argv[1], sys.argv[2]
+    if cmd == "scene_sheets":
+        meta = {}
+        for sid, title, note in scenes.titles():
+            n, tk, w, h = scene_sheet(sid, os.path.join(out, "sheets", f"{sid}.png")); meta[sid] = {"n": n, "ticks": tk, "w": w, "h": h}; print(sid, "ok")
+        json.dump(meta, open(os.path.join(out, "sheets", "scenes.json"), "w"))
+    else:
+        blobs = json.load(open(os.path.join(out, "blobs.json"))); cj = json.load(open(sys.argv[3])); meta = json.load(open(os.path.join(out, "sheets", "scenes.json"))); written = []
+        for i, (sid, title, note) in enumerate(scenes.titles()):
+            m = meta[sid]; src = scene_board(sid, title, note, blobs[sid], m["n"], m["ticks"], m["w"], m["h"]); fn = f"{sid.replace('-', '')}V2_03.dc.html"
+            open(os.path.join(out, "project", fn), "w").write(src)
+            cj["boards"][fn] = {"title": f"{sid} · {title} · looping scene · V2.03", "page": "scenes", "x": (i % 4) * 620, "y": (i // 4) * 820, "w": 540, "h": 700}
+            if fn not in cj["order"]: cj["order"].append(fn)
+            written.append(fn)
+        cj["notes"]["scn_title"] = {"kind": "title1", "page": "scenes", "x": 0, "y": -300, "maxW": 2480, "text": "Looping scenes V2.03 (2026-11-02) · 16 pixel backgrounds for the videos · drawn at 135×240, shown at 8× = 1080×1920 · spec[\"bg\"] = \"SCN-NN\""}
+        json.dump(cj, open(sys.argv[3], "w"), indent=1); print(json.dumps(written))

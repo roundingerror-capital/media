@@ -419,11 +419,23 @@ def threeway_panel(d, cards, y0, quote=""):
     if quote: d.text((W // 2, y0 + ch + 126), quote, font=mono(22), fill=MUT, anchor="ms")
 
 _BG = {}
-def office_bg(S, path=None):
+def office_bg(S, path=None, t=0.0):
     """Office backdrop (HQ render, 2026-10-28 the boss: "use the office as a setup to tell our stories"): a 9:16 crop of the office,
-    dimmed so white and lime text stays readable, cached per spec. spec["bg"] = png path, spec["bg_dim"] = 0..1 (default 0.42 brightness)."""
+    dimmed so white and lime text stays readable, cached per spec. spec["bg"] = png path, spec["bg_dim"] = 0..1 (default 0.42 brightness).
+    spec["bg"] = "SCN-03" (2026-11-02): a looping pixel scene from tools/scenes.py, drawn fresh per loop frame, dimmed the same way, no blur."""
     from PIL import ImageEnhance, ImageFilter
-    path = path or S["bg"]; k = (path, S.get("bg_dim", 0.42))
+    path = path or S["bg"]
+    if isinstance(path, str) and path.startswith("SCN-"):
+        import scenes
+        fr, tk = scenes.frames_1x(path) if path not in scenes._CACHE else scenes._CACHE[path]; scenes._CACHE[path] = (fr, tk)
+        total = sum(tk); u = (t * 10) % total; acc = 0; idx = len(fr) - 1
+        for i, kk in enumerate(tk):
+            acc += kk
+            if u < acc: idx = i; break
+        k = (path, idx, S.get("bg_dim", 0.42))
+        if k not in _BG: _BG[k] = ImageEnhance.Brightness(fr[idx].resize((W, H), Image.NEAREST).convert("RGB")).enhance(k[2])
+        return _BG[k].copy()
+    k = (path, S.get("bg_dim", 0.42))
     if k not in _BG:
         im = Image.open(path).convert("RGB"); r = max(W / im.width, H / im.height)
         im = im.resize((int(im.width * r + 0.5), int(im.height * r + 0.5)), Image.NEAREST)
@@ -438,7 +450,7 @@ def scene_frame(S, t, heads_override=None):
         if m["kind"] == "shades" and m["t"] <= t <= m["t"] + m.get("dur", 1.6): SHADES_ON[m.get("who", "theo")] = min(1, (t - m["t"]) / 0.3)
     sc = S["scenes"]; k = max(i for i, s in enumerate(sc) if t >= s[0] or i == 0)
     bgp = (S.get("bgs") or {}).get(k) or S.get("bg")
-    img = office_bg(S, bgp) if bgp else Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
+    img = office_bg(S, bgp, t) if bgp else Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     sc = S["scenes"]; k = max(i for i, s in enumerate(sc) if t >= s[0] or i == 0)
     t0, t1, kick, heads, body, lines, cast, hl = sc[k]
     if k == 0 and heads_override: heads = heads_override
