@@ -91,14 +91,17 @@ def piggy(pid="PIG-01", t=0.0, coin=True):
 
 # ---------------------------------------------------------------- characters at building scale ("minis")
 _SPR = {}
+MINI_SCALE = .52
 def mini(name, t=0.0, flip=False):
-    """0.5x mascot (about 5 ft against a 12 ft floor): downscaled smoothly, alpha snapped, so eyes stay readable."""
-    if name not in _SPR:
+    """0.5x mascot (about 5 ft against a 12 ft floor): downscaled smoothly, alpha snapped, so eyes stay readable.
+    MINI_SCALE sets the size (V2.01 buildings use ~0.26: about 11-12 px tall)."""
+    key = (name, MINI_SCALE)
+    if key not in _SPR:
         f = {"theo": "theo_sprite_1x", "penny": "penny_sprite_1x", "ada": "ada_teal_1x", "roz": "roz_sprite_1x", "kit": "kit_sprite_1x", "boss": "boss_shadow_1x"}[name]
         im = Image.open(os.path.join(HERE, "sprites", f + ".png")).convert("RGBA"); bb = im.getbbox(); im = im.crop(bb)
-        sm = im.resize((max(1, round(im.width * .52)), max(1, round(im.height * .52))), Image.LANCZOS)
-        r, g, b, a = sm.split(); a = a.point(lambda v: 255 if v > 110 else 0); _SPR[name] = Image.merge("RGBA", (r, g, b, a))
-    s = _SPR[name]
+        sm = im.resize((max(1, round(im.width * MINI_SCALE)), max(1, round(im.height * MINI_SCALE))), Image.LANCZOS)
+        r, g, b, a = sm.split(); a = a.point(lambda v: 255 if v > 110 else 0); _SPR[key] = Image.merge("RGBA", (r, g, b, a))
+    s = _SPR[key]
     return s.transpose(Image.FLIP_LEFT_RIGHT) if flip else s
 def put(im, sp, x, floor_y):
     """paste a mini with its feet on floor_y, centred on x."""
@@ -389,6 +392,173 @@ def bodega(t=0.0):
     d.rectangle([0, 280, Wd, Hd], fill=(80, 80, 86, 255)); d.rectangle([0, 280, Wd, 281], fill=(120, 120, 126, 255))
     return outline(im, 1)
 
+
+# ---------------------------------------------------------------- BLD-03 flavors, V2.02 (the boss 2026-11-01)
+# "Windows not that close to the edge: invert it (thick wall on the open left side). No ground level, no street: from way up in
+#  the air. Some at night. Decorative edges on top. Ornate window framing on the older brick ones; some not brick, solid facades."
+FLAVORS = [  # name, facade kind, wall colour, trim colour, window head, top, time, fire escape, water tank
+    ("Red brick · keystones", "brick", (150, 62, 46), (214, 200, 176), "keystone", "bracketed", "day", True, True),
+    ("Red brick · keystones · night", "brick", (150, 62, 46), (214, 200, 176), "keystone", "bracketed", "night", True, True),
+    ("Limestone · arched hoods", "stone", (222, 208, 182), (238, 228, 206), "hood", "balustrade", "day", False, False),
+    ("Limestone · arched hoods · night", "stone", (222, 208, 182), (238, 228, 206), "hood", "balustrade", "night", False, False),
+    ("Umber brick · pediments · night", "brick", (104, 58, 42), (196, 140, 98), "pediment", "crenel", "night", False, True),
+    ("Sage stucco · dusk", "stucco", (148, 168, 140), (232, 226, 206), "simple", "copper", "dusk", True, False),
+    ("Buff brick · copper crown · night", "brick", (204, 172, 120), (240, 230, 206), "segment", "copper", "night", True, True),
+    ("Granite · deco · night", "stone", (92, 96, 108), (214, 178, 96), "deco", "deco", "night", False, False),
+]
+def _tone(c, k): return tuple(max(0, min(255, int(v * k))) for v in c[:3])
+def _sky(d, Wd, Hd, time, r):
+    bands = {"day": [(150, 196, 236), (164, 206, 240), (180, 216, 244), (196, 226, 246)],
+             "dusk": [(70, 64, 120), (130, 86, 140), (214, 120, 120), (248, 176, 120)],
+             "night": [(10, 14, 34), (14, 20, 46), (20, 28, 60), (28, 38, 74)]}[time]
+    bh = Hd // len(bands)
+    for i, c in enumerate(bands): d.rectangle([0, i * bh, Wd, (i + 1) * bh + 1], fill=c + (255,))
+    if time == "night":
+        for _ in range(40): x, y = r.randint(0, Wd - 1), r.randint(0, Hd // 2); d.point((x, y), fill=(250, 248, 230, 255) if r.random() < .3 else (170, 180, 210, 255))
+        d.ellipse([Wd - 70, 26, Wd - 52, 44], fill=(246, 240, 214, 255)); d.ellipse([Wd - 64, 24, Wd - 48, 40], fill=bands[0] + (255,))   # crescent
+    if time == "day":
+        for cx, cy in ((40, 40), (180, 24), (250, 70)): d.rounded_rectangle([cx, cy, cx + 34, cy + 6], radius=3, fill=(248, 250, 252, 255)); d.rounded_rectangle([cx + 8, cy - 4, cx + 24, cy + 2], radius=3, fill=(248, 250, 252, 255))
+    # far skyline (behind, lower), lit windows at night
+    sk = {"day": (196, 212, 228), "dusk": (88, 70, 112), "night": (22, 28, 52)}[time]
+    for i in range(14):
+        bx = i * 26 - 10; top = 120 + r.randint(-40, 60); d.rectangle([bx, top, bx + 22, Hd], fill=sk + (255,))
+        if time != "day":
+            for wy in range(top + 6, Hd, 9):
+                for wx in range(bx + 4, bx + 20, 6):
+                    if r.random() < .22: d.point((wx, wy), fill=(255, 214, 140, 255) if r.random() < .8 else (180, 210, 255, 255))
+def _frame(d, x, y, w, h, style, trim, wall):
+    T, TD, TL = trim, _tone(trim, .72), _tone(trim, 1.12)
+    d.rectangle([x - 2, y - 2, x + w + 1, y + h + 1], fill=TD + (255,))                                             # reveal
+    d.rectangle([x - 3, y + h + 1, x + w + 2, y + h + 3], fill=T + (255,)); d.line([(x - 3, y + h + 1), (x + w + 2, y + h + 1)], fill=TL + (255,))   # sill
+    if style in ("keystone", "pediment", "hood"):
+        for bx in (x - 2, x + w - 1): d.rectangle([bx, y + h + 4, bx + 2, y + h + 5], fill=TD + (255,))          # sill corbels
+    if style == "keystone":
+        d.rectangle([x - 4, y - 7, x + w + 3, y - 3], fill=T + (255,)); d.line([(x - 4, y - 7), (x + w + 3, y - 7)], fill=TL + (255,))
+        kx = x + w // 2; d.polygon([(kx - 4, y - 9), (kx + 3, y - 9), (kx + 2, y - 2), (kx - 3, y - 2)], fill=TL + (255,)); d.line([(kx + 3, y - 9), (kx + 2, y - 2)], fill=TD + (255,))
+        for vx in range(x - 3, x + w + 3, 4): d.point((vx, y - 4), fill=TD + (255,))                               # voussoir joints
+    elif style == "hood":
+        d.chord([x - 5, y - 12, x + w + 4, y + 8], 180, 360, fill=T + (255,)); d.chord([x - 2, y - 8, x + w + 1, y + 6], 180, 360, fill=_tone(wall, .9) + (255,))
+        d.arc([x - 5, y - 12, x + w + 4, y + 8], 180, 360, fill=TL + (255,))
+        kx = x + w // 2; d.rectangle([kx - 2, y - 12, kx + 1, y - 6], fill=TL + (255,)); d.point((kx + 1, y - 7), fill=TD + (255,))
+        d.rectangle([x - 6, y - 2, x - 3, y + 1], fill=T + (255,)); d.rectangle([x + w + 2, y - 2, x + w + 5, y + 1], fill=T + (255,))   # imposts
+    elif style == "pediment":
+        d.rectangle([x - 5, y - 5, x + w + 4, y - 3], fill=T + (255,)); d.polygon([(x - 5, y - 5), (x + w + 4, y - 5), (x + w // 2, y - 13)], fill=T + (255,))
+        d.polygon([(x - 1, y - 6), (x + w, y - 6), (x + w // 2, y - 11)], fill=_tone(trim, .86) + (255,)); d.line([(x - 5, y - 5), (x + w // 2, y - 13)], fill=TL + (255,))
+        d.point((x + w // 2, y - 8), fill=TL + (255,))                                                                  # rosette
+    elif style == "segment":
+        d.chord([x - 3, y - 7, x + w + 2, y + 4], 180, 360, fill=_tone(wall, .78) + (255,))
+        for vx in range(x - 2, x + w + 2, 3): d.line([(vx, y - 5 + abs(vx - (x + w // 2)) // 8), (vx, y - 2)], fill=_tone(wall, .6) + (255,))
+        kx = x + w // 2; d.rectangle([kx - 1, y - 8, kx + 1, y - 3], fill=T + (255,))
+    elif style == "deco":
+        for px in (x - 5, x + w + 2): d.rectangle([px, y - 4, px + 2, y + h + 6], fill=T + (255,)); d.point((px + 1, y - 4), fill=TL + (255,))
+        d.rectangle([x - 2, y + h + 4, x + w + 1, y + h + 9], fill=_tone(wall, .8) + (255,))
+        for zx in range(x, x + w, 6): d.line([(zx, y + h + 8), (zx + 3, y + h + 5), (zx + 6, y + h + 8)], fill=T + (255,))   # chevrons
+    else:  # simple stucco band
+        d.rectangle([x - 3, y - 4, x + w + 2, y - 3], fill=T + (255,))
+def _top(d, x0, x1, y, kind, trim, wall, r):
+    T, TD, TL = trim, _tone(trim, .72), _tone(trim, 1.12)
+    if kind == "bracketed":
+        d.rectangle([x0 - 6, y, x1, y + 10], fill=T + (255,)); d.line([(x0 - 6, y), (x1, y)], fill=TL + (255,)); d.line([(x0 - 6, y + 10), (x1, y + 10)], fill=TD + (255,))
+        for dx in range(x0 - 4, x1, 4): d.rectangle([dx, y + 11, dx + 1, y + 13], fill=T + (255,))                 # dentils
+        for bx in range(x0, x1, 18): d.polygon([(bx, y + 11), (bx + 5, y + 11), (bx + 5, y + 20), (bx + 2, y + 16)], fill=T + (255,)); d.line([(bx + 5, y + 11), (bx + 5, y + 20)], fill=TD + (255,))
+        d.rectangle([x0 - 2, y - 8, x1, y - 1], fill=_tone(wall, .9) + (255,))                                         # parapet
+        d.rectangle([x0 - 3, y - 10, x1, y - 8], fill=T + (255,))
+    elif kind == "balustrade":
+        d.rectangle([x0 - 4, y + 2, x1, y + 8], fill=T + (255,)); d.line([(x0 - 4, y + 2), (x1, y + 2)], fill=TL + (255,))
+        for dx in range(x0 - 2, x1, 3): d.point((dx, y + 9), fill=TD + (255,))
+        d.rectangle([x0 - 4, y - 16, x1, y - 14], fill=T + (255,)); d.rectangle([x0 - 4, y - 1, x1, y + 1], fill=T + (255,))
+        for bx in range(x0, x1, 5): d.rectangle([bx + 1, y - 13, bx + 2, y - 2], fill=T + (255,)); d.point((bx + 1, y - 9), fill=TL + (255,))   # balusters
+        for px in range(x0 - 4, x1, 46):
+            d.rectangle([px, y - 18, px + 6, y + 1], fill=TL + (255,)); d.ellipse([px, y - 26, px + 6, y - 19], fill=T + (255,)); d.rectangle([px + 2, y - 28, px + 4, y - 26], fill=T + (255,))   # urns on piers
+    elif kind == "crenel":
+        d.rectangle([x0 - 4, y - 2, x1, y + 6], fill=T + (255,)); d.line([(x0 - 4, y - 2), (x1, y - 2)], fill=TL + (255,))
+        for mx in range(x0 - 4, x1, 12): d.rectangle([mx, y - 12, mx + 6, y - 2], fill=_tone(wall, .95) + (255,)); d.rectangle([mx, y - 13, mx + 6, y - 12], fill=T + (255,))
+        for dx in range(x0, x1, 6): d.rectangle([dx, y + 7, dx + 2, y + 9], fill=TD + (255,))
+    elif kind == "copper":
+        CU, CUL, CUD = (92, 160, 140), (140, 200, 176), (54, 104, 92)
+        d.rectangle([x0 - 6, y - 2, x1, y + 8], fill=CU + (255,)); d.line([(x0 - 6, y - 2), (x1, y - 2)], fill=CUL + (255,)); d.line([(x0 - 6, y + 8), (x1, y + 8)], fill=CUD + (255,))
+        for dx in range(x0 - 4, x1, 5): d.rectangle([dx, y + 9, dx + 2, y + 11], fill=CUD + (255,))
+        for fx in range(x0, x1, 30):
+            d.polygon([(fx, y - 2), (fx + 8, y - 2), (fx + 4, y - 16)], fill=CU + (255,)); d.line([(fx + 4, y - 16), (fx + 4, y - 22)], fill=CUD + (255,)); d.point((fx + 4, y - 23), fill=(240, 210, 120, 255))   # finials
+        d.rectangle([x0 - 2, y - 6, x1, y - 3], fill=_tone(wall, .9) + (255,))
+    elif kind == "deco":
+        for i, (inset, hh) in enumerate(((0, 8), (20, 18), (44, 30))):
+            d.rectangle([x0 + inset, y - hh, x1, y - hh + 8], fill=_tone(wall, 1.0 - .08 * i) + (255,)); d.line([(x0 + inset, y - hh), (x1, y - hh)], fill=T + (255,))
+        for fx in range(x0 + 50, x1, 16):
+            for k in range(3): d.line([(fx, y - 22), (fx - 6 + k * 6, y - 30)], fill=T + (255,))                      # sunbursts
+            d.point((fx, y - 31), fill=(255, 240, 180, 255))
+def prewar_v3(n=0, t=0.0):
+    """BLD-03 flavor n (0..7), 300x600, upper floors only (no street, no ground floor), thick wall on the visible left side."""
+    global MINI_SCALE
+    name, facade, wall, trim, head, top, time, fe, tank = FLAVORS[n]
+    old = MINI_SCALE; MINI_SCALE = .27
+    Wd, Hd = 300, 600; r = random.Random(300 + n)
+    im = Image.new("RGBA", (Wd, Hd)); d = ImageDraw.Draw(im); _sky(d, Wd, Hd, time, r)
+    X0, ROOF = 26, 96
+    F = Image.new("RGBA", (Wd, Hd)); fd = ImageDraw.Draw(F)
+    if facade == "brick": _bricks(fd, X0, ROOF, Wd, Hd, wall + (255,), _tone(wall, .82) + (255,), rh=3, seed=n)
+    else:
+        fd.rectangle([X0, ROOF, Wd, Hd], fill=wall + (255,))
+        if facade == "stone":
+            for y in range(ROOF + 14, Hd, 14): fd.line([(X0, y), (Wd, y)], fill=_tone(wall, .9) + (255,))          # ashlar courses
+            for y in range(ROOF + 14, Hd, 28):
+                for x in range(X0 + 18, Wd, 36): fd.line([(x, y), (x, y + 13)], fill=_tone(wall, .9) + (255,))
+    fd.rectangle([X0, ROOF, X0 + 3, Hd], fill=_tone(wall, 1.12) + (255,))                                            # lit corner (light from the left)
+    for y in range(ROOF + 8, Hd, 10): fd.rectangle([X0, y, X0 + 8, y + 7], fill=_tone(trim, .95) + (255,)) if facade == "brick" else None   # quoins on the corner
+    if tank:
+        tx = 160; fd.rectangle([tx, 28, tx + 46, 74], fill=(104, 74, 52, 255))
+        for x in range(tx + 4, tx + 46, 6): fd.line([(x, 28), (x, 74)], fill=(84, 58, 40, 255))
+        for yy in (38, 56): fd.line([(tx, yy), (tx + 46, yy)], fill=(60, 50, 44, 255))
+        fd.polygon([(tx - 4, 28), (tx + 50, 28), (tx + 23, 10)], fill=(70, 52, 40, 255)); fd.line([(tx + 23, 10), (tx + 23, 6)], fill=(60, 50, 44, 255))
+        for lx in (tx + 2, tx + 16, tx + 30, tx + 44): fd.line([(lx, 74), (lx, ROOF - 12)], fill=(40, 36, 36, 255), width=2)
+    _top(fd, X0, Wd, ROOF, top, trim, wall, r)
+    COLS = [64, 120, 176, 232]; WW, WH = 36, 46; ROWS = list(range(ROOF + 32, Hd, 58))
+    for y in ROWS:
+        for x in COLS: _frame(fd, x, y, WW, WH, head, trim, wall)
+        if facade != "brick": fd.line([(X0, y + WH + 12), (Wd, y + WH + 12)], fill=_tone(wall, .88) + (255,))     # string course
+    if time != "day":
+        k = .56 if time == "night" else .74; tint = (.66, .74, 1.0) if time == "night" else (.92, .82, .92)
+        px = F.load()
+        for yy in range(Hd):
+            for xx in range(Wd):
+                c = px[xx, yy]
+                if c[3]: px[xx, yy] = (int(c[0] * k * tint[0]), int(c[1] * k * tint[1]), int(c[2] * k * tint[2]), 255)
+    im.alpha_composite(F)
+    if time == "night":   # uplights wash the crown so the ornament reads at night (three stepped bands, no gradient)
+        U = Image.new("RGBA", (Wd, Hd)); ud = ImageDraw.Draw(U)
+        for i, (a, h0) in enumerate(((70, 34), (44, 22), (24, 12))): ud.rectangle([X0, ROOF - 30 + i * 0, Wd, ROOF + h0], fill=(255, 196, 120, a // 2))
+        U.putalpha(Image.composite(U.split()[3], Image.new("L", (Wd, Hd), 0), F.split()[3])); im.alpha_composite(U)
+        for lx in range(X0 + 30, Wd, 56): ImageDraw.Draw(im).rectangle([lx, ROOF + 22, lx + 2, ROOF + 24], fill=(255, 226, 160, 255))   # the lamps
+    # windows: no two alike; the five residents once each, pets and empty rooms between
+    kinds = ["living", "kitchen", "bedroom", "plant", "cat", "trading", "studio", "vacuum", "gym", "dog", "living", "bedroom", "plant", "kitchen", "cat", "living"]
+    temps = ["2700K", "3000K", "3500K", "4000K", "5000K", "tv", "purple", "teal", "red"]
+    cast = {3: "theo", 9: "penny", 14: "ada", 21: "roz", 27: "kit"}
+    slots = [(x, y) for y in ROWS for x in COLS]; rr = random.Random(900 + n)
+    order = list(range(len(slots))); rr.shuffle(order)
+    for i, (x, y) in enumerate(slots):
+        j = order[i]
+        dark = (j % 8 == 5) or (time == "day" and j % 5 == 1) or (time != "day" and j % 3 == 0)   # nights: about a third of the windows dark
+        if dark:
+            rm = Image.new("RGBA", (WW, WH), ((22, 26, 44) if time != "day" else (60, 74, 96)) + (255,)); dd = ImageDraw.Draw(rm)
+            dd.line([(4, WH - 6), (WW - 6, 6)], fill=((44, 52, 84) if time != "day" else (120, 140, 168)) + (255,))   # glass reflection
+        else:
+            who = cast.get(i); kd = kinds[(j * 7) % len(kinds)]
+            if who and kd in ("cat", "dog", "plant"): kd = "living"
+            rm = room(WW, WH, kd, temps[(j * 5) % len(temps)], t, 500 + n * 40 + j, who)
+        im.alpha_composite(rm, (x, y))
+        dd = ImageDraw.Draw(im); fc = _tone(trim, .55 if time == "day" else .3)
+        dd.line([(x + WW // 2, y), (x + WW // 2, y + WH - 1)], fill=fc + (255,)); dd.line([(x, y + 20), (x + WW - 1, y + 20)], fill=fc + (255,))   # sash
+        if time != "day" and not dark: dd.line([(x - 3, y + WH + 1), (x + WW + 2, y + WH + 1)], fill=(255, 210, 150, 255))  # warm light on the sill
+    if fe:   # fire escape on the right two bays (away from the visible edge)
+        E = Image.new("RGBA", (Wd, Hd)); ed = ImageDraw.Draw(E); FE = (28, 26, 30, 255) if time == "day" else (12, 12, 18, 255)
+        for i, y in enumerate(ROWS):
+            py = y + WH + 6; ed.rectangle([168, py, 276, py + 2], fill=FE); ed.line([(168, py - 9), (276, py - 9)], fill=FE)
+            for x in range(168, 277, 4): ed.line([(x, py - 9), (x, py)], fill=FE)
+            a, b = (180, 262) if i % 2 == 0 else (262, 180); ed.line([(a, py + 2), (b, py + 58)], fill=FE, width=2)
+        im.alpha_composite(E)
+    MINI_SCALE = old
+    return outline(im.crop((0, 0, Wd, Hd)), 0) if False else im
+
 REG = {
     "PIG-01": dict(kind="prop", v=1, fn=lambda t=0.0: piggy("PIG-01", t), title="Piggy bank · classic pink", grid="64x64 standard", scale=6),
     "PIG-02": dict(kind="prop", v=1, fn=lambda t=0.0: piggy("PIG-02", t), title="Piggy bank · lucky gold", grid="64x64 standard", scale=6),
@@ -400,6 +570,8 @@ REG = {
     "BLD-05": dict(kind="building", v=1, fn=loft, title="SoHo cast-iron loft", grid="220x360 · 72 px floors", scale=2),
     "BLD-06": dict(kind="building", v=1, fn=bodega, title="Corner walk-up + bodega", grid="220x300 · 56 px floors", scale=2),
 }
+for _i, _f in enumerate(FLAVORS):
+    REG[f"BLD-03-F{_i + 1}"] = dict(kind="building", v="2.02", fn=(lambda t=0.0, n=_i: prewar_v3(n, t)), title=f"BLD-03 · flavor {_i + 1} · {_f[0]}", grid="300x600 · upper floors only · 58 px floors", scale=1.5)
 def get(aid, t=0.0):
     """The asset as RGBA at native size. Pass t for animated bits (TVs, vacuums, steam, tails, the beacon)."""
     return REG[aid]["fn"](t)
