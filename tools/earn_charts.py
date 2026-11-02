@@ -85,11 +85,18 @@ def coaster(img, d, u, y, vals, labels, avg):
                 for k in range(5): d.ellipse([cx - 40 - k * 14 - w * 60, ground - 14 - k * 6, cx - 26 - k * 14 - w * 60, ground - 2 - k * 6], fill=(150, 130, 110))
             if w < 1.2: yell = "AGAIN!"
         ang = -math.degrees(math.atan2(min(vx, g * v), vx)) * .6 if v <= tland else 0
-    cart = Image.new("RGBA", (120, 90)); cd = ImageDraw.Draw(cart)
-    cd.rounded_rectangle([6, 44, 114, 84], radius=14, fill=(230, 60, 90)); cd.rounded_rectangle([14, 50, 106, 78], radius=10, fill=(255, 110, 140))
-    cd.ellipse([18, 72, 42, 90], fill=(30, 30, 30)); cd.ellipse([78, 72, 102, 90], fill=(30, 30, 30)); cd.ellipse([24, 78, 36, 86], fill=(90, 90, 90)); cd.ellipse([84, 78, 96, 86], fill=(90, 90, 90))
-    kit = daily.sprite_state("kit", False, u); kit = kit.resize((kit.width * 2, kit.height * 2), Image.NEAREST); cart.alpha_composite(kit, (60 - kit.width // 2, 48 - kit.height))
-    cart = cart.rotate(ang, resample=Image.NEAREST, expand=True); img.paste(cart, (int(cx - cart.width / 2), int(cy - cart.height / 2 - 30)), cart)
+    # the cart: a tall canvas so Kit's whole head and gills fit above the car (the boss 11/2: "he has no head")
+    kit = daily.sprite_state("kit", False, u); kit = kit.resize((kit.width * 2, kit.height * 2), Image.NEAREST)
+    CW, CH = 130, 60 + kit.height; cart = Image.new("RGBA", (CW, CH)); cd = ImageDraw.Draw(cart); cy0 = CH - 50
+    cd.rounded_rectangle([8, cy0, CW - 8, cy0 + 40], radius=14, fill=(230, 60, 90)); cd.rounded_rectangle([16, cy0 + 6, CW - 16, cy0 + 34], radius=10, fill=(255, 110, 140))
+    cd.rectangle([22, cy0 + 10, CW - 22, cy0 + 16], fill=(255, 170, 190))                                        # highlight
+    cd.ellipse([20, cy0 + 28, 46, cy0 + 50], fill=(30, 30, 30)); cd.ellipse([CW - 46, cy0 + 28, CW - 20, cy0 + 50], fill=(30, 30, 30))
+    cd.ellipse([27, cy0 + 35, 39, cy0 + 43], fill=(110, 110, 110)); cd.ellipse([CW - 39, cy0 + 35, CW - 27, cy0 + 43], fill=(110, 110, 110))
+    cart.alpha_composite(kit, (CW // 2 - kit.width // 2, cy0 + 14 - kit.height))                                 # sitting in the car, lower body behind the side
+    cd.rounded_rectangle([16, cy0 + 6, CW - 16, cy0 + 34], radius=10, fill=(255, 110, 140, 0))
+    front = Image.new("RGBA", (CW, CH)); fd = ImageDraw.Draw(front); fd.rounded_rectangle([8, cy0, CW - 8, cy0 + 40], radius=14, fill=(230, 60, 90)); fd.rounded_rectangle([16, cy0 + 6, CW - 16, cy0 + 34], radius=10, fill=(255, 110, 140))
+    fd.rectangle([22, cy0 + 10, CW - 22, cy0 + 16], fill=(255, 170, 190)); cart.alpha_composite(front)             # the car's front wall over her lap
+    cart = cart.rotate(ang, resample=Image.NEAREST, expand=True); img.paste(cart, (int(cx - cart.width / 2), int(cy - cart.height + 40)), cart)
     if yell:
         f = archivo(30, 110, 900); tw = d.textlength(yell, font=f); bx0 = int(min(max(x0, cx - tw / 2 - 16), x1 - tw - 32)); by0 = int(cy - 150)
         d.rounded_rectangle([bx0, by0, bx0 + tw + 32, by0 + 52], radius=12, fill=(255, 255, 255), outline=(0, 0, 0), width=3)
