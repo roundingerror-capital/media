@@ -191,7 +191,7 @@ def anim(name, t, u, pose, s=11):
 def stamp(d, cx, cy, txt, col, k, size=120, ang=-12):
     """Rubber stamp slamming in: scale overshoot, thick outline box."""
     if k <= 0: return
-    f = archivo(int(size * k), 125, 900); tw = d.textlength(txt, font=f)
+    f = archivo(max(8, int(size * k)), 125, 900); tw = d.textlength(txt, font=f)
     box = Image.new("RGBA", (int(tw + 80), int(size * k * 1.3)), (0, 0, 0, 0)); bd = ImageDraw.Draw(box)
     bd.rounded_rectangle([0, 0, box.width - 1, box.height - 1], radius=18, outline=col, width=10)
     bd.text((box.width // 2, int(box.height * .78)), txt, font=f, fill=col, anchor="ms")
