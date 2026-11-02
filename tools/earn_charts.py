@@ -36,35 +36,60 @@ def scoreboard(img, d, u, y, vals, labels, avg):
     return bot + 20
 
 def coaster(img, d, u, y, vals, labels, avg):
-    """A rollercoaster: the track rides each report's move, lime climbs and coral drops, posts down to the ground, Kit in the cart."""
+    """A rollercoaster: the track rides each report's move (lime climbs, coral drops) on wooden trestles; Kit rides the cart on the
+    drawn end, hops at every peak, yells on the drops, then flies off the end, lands on the ground rail and bounces to a stop."""
     x0, x1 = M, SAFE_R; top = y + 60; bot = top + 440; n = len(vals); hi = max(abs(v) for v in vals) or 1
     pts = [(x0 + 40 + i * (x1 - x0 - 80) / (n - 1), top + 200 - v / hi * 160) for i, v in enumerate(vals)]
-    kk = _ease(u / 2.2); shown = int(kk * (n - 1) * 100) / 100
-    d.rectangle([x0 - 10, bot - 24, x1 + 10, bot], fill=(70, 50, 40)); d.rectangle([x0 - 10, bot - 24, x1 + 10, bot - 20], fill=(110, 80, 60))
+    DRAW = 2.2; kk = _ease(min(1, u / DRAW)); shown = kk * (n - 1)
+    ground = bot - 24
+    d.rectangle([x0 - 10, ground, x1 + 10, bot], fill=(70, 50, 40)); d.rectangle([x0 - 10, ground, x1 + 10, ground + 4], fill=(110, 80, 60))
     for i in range(n):
         px, py = pts[i]
-        if i <= shown:
-            for sx in (-14, 14): d.line([(px + sx, py), (px + sx, bot - 24)], fill=(120, 90, 70), width=5)
-            for cy in range(int(py) + 30, bot - 30, 44): d.line([(px - 14, cy), (px + 14, cy + 22)], fill=(100, 72, 56), width=3); d.line([(px + 14, cy), (px - 14, cy + 22)], fill=(100, 72, 56), width=3)
+        if i <= shown + 1e-6:
+            for sx in (-14, 14): d.line([(px + sx, py), (px + sx, ground)], fill=(120, 90, 70), width=5)
+            for cy in range(int(py) + 30, int(ground) - 30, 44): d.line([(px - 14, cy), (px + 14, cy + 22)], fill=(100, 72, 56), width=3); d.line([(px + 14, cy), (px - 14, cy + 22)], fill=(100, 72, 56), width=3)
     for i in range(n - 1):
-        if i + 1 > shown + 1e-6 and i >= shown: break
+        if i > shown: break
         a, b = pts[i], pts[i + 1]; frac = min(1, shown - i); bx = a[0] + (b[0] - a[0]) * frac; by = a[1] + (b[1] - a[1]) * frac
         col = LIME if vals[i + 1] >= 0 else CORAL
         d.line([(a[0], a[1] + 10), (bx, by + 10)], fill=(50, 40, 36), width=16); d.line([(a[0], a[1]), (bx, by)], fill=col, width=10)
-        for s in range(0, 100, 12):
-            tx = a[0] + (bx - a[0]) * s / 100; ty = a[1] + (by - a[1]) * s / 100; d.line([(tx, ty - 6), (tx, ty + 12)], fill=(60, 48, 40), width=3)
+        for s_ in range(0, int(frac * 100), 12):
+            tx = a[0] + (b[0] - a[0]) * s_ / 100; ty = a[1] + (b[1] - a[1]) * s_ / 100; d.line([(tx, ty - 6), (tx, ty + 12)], fill=(60, 48, 40), width=3)
     for i, (v, lab) in enumerate(zip(vals, labels)):
         if i <= shown + .01:
             px, py = pts[i]; col = LIME if v >= 0 else CORAL
             d.text((px, py - 26 if v >= 0 else py + 54), _lab(v), font=mono(28, True), fill=col, anchor="ms", stroke_width=4, stroke_fill="#000000")
         d.text((pts[i][0], bot + 30), lab, font=mono(20), fill=MUT, anchor="ms")
-    # the cart with Kit, riding the drawn end of the track
-    i = min(n - 2, int(shown)); frac = shown - i; a, b = pts[i], pts[min(n - 1, i + 1)]; cx = a[0] + (b[0] - a[0]) * frac; cy = a[1] + (b[1] - a[1]) * frac
-    ang = -math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
-    cart = Image.new("RGBA", (120, 90)); cd = ImageDraw.Draw(cart); cd.rounded_rectangle([6, 44, 114, 84], radius=14, fill=(230, 60, 90)); cd.rounded_rectangle([14, 50, 106, 78], radius=10, fill=(255, 110, 140))
-    cd.ellipse([18, 72, 42, 90], fill=(30, 30, 30)); cd.ellipse([78, 72, 102, 90], fill=(30, 30, 30))
+    # the cart
+    yell = None
+    if u <= DRAW:
+        i = min(n - 2, int(shown)); frac = shown - i; a, b = pts[i], pts[min(n - 1, i + 1)]
+        cx = a[0] + (b[0] - a[0]) * frac; cy = a[1] + (b[1] - a[1]) * frac
+        ang = -math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
+        hop = 22 * math.sin(math.pi * min(1, frac / .25)) if frac < .25 and i > 0 else 0          # a little hop over every peak/trough
+        if vals[i + 1] < 0 and .15 < frac < .95: yell = "WEEEEE!"
+        elif vals[i + 1] >= 0 and vals[i + 1] >= hi * .8 and .3 < frac < .95: yell = "TO THE TOP!"
+        cy -= hop
+    else:   # off the end: a parabola from the last point down to the ground rail, two bounces, a dust puff, then parked
+        v = u - DRAW; lx, ly = pts[-1]; vx = 150; g = 1500
+        cx = min(x1 - 40, lx + vx * v); cy = ly + .5 * g * v * v
+        tland = math.sqrt(max(0, 2 * (ground - 30 - ly) / g))
+        if v > tland:
+            w = v - tland; cy = ground - 30 - abs(40 * math.sin(w * 7)) * max(0, 1 - w / .9); cx = min(x1 - 40, lx + vx * tland + 60 * min(w, .9))
+            if w < .6:
+                for k in range(5): d.ellipse([cx - 40 - k * 14 - w * 60, ground - 14 - k * 6, cx - 26 - k * 14 - w * 60, ground - 2 - k * 6], fill=(150, 130, 110))
+            if w < 1.2: yell = "AGAIN!"
+        ang = -math.degrees(math.atan2(min(vx, g * v), vx)) * .6 if v <= tland else 0
+    cart = Image.new("RGBA", (120, 90)); cd = ImageDraw.Draw(cart)
+    cd.rounded_rectangle([6, 44, 114, 84], radius=14, fill=(230, 60, 90)); cd.rounded_rectangle([14, 50, 106, 78], radius=10, fill=(255, 110, 140))
+    cd.ellipse([18, 72, 42, 90], fill=(30, 30, 30)); cd.ellipse([78, 72, 102, 90], fill=(30, 30, 30)); cd.ellipse([24, 78, 36, 86], fill=(90, 90, 90)); cd.ellipse([84, 78, 96, 86], fill=(90, 90, 90))
     kit = daily.sprite_state("kit", False, u); kit = kit.resize((kit.width * 2, kit.height * 2), Image.NEAREST); cart.alpha_composite(kit, (60 - kit.width // 2, 48 - kit.height))
     cart = cart.rotate(ang, resample=Image.NEAREST, expand=True); img.paste(cart, (int(cx - cart.width / 2), int(cy - cart.height / 2 - 30)), cart)
+    if yell:
+        f = archivo(30, 110, 900); tw = d.textlength(yell, font=f); bx0 = int(min(max(x0, cx - tw / 2 - 16), x1 - tw - 32)); by0 = int(cy - 150)
+        d.rounded_rectangle([bx0, by0, bx0 + tw + 32, by0 + 52], radius=12, fill=(255, 255, 255), outline=(0, 0, 0), width=3)
+        d.polygon([(int(cx) - 10, by0 + 52), (int(cx) + 10, by0 + 52), (int(cx), by0 + 70)], fill=(255, 255, 255))
+        d.text((bx0 + 16, by0 + 38), yell, font=f, fill=(0, 0, 0), anchor="ls")
     return bot + 50
 
 def cards(img, d, u, y, vals, labels, avg):

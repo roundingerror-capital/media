@@ -19,6 +19,7 @@ Sheet fields read (every number on screen comes from here, nothing is typed by h
 Usage: python3 tools/earnings.py <sheet.json> <out_dir> [--derive]
 """
 import json, os, sys, re, datetime, random
+import earn_charts as EC   # chart styles for the history slide (the boss 2026-11-02 picked the rollercoaster)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 W_, L_, OR = "#F2F2EE", "#C8F03C", "#FF8A5B"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -161,7 +162,7 @@ def build_spec(sheet, derive=False):
         [4.5, 13.0, f"LAST {N} REPORTS · NEXT-DAY MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
          [(f"Median {pct(s['median_size_pct'])}. " if s.get("median_size_pct") is not None else "") + "Close before vs close after the report."],
          [[10.6, 12.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
-    charts = {1: {"vals": [m["move_pct"] for m in moves], "labels": labels, "note": "Past moves. Not a prediction.", "avg": s["average_size_of_move_pct"], "title": "NEXT-DAY MOVE AFTER EACH REPORT"}}
+    charts = {1: {"draw": EC.make("coaster", [m["move_pct"] for m in moves], labels, s["average_size_of_move_pct"])}}   # the rollercoaster: Kit rides the moves
     visuals = {}; t = 13.0
     if pt:
         sc.append([t, t + 9.5, "WOULD A PUT HAVE BEEN SAFE? · HYPOTHETICAL", [[f"A put {pct(pt['strike_pct_below'])} below", W_], ["the close before…", L_]], [],
@@ -192,7 +193,7 @@ def build_spec(sheet, derive=False):
         if k == len(sc) - 1 and scn[5]: scn[5][0][3] = "Comment!" if scn[5][0][2] == "penny" else scn[5][0][3]
         scn[6] = c; cast_x[k] = cv["xs"][k]
     shades_who = next((w for w in cv["casts"][1] if w in ("theo", "penny", "ada", "kit", "roz")), "theo")
-    return {"cast_x": cast_x, "cast_h": {1: 290}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
+    return {"cast_x": cast_x, "cast_h": {1: 220}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry", "music_start": 7.0,
             "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.26, "bg_blur": 2.0,
             "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
@@ -200,6 +201,8 @@ def build_spec(sheet, derive=False):
             "endcard": {"line1": "LIKE + FOLLOW", "line2": "FOR MORE UPDATES", "show_positions": False},
             "scenes": sc, "charts": charts, "visuals": visuals,
             "memes": [{"t": 0.2, "dur": 2.0, "kind": "pov", "text": f"POV: {T} reports {day}"},
+                      {"t": 4.8, "dur": 1.6, "kind": "pov", "text": "POV: you held through earnings", "y": 330},
+                      {"t": 6.8, "dur": 1.2, "kind": "zoom", "text": "HOLD ON", "y": 330},   # as the cart flies off the end
                       {"t": 5.0, "dur": 1.6, "kind": "shades", "who": shades_who}],
             "_test": test}
 
