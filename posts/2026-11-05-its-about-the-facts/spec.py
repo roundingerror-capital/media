@@ -85,7 +85,7 @@ def progress_panel(img, d, u, y):
     return bot + 20
 
 WALK = [("ada", 0.0), ("kit", 0.5), ("roz", 1.0)]   # who walks in, and when (seconds after the slide starts)
-SAY = [(2.4, 4.2, "ada", "Group hug? No. Group FACTS."), (4.5, 6.3, "roz", "Noted. Carefully.")]
+SAY = [(2.4, 3.9, "ada", "Group hug? No. Group FACTS."), (5.6, 6.4, "roz", "Noted. Carefully.")]
 def intervention(img, d, u, y):
     """Slide 2: Ada, Kit and Roz walk in from the right (V2.03 walk rigs, whole-number scale, mirrored) and stop in a line."""
     k = 5; stops = [980, 790, 600]
@@ -121,7 +121,7 @@ SPEC = dict(label="CONCEPT", end=29.5, bpm=132, root=49.0, seed=1105, mel=3, cha
   (5.0, 10.5, "RENDER COMPLETE · 5K ULTRA", [("Behold.", INK), ("Theo.", LIME)], [],
    [(5.6, 7.6, "penny", "Look at the FUR.", "jump"), (7.9, 10.3, "theo", "…that's me?", "brow")], ["penny", "theo"], -1),
   (10.5, 17.0, "THE INTERVENTION", [("Penny.", INK), ("We've been through this.", LIME)], [],
-   [(10.8, 12.6, "theo", "Penny. Sit down.", "brow"), (13.0, 14.5, "penny", "It's EIGHT K next time!", "jump")], ["penny", "theo"], -1),
+   [(10.8, 12.6, "theo", "Penny. Sit down.", "brow"), (14.6, 16.0, "penny", "It's EIGHT K next time!", "jump")], ["penny", "theo"], -1),
   (17.0, 19.2, "ALL TOGETHER NOW", [("It's not about", INK), ("the graphics.", RED)], [],
    [(17.3, 19.0, "theo", "It's about…", "nod")], ["penny", "theo", "ada"], -1),
   (19.2, 25.6, "ALL TOGETHER NOW", [("Say it with us:", INK)], [], [], ["penny", "theo", "ada"], -1),
