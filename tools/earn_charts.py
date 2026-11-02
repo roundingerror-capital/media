@@ -56,10 +56,15 @@ def coaster(img, d, u, y, vals, labels, avg):
         for s_ in range(0, int(frac * 100), 12):
             tx = a[0] + (b[0] - a[0]) * s_ / 100; ty = a[1] + (b[1] - a[1]) * s_ / 100; d.line([(tx, ty - 6), (tx, ty + 12)], fill=(60, 48, 40), width=3)
     for i, (v, lab) in enumerate(zip(vals, labels)):
-        if i <= shown + .01:
-            px, py = pts[i]; col = LIME if v >= 0 else CORAL
-            d.text((px, py - 26 if v >= 0 else py + 54), _lab(v), font=mono(28, True), fill=col, anchor="ms", stroke_width=4, stroke_fill="#000000")
         d.text((pts[i][0], bot + 30), lab, font=mono(20), fill=MUT, anchor="ms")
+    # value tags last, each on its own black pill so the trestles never run through the digits (OCR read "-6.9%" as "-6%9")
+    f = mono(28, True)
+    for i, v in enumerate(vals):
+        if i > shown + .01: continue
+        px, py = pts[i]; col = LIME if v >= 0 else CORAL; txt = _lab(v); tw = d.textlength(txt, font=f)
+        ty = py - 44 if v >= 0 else py + 30
+        d.rounded_rectangle([px - tw / 2 - 10, ty - 4, px + tw / 2 + 10, ty + 36], radius=8, fill=(0, 0, 0))
+        d.text((px, ty + 28), txt, font=f, fill=col, anchor="ms")
     # the cart
     yell = None
     if u <= DRAW:
