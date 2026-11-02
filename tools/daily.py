@@ -343,6 +343,8 @@ def meme_layer(img, S, t):
                 y = 950 + my + i * 120
                 d.text((M, y), lab, font=archivo(52, 100, 900), fill=INK, anchor="ls")
                 d.text((SAFE_R, y), val, font=archivo(64, 100, 900), fill=m.get("a2c", "#EB2626") if i == 0 else m.get("b2c", LIME), anchor="rs")
+            if m.get("hypo"):   # lesson figures in a two-panel carry the same orange tag as the worked-example panels (Roz 2026-11-02)
+                d.rectangle([SAFE_R - 280, 1066 + my, SAFE_R, 1110 + my], fill="#FF8A5B"); d.text((SAFE_R - 140, 1098 + my), "HYPOTHETICAL", font=mono(26, True), fill="#000000", anchor="ms")
         elif k == "freeze":
             g = img.convert("L").convert("RGB"); img.paste(Image.blend(g, Image.new("RGB", (W, H), (40, 30, 20)), 0.25)); d = ImageDraw.Draw(img)
             f = fit(m["text"], SAFE_R - M - 20, 84, wdth=110, wght=900)
