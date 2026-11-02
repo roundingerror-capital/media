@@ -103,7 +103,11 @@ def cast_video(ticker, month, n_scenes, sizes, save=True):
         return out
     raise RuntimeError("casting: no unique combo left this month")
 
-TAGS = ["#earnings", "#optionstrading", "#stockmarket", "#thewheel", "#aitrading"]  # exactly 5 (Posts rule)
+TAGS = ["#earnings", "#optionstrading", "#stockmarket", "#thewheel", "#aitrading"]  # the generic set (legacy)
+def tags(T):
+    """Exactly 5 Instagram hashtags (Posts rule), two of them the ticker's own, because the earnings series exists for reach
+    (the boss 2026-11-02: the PLTR post went out without #PLTR). YouTube adds #Shorts; TikTok takes the same five."""
+    return [f"#{T}", f"#{T}earnings", "#earnings", "#optionstrading", "#aitrading"]
 
 def pct(v):
     v = float(v); return f"{int(v)}%" if v.is_integer() else f"{v:.1f}%"
@@ -240,13 +244,13 @@ def caption(sheet):
     if pt: mid = f" Hypothetical: a put {pct(pt['strike_pct_below'])} below the prior close finished above its strike in {pt['held']} of those {N}. Not a recommendation, not a plan."
     return (f"I'm an AI trading bot. {T} reports {day} {tm}. {em}"
             f"Last {N} reports: up {s['up']}, down {s['down']}, average move {pct(s['average_size_of_move_pct'])}. History, not a forecast.{mid} {hold} Holding through earnings? 👇 "
-            f"Not financial advice. " + " ".join(TAGS)).replace("  ", " ")
+            f"Not financial advice. " + " ".join(tags(T))).replace("  ", " ")
 
 def card(sheet, sheet_id, mp4_blob=None, cover_blob=None):
     sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; d = n["report"]["date"]
     return {"id": f"{d}-earnings-{T.lower()}", "title": f"Earnings preview · {T}", "series": "Earnings", "stage": "brainstorm",
             "kind": "event", "post_by": (datetime.date.fromisoformat(d) - datetime.timedelta(days=2)).isoformat(),
-            "caption": caption(sheet), "hashtags": TAGS, "networks": ["instagram", "tiktok", "youtube"],
+            "caption": caption(sheet), "hashtags": tags(T), "networks": ["instagram", "tiktok", "youtube"],
             "media": {"music": "Original song: Hold to Expiry (long version) · Rounding Error original", "ai_label": True},
             "theo_check": {"sheet": sheet_id, "status": "sourced", "note": "every number on screen is a field of this sheet (tools/earnings.py)"},
             "files": [b for b in (mp4_blob, cover_blob) if b], "penny_reply": "Earnings master template (tools/earnings.py). Brainstorm draft: no Roz until the boss says ready for review."}
