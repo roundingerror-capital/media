@@ -7,14 +7,23 @@ import os, sys, math
 HERE = os.path.dirname(os.path.abspath(__file__)); TOOLS = os.path.join(HERE, "..", "..", "tools"); sys.path.insert(0, TOOLS); sys.path.insert(0, HERE)
 from PIL import Image, ImageDraw
 import daily, rigs, scenes, props as PROPS
-from make_reel import W, H, fade
+from make_reel import W, H, fade, archivo
 import spec as BASE_SPEC
 SPEC = dict(BASE_SPEC.SPEC)
 BASE = daily.BASE
 
-ROOMS = {0: "SCN-02", 1: "SCN-02", 2: "SCN-01", 3: "SCN-01", 4: "SCN-01", 5: "SCN-01"}
-DIM = 0.5
+# Rooms (the boss 2026-11-02: "there are cool ones, you picked gray"): the render happens in Kit's neon game studio, the intervention in
+# the boardroom with the city behind the glass, the slam sequence in deep space (To the moon), the close on the rooftop at night.
+ROOMS = {0: "SCN-06", 1: "SCN-06", 2: "SCN-15", 3: "SCN-15", 4: "SCN-13", 5: "SCN-03"}
+DIM = 0.72
 ANIM = {"jump": "celebrate", "point": "point", "brow": "shrug", "nod": "nod", "wave": "talk", "spin": "celebrate", "thumbs": "nod"}
+# One or two animations per scene per character (the boss: "they have ten each, pick one or two per scene"); used when not speaking.
+ACT = {0: {"penny": "celebrate"},
+       1: {"penny": "celebrate", "theo": "facepalm"},
+       2: {"penny": "shrug", "theo": "point"},
+       3: {"penny": "shakehead", "theo": "nod", "ada": "nod"},
+       4: {"penny": "celebrate", "theo": "celebrate", "ada": "celebrate"},
+       5: {"penny": "shrug", "theo": "nod", "ada": "celebrate"}}
 FLIP = {"theo": False, "penny": False, "ada": True, "kit": True, "roz": True}   # the V2.03 boards face right; mirror the right-hand side of the line-up
 DESK_PROPS = {0: [("PROP-001", 0.62, 60), ("PROP-014", 0.74, 40), ("PROP-499", 0.84, 20)]}   # (prop, x as a fraction of W, lift above the floor line)
 
@@ -36,7 +45,7 @@ def rig_layer(img, d, S, t, cast, lines, text_bottom):
         xc = int(W * xs[i])
         talk = [(ts, te, pose) for ts, te, w, _, pose in lines if w == n and ts <= t < te]
         if talk: ts, te, pose = talk[0]; an, t0 = ANIM.get(pose, "talk"), ts
-        else: an, t0 = "idle", 0.0
+        else: an, t0 = ACT.get(kk, {}).get(n, "idle"), sc[kk][0]
         if an not in rigs.anims(n): an = "talk" if talk else "idle"
         sp = rigs.frame(n, an, t, k=k, flip=FLIP.get(n, False), loop=True, t0=t0)
         d.ellipse([xc - sp.width * 0.33, BASE - 8, xc + sp.width * 0.33, BASE + 16], fill="#1a1a1a")
@@ -45,6 +54,20 @@ def rig_layer(img, d, S, t, cast, lines, text_bottom):
         if ts <= t < te and w in cast:
             xc = int(W * xs[cast.index(w)]); y = max(text_bottom + 24, BASE - hpx - 150); daily.bubble(d, xc, y, ln)
 
+def banner(img, d, u, y):
+    """The INTERVENTION banner: red cloth unrolls from the ceiling as the team walks in, then sways. Drawn over the base hook."""
+    y = BASE_SPEC.intervention(img, d, u, y)
+    if u < 0.3: return y
+    k = min(1, (u - 0.3) / 0.6); k = 1 - (1 - k) ** 3; top = 950; hgt = int(150 * k); sway = int(6 * math.sin(u * 2.2))
+    x0, x1 = 120 + sway, W - 120 + sway
+    d.rectangle([x0 - 10, top - 14, x1 + 10, top], fill=(110, 80, 50))                         # the rod
+    d.rectangle([x0, top, x1, top + hgt], fill=(190, 40, 48)); d.rectangle([x0, top, x1, top + 10], fill=(230, 80, 80))
+    if k >= 1:
+        for i in range(x0, x1, 48): d.polygon([(i, top + hgt), (i + 24, top + hgt + 22), (i + 48, top + hgt)], fill=(190, 40, 48))   # scalloped hem
+        d.text(((x0 + x1) // 2, top + 112), "INTERVENTION", font=archivo(104, 125, 900), fill="#F2F2EE", anchor="ms", stroke_width=4, stroke_fill=(120, 20, 28))
+    return y
+
+SPEC["charts"] = dict(SPEC["charts"]); SPEC["charts"][2] = {"draw": banner}
 daily.office_bg = room_bg
 daily.char_layer = rig_layer
 SPEC["bg"] = None; SPEC["bgs"] = ROOMS

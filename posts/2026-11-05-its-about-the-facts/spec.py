@@ -92,7 +92,7 @@ def intervention(img, d, u, y):
     for i, (ch, t0) in enumerate(WALK):
         if u < t0: continue
         tw = u - t0; x = max(stops[i], int(W + 100 - 420 * tw)); moving = x > stops[i]
-        fr = rigs.frame(ch, "walk" if moving else "idle", u, k=k, flip=True)
+        fr = rigs.frame(ch, "walk" if moving else ("holdsign" if ch == "kit" else "shakehead"), u, k=k, flip=True)
         d.ellipse([x - 50, BASE - 8, x + 50, BASE + 16], fill="#1a1a1a"); img.paste(fr, (x - fr.width // 2, BASE - fr.height), fr)
         for a, b, who, ln in SAY:
             if who == ch and a <= u < b: daily.bubble(d, x, BASE - fr.height - 150, ln)
