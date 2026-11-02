@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 # asset renders regenerate from tools/assets.py; media never goes to git before approval
 tools/assets/lib/
+
+# AI-generated render images dropped next to specs (media, never committed)
+posts/**/render_*.png
