@@ -16,14 +16,17 @@ BASE = daily.BASE
 # the boardroom with the city behind the glass, the slam sequence in deep space (To the moon), the close on the rooftop at night.
 ROOMS = {0: "SCN-06", 1: "SCN-06", 2: "SCN-15", 3: "SCN-15", 4: "SCN-13", 5: "SCN-03"}
 DIM = 0.72
-ANIM = {"jump": "celebrate", "point": "point", "brow": "shrug", "nod": "nod", "wave": "talk", "spin": "celebrate", "thumbs": "nod"}
+ANIM = {"jump": "celebrate", "point": "point", "brow": "shakehead", "nod": "nod", "wave": "talk", "spin": "celebrate", "thumbs": "nod"}
 # One or two animations per scene per character (the boss: "they have ten each, pick one or two per scene"); used when not speaking.
+# v5 (the boss: "Theo and Penny look like stickers"): the subtle ones (idle breathe, point, shrug) read as frozen at phone size, so every
+# scene uses the big-motion animations (celebrate = jump, shakehead = sway, walk = step, facepalm, nod), plus a whole-pixel beat hop.
 ACT = {0: {"penny": "celebrate"},
        1: {"penny": "celebrate", "theo": "facepalm"},
-       2: {"penny": "shrug", "theo": "point"},
-       3: {"penny": "shakehead", "theo": "nod", "ada": "nod"},
+       2: {"penny": "celebrate", "theo": "shakehead"},
+       3: {"penny": "shakehead", "theo": "nod", "ada": "celebrate"},
        4: {"penny": "celebrate", "theo": "celebrate", "ada": "celebrate"},
-       5: {"penny": "shrug", "theo": "nod", "ada": "celebrate"}}
+       5: {"penny": "facepalm", "theo": "nod", "ada": "celebrate"}}
+HOP = True   # beat hop: a 0-2 native-pixel lift on the music's beat (translation only; frames untouched)
 FLIP = {"theo": False, "penny": False, "ada": True, "kit": True, "roz": True}   # the V2.03 boards face right; mirror the right-hand side of the line-up
 DESK_PROPS = {0: [("PROP-001", 0.62, 60), ("PROP-014", 0.74, 40), ("PROP-499", 0.84, 20)]}   # (prop, x as a fraction of W, lift above the floor line)
 
@@ -48,8 +51,9 @@ def rig_layer(img, d, S, t, cast, lines, text_bottom):
         else: an, t0 = ACT.get(kk, {}).get(n, "idle"), sc[kk][0]
         if an not in rigs.anims(n): an = "talk" if talk else "idle"
         sp = rigs.frame(n, an, t, k=k, flip=FLIP.get(n, False), loop=True, t0=t0)
+        ph = t * S["bpm"] / 60; hop = k * int(round(2 * abs(math.sin(math.pi * ph)))) if HOP else 0
         d.ellipse([xc - sp.width * 0.33, BASE - 8, xc + sp.width * 0.33, BASE + 16], fill="#1a1a1a")
-        img.paste(sp, (xc - sp.width // 2, BASE - sp.height), sp)
+        img.paste(sp, (xc - sp.width // 2, BASE - sp.height - hop), sp)
     for ts, te, w, ln, _ in lines:
         if ts <= t < te and w in cast:
             xc = int(W * xs[cast.index(w)]); y = max(text_bottom + 24, BASE - hpx - 150); daily.bubble(d, xc, y, ln)
@@ -68,6 +72,9 @@ def banner(img, d, u, y):
     return y
 
 SPEC["charts"] = dict(SPEC["charts"]); SPEC["charts"][2] = {"draw": banner}
-daily.office_bg = room_bg
-daily.char_layer = rig_layer
+# daily.py runs as __main__ and imports the spec, so the spec's `daily` is a second module object: patch BOTH, or the old
+# static sprites keep drawing (v3/v4 shipped that way: the walkers were rigs, Theo and Penny were the stickers. The boss 2026-11-02.)
+for mod in {daily, sys.modules.get("__main__")}:
+    if mod is not None and hasattr(mod, "char_layer"):
+        mod.office_bg = room_bg; mod.char_layer = rig_layer
 SPEC["bg"] = None; SPEC["bgs"] = ROOMS
