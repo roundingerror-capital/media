@@ -370,7 +370,8 @@ def chart_panel(d, vals, labels, y0, y1, note=""):
     for i, (v, lab) in enumerate(zip(vals, labels)):
         x0 = M + i * bw + bw * .18; x1 = M + (i + 1) * bw - bw * .18; yv = zero - v / rng * (y1 - y0)
         d.rectangle([x0, min(zero, yv), x1, max(zero, yv)], fill=RED if v < 0 else LIME)
-        d.text(((x0 + x1) / 2, max(zero, yv) + 36), pctlab(v), font=mono(28 if n <= 6 else 24, True), fill=INK, anchor="ms")
+        lab_v = pctlab(v).lstrip("+")   # up bars drop the "+": the bar above the line says it, and OCR read "+2.9%" as "42.9%" (2026-11-01)
+        d.text(((x0 + x1) / 2, max(zero, yv) + 36), lab_v, font=mono(28 if n <= 6 else 24, True), fill=INK, anchor="ms")
         d.text(((x0 + x1) / 2, y0 - 14), lab, font=mono(22), fill=MUT, anchor="ms")
     if note: d.text((M, y1 + 100), note, font=mono(22), fill=MUT, anchor="ls")
 
