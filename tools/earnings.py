@@ -50,7 +50,27 @@ LINES = {   # bubble lines (<= 22 chars, no digits: the scan reads every number)
     "roz": ["Not advice. Promise.", "Read the fine print.", "Shell first.", "Hypothetical. Noted.", "Careful counts.", "Slow on purpose.",
             "Past isn't promise.", "Footnote: no picks.", "I'll allow it.", "Careful is cool."],
 }
+REACT = {"theo": "Noted.", "penny": "Wild ride!", "ada": "Oof. Big dips!", "kit": "GG. Respawn.", "roz": "Noted. Carefully."}   # beat 2 on the history slide (no digits)
 XS_POOL = {1: [[.5], [.32], [.68]], 2: [[.3, .7], [.22, .62], [.38, .78], [.26, .74]], 3: [[.2, .5, .8], [.18, .45, .74], [.26, .54, .82]]}
+MAX_GAP = 2.6      # seconds a slide may sit with nothing new happening (a bubble takes ~2 s to read); the last slide is the outro and exempt
+ACTION = {1: 4.0}  # per slide: seconds of continuous on-screen action from the slide start (slide 1: Kit's rollercoaster ride, track + flight + bounces)
+
+def check_pace(spec):
+    """Dead-air lint (the boss 2026-11-02, twice: the PLTR history slide froze after Kit's cart stopped). A beat is anything new on
+    screen: the slide start, a bubble, a meme, the end of a chart animation. Any silence longer than MAX_GAP inside a slide (except
+    the outro) fails the build, so a timing regression can never reach Roz or the boss again. Returns the gaps found."""
+    bad = []
+    for k, scn in enumerate(spec["scenes"][:-1]):
+        t0, t1 = scn[0], scn[1]
+        beats = {t0, t1} | {ln[0] for ln in scn[5]} | {m["t"] for m in spec.get("memes", []) if m and t0 <= m["t"] < t1}
+        if k in ACTION: beats |= {t0 + x for x in frange(0, ACTION[k], 1.0)}   # the chart moves the whole time: no silence there
+        b = sorted(beats)
+        for a, c in zip(b, b[1:]):
+            if c - a > MAX_GAP: bad.append((k, round(a, 1), round(c, 1), round(c - a, 1)))
+    return bad
+
+def frange(a, b, step):
+    while a <= b + 1e-9: yield a; a += step
 LEDGER = os.path.join(HERE, "casting_ledger.json")
 
 def _ledger(month):
@@ -183,11 +203,13 @@ def build_spec(sheet, derive=False):
          ([f"Options priced a move of about {pct(x)}" + (f" ({ao})." if ao else ".")] if x else [f"Average move, last {N} reports: {pct(s['average_size_of_move_pct'])}."])
          + ([f"Analysts expect EPS of ${n['report']['eps_estimate']:.2f} (Robinhood)."] if n["report"].get("eps_estimate") is not None else []) + ([one] if one else []),
          [[0.4, 2.2, "penny", "Big one?!", "jump"], [2.4, 4.3, "theo", "Let's look back.", "nod"]], ["penny", "theo"], 0],
-        [4.5, 13.0, f"LAST {N} REPORTS · {mv_day.upper()} MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
+        [4.5, 12.0, f"LAST {N} REPORTS · {mv_day.upper()} MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
          [(f"Median {pct(s['median_size_pct'])}. " if s.get("median_size_pct") is not None else "") + "Close before vs close after the report."],
-         [[10.6, 12.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
+         [[8.4, 9.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
+    # The history slide is 7.5 s (was 8.5: the boss 2026-11-02, twice: "a solid awkward moment" after Kit's cart stopped). Kit's ride
+    # ends about u=4.0 (track 2.2 s + flight + bounces), the first bubble lands at 3.9, the second cast member reacts at 5.5.
     charts = {1: {"draw": EC.make("coaster", [m["move_pct"] for m in moves], labels, s["average_size_of_move_pct"])}}   # the rollercoaster: Kit rides the moves
-    visuals = {}; t = 13.0
+    visuals = {}; t = 12.0
     if pt:
         # Theo's put_test field only (see put_test). No "safe": a hindsight count, not a safety claim (Roz 2026-11-02).
         sc.append([t, t + 9.5, "HOW FAR DID IT FALL? · HYPOTHETICAL", [[f"A put {pct(pt['strike_pct_below'])} below", W_], ["the close before…", L_]], [],
@@ -202,9 +224,9 @@ def build_spec(sheet, derive=False):
     # The method slide: the sheet's own wording ("History, not a forecast.") and Rules §8 word for word ("Hold to expiry." /
     # "Puts are never rolled."). Nothing of ours: Roz 2026-11-02 struck "OUR RULE · We don't guess the direction… We don't bet on it."
     # (no sheet or decision backs it; Rules §6a lets a put span a report).
-    sc.append([t, t + 6.5, "HISTORY, NOT A FORECAST", [["Our rule:", W_], ["hold to expiry.", L_]],
+    sc.append([t, t + 6.0, "HISTORY, NOT A FORECAST", [["Our rule:", W_], ["hold to expiry.", L_]],
                ([hold] if hold else []) + ["Puts are never rolled."],
-               [[t + 3.2, t + 6.3, "ada", "Data says: humble.", "thumbs"]], ["theo", "ada"], 0 if hold else -1]); t += 6.5
+               [[t + 1.2, t + 3.3, "ada", "Data says: humble.", "thumbs"]], ["theo", "ada"], 0 if hold else -1]); t += 6.0
     sc.append([t, t + 4.5, "YOUR TURN", [["Holding through", W_], ["earnings?", L_]], ["Tell us below."],
                [[t + 0.3, t + 4.3, "penny", "Comment!", "point"]], ["penny", "ada", "theo"], 0]); end = t + 4.5
     # casting: random active staff per slide, unique per video this month (the ledger), varied placement
@@ -215,15 +237,27 @@ def build_spec(sheet, derive=False):
         t0, t1 = scn[0], scn[1]; c = cv["casts"][k]; rows = cv["lines"][k]
         if k == 0: tl = [[t0 + 0.4, t0 + 2.2], [t0 + 2.4, t1 - 0.2]]
         elif k == len(sc) - 1: tl = [[t0 + 0.3, t1 - 0.2]]
-        elif k == 1: tl = [[t0 + 3.9, t1 - 0.2]]   # the boss 2026-11-02: no dead air after Kit's cart lands (~t0+3.6); the line lands with a zoom
-        else: tl = [[t0 + 1.2, t1 - 0.2]]          # middle slides: react right after the headline, not 3 s before the slide ends
+        elif k == 1:
+            # the boss 2026-11-02 (twice): no dead air after Kit's cart lands (~t0+4.0). Beat 1: the bubble + zoom at 3.9. Beat 2: the other
+            # cast member reacts at 5.5 so nobody stands still until the slide ends. The ledger keeps one line per slide, so beat 2 is a fixed
+            # short reaction per character (REACT), never a figure, never a claim.
+            tl = [[t0 + 3.9, t0 + 5.3], [t0 + 5.5, t1 - 0.2]]
+            if len(rows) < 2:
+                other = next((w for w in c if w != rows[0][0]), None)
+                if other: rows = rows + [[other, REACT[other], POSE[other][0]]]
+        else:
+            # middle slides: react right after the headline (1.2), then the other cast member at 3.6, so no 5 s freeze (check_pace)
+            tl = [[t0 + 1.2, t0 + 3.3], [t0 + 3.6, t1 - 0.2]]
+            if len(rows) < 2:
+                other = next((w for w in c if w != rows[0][0]), None)
+                if other: rows = rows + [[other, REACT[other], POSE[other][0]]]
         if k == len(sc) - 1 and not any(w == c[0] for w, _, _ in rows): rows = [[c[0], rows[0][1], rows[0][2]]] if rows[0][0] not in c else rows
         scn[5] = [[a, b, w, ln, pose] for (a, b), (w, ln, pose) in zip(tl, rows)]
         if k == len(sc) - 1 and scn[5]: scn[5][0][3] = "Comment!" if scn[5][0][2] == "penny" else scn[5][0][3]
         scn[6] = c; cast_x[k] = cv["xs"][k]
         if k == 1 and scn[5]: twist = {"t": scn[5][0][0], "dur": 1.3, "kind": "zoom", "text": scn[5][0][3].upper(), "y": 330}   # "PLOT TWIST?!" punch-in with the bubble
     shades_who = next((w for w in cv["casts"][1] if w in ("theo", "penny", "ada", "kit", "roz")), "theo")
-    return {"cast_x": cast_x, "cast_h": {1: 220}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
+    spec = {"cast_x": cast_x, "cast_h": {1: 220}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry_long", "music_start": 8.0,
             "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.26, "bg_blur": 2.0,
             "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
@@ -235,6 +269,9 @@ def build_spec(sheet, derive=False):
                       {"t": 6.8, "dur": 1.2, "kind": "zoom", "text": "HOLD ON", "y": 330},   # as the cart flies off the end
                       {"t": 5.0, "dur": 1.6, "kind": "shades", "who": shades_who}, twist],
             "_test": test}
+    gaps = check_pace(spec)
+    if gaps: raise RuntimeError("DEAD AIR: " + "; ".join(f"slide {k}: {a}s→{c}s ({g}s silent)" for k, a, c, g in gaps))
+    return spec
 
 def caption(sheet):
     sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); s = n["summary"]; N = len(n["last_8_next_day_moves"])
