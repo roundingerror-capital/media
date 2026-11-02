@@ -362,8 +362,9 @@ def fawn_v27(shadow=False, v=None):
         for i in range(len(pts) - 2): bd.line([(pts[i][0] - sx, pts[i][1] - 1), (pts[i + 1][0] - sx, pts[i + 1][1] - 1)], fill=RC[3] if lit else RC[2])   # top edge catches the light
         hx = xs + sx * 3; bd.rectangle([hx - 1, 52, hx + 1, 54], fill=(70, 46, 34) if not shadow else RC[0]); bd.point([(hx - 1 if lit else hx + 1, 52)], fill=(126, 92, 66) if not shadow else RC[1])
     # head: wide brow and cheeks that taper to a long muzzle
-    _sphere(lambda d: d.ellipse([15, 11, 49, 35], fill=255), (15, 11, 49, 35), RC, body, bands=B)
-    _sphere(lambda d: d.polygon([(17, 26), (47, 26), (37, 40), (27, 40)], fill=255), (17, 26, 47, 40), RC, body, bands=B, rim=False)
+    _sphere(lambda d: d.ellipse([15, 12, 49, 35], fill=255), (15, 12, 49, 35), RC, body, bands=B)
+    JAW = [(16, 26), (48, 26), (46, 31), (42, 36), (38, 40), (26, 40), (22, 36), (18, 31)]   # rounded jaw: soft cheeks into the muzzle, not a cone
+    _sphere(lambda d: d.polygon(JAW, fill=255), (16, 26, 48, 41), RC, body, bands=B, rim=False)
     MID = [tuple((a + b) // 2 for a, b in zip(RC[k], RB[k])) for k in range(5)]   # halfway between coat and muzzle: the blend ring
     _sphere(lambda d: d.ellipse([25, 29, 39, 43], fill=255), (25, 29, 39, 43), MID, body, bands=(.05, .2, .6, 1.1), rim=False)
     _sphere(lambda d: d.ellipse([27, 31, 37, 42], fill=255), (27, 31, 37, 42), RB, body, bands=(.04, .16, .55, 1.1), rim=False)   # muzzle: soft oval, no straight line
@@ -397,7 +398,7 @@ def fawn_v27(shadow=False, v=None):
                     if i == len(pts) - 1: col = AT
                     d.point([(X(x), y)], fill=col)
     EYE = (30, 20, 18) if not shadow else (8, 4, 8)
-    IRIS, IRIS2, RIM = ((150, 98, 58), (186, 132, 82), (62, 36, 24)) if not shadow else (EYE, EYE, EYE)
+    IRIS, IRIS2, RIM = ((96, 58, 34), (128, 82, 48), (36, 20, 14)) if not shadow else (EYE, EYE, EYE)   # deeper brown
     for x0 in (19, 38):   # big eyes: light brown iris, dark rim, the pupil set inward (a soft gaze to the middle), catchlights
         inward = 1 if x0 < 32 else -1
         d.ellipse([x0, 21, x0 + 7, 30], fill=RIM); d.ellipse([x0 + 1, 22, x0 + 6, 29], fill=IRIS)
@@ -424,15 +425,15 @@ def fawn_v27(shadow=False, v=None):
         for x, col in ((28, (230, 60, 90)), (32, (90, 170, 240)), (36, (230, 60, 90))): d.rectangle([x - 1, 9, x, 10], fill=col); d.point([(x - 1, 9)], fill=(255, 255, 255))
     if v.get("jewels", True):
         G0, G1, G2, G3 = ((150, 100, 24), (214, 166, 48), (248, 214, 104), (255, 246, 200)) if not shadow else ((60, 50, 40), (90, 76, 60), (110, 96, 80), (130, 116, 100))
-        # gold choker: a snug band where the neck meets the head, a tiny charm in the middle
-        d.line([(28, 41), (36, 41)], fill=G2); d.line([(28, 42), (36, 42)], fill=G1); d.point([(28, 42), (36, 42)], fill=G0)
-        for x in (29, 31, 33, 35): d.point([(x, 41)], fill=G3 if x < 32 else G2)                                 # light catches the left
-        d.point([(32, 43)], fill=G1); d.point([(32, 44)], fill=G0)
-        # gold studs: three along each long ear's lower edge
+        # gold choker: a snug band on the neck, below the chin (it read as "in her mouth" at the chin line), a tiny charm on the chest
+        d.line([(29, 44), (35, 44)], fill=G2); d.line([(29, 45), (35, 45)], fill=G1); d.point([(29, 45), (35, 45)], fill=G0)
+        for x in (30, 32, 34): d.point([(x, 44)], fill=G3)
+        d.point([(32, 46)], fill=G2); d.point([(32, 47)], fill=G0)
+        # gold studs, extra bright: three along each long ear's lower edge, a near-white core and a gold edge
+        HOT = (255, 252, 228) if not shadow else G3
         for ex, ey in ((13, 24), (10, 23), (7, 21)):
-            for x in (ex, 64 - ex - 1):
-                d.point([(x, ey)], fill=G2); d.point([(x, ey + 1)], fill=G0)
-            d.point([(ex, ey)], fill=G3)
+            for x, inner in ((ex, ex + 1), (64 - ex - 1, 64 - ex - 2)):
+                d.point([(x, ey)], fill=HOT); d.point([(inner, ey)], fill=G2); d.point([(x, ey + 1)], fill=G1)
     return im
 V27 = [  # rev 2 (11/1): same cream fawn, deer ears, new antlers and arms, no accessories; takes vary the coat pattern only
     ("Dappled rows", dict(spots="rows", belly="oval")),
@@ -440,7 +441,7 @@ V27 = [  # rev 2 (11/1): same cream fawn, deer ears, new antlers and arms, no ac
     ("White bib", dict(spots="rows", belly="bib")),
     ("Freckles + dapples", dict(spots="scatter", belly="soft", freckles="muzzle")),
     ("Dense dapples", dict(spots="dense", belly="chest")),
-    ("Dorsal stripe", dict(spots="rows", belly="soft", stripe=True)),
+    ("Dapples + bib", dict(spots="rows", belly="bib", freckles="cheeks")),
     ("Plain coat", dict(spots="none", belly="bib", freckles="cheeks")),
     ("Soft belly", dict(spots="few", belly="soft")),
 ]
