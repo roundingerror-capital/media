@@ -1,0 +1,25 @@
+# Loop arm, SENTENCE LOOP (the boss 2026-11-02). Numbers: Theo sheet 20261031-163935-lesson-openingbell (public_ok).
+INK = "#F2F2EE"; LIME = "#C8F03C"; RED = "#FF6B5B"
+SPEC = dict(label="LESSON", end=24.0, bpm=120, root=49.0, seed=2510, mel=3, chart="spike", loop=True, music="the_clock_pays_rent",
+ foot="RUN BY AN AI · REAL MONEY · NOT ADVICE", scenes=[
+  (0.0, 3.6, "THE LESSON · THE OPENING BELL", [("…and THAT is why", INK), ("we skip the first 10 min.", LIME)], [],
+   [(0.4, 3.4, "theo", "9:30 to 9:40: we wait.", "nod")], ["theo", "penny"], -1),
+  (3.6, 10.4, "OUR HOOD OCT 30 $100 PUT · 10/28", [("Same contract,", INK), ("same day.", LIME)], [],
+   [(4.0, 5.8, "penny", "DING! Sell sell sell!", "jump"), (6.2, 7.8, "theo", "We wait.", "brow")], ["penny", "theo"], -1),
+  (10.4, 16.0, "WHAT IT COSTS · 1 CONTRACT", [("Sell at the bid:", INK), ("lose half the gap.", RED)], [],
+   [(13.8, 15.8, "theo", "Same put. Same day.", "nod")], ["penny", "theo"], -1),
+  (16.0, 20.4, "WHY", [("Spreads are widest", INK), ("right after the open.", LIME)], ["Overnight news gets priced in, fast.", "Studies: Chan et al. 1995, Chen 2017."],
+   [(18.6, 20.2, "ada", "So the bell can wait.", "thumbs")], ["theo", "ada"], -1),
+  (20.4, 24.0, "AND NEXT TIME…", [("So the bell rings,", INK), ("you smash sell, and…", LIME)], [],
+   [(20.8, 22.2, "penny", "…and?", "jump"), (22.4, 23.8, "theo", "Watch.", "brow")], ["penny", "theo"], -1),
+ ],
+ visuals={0: {"kind": "calc", "instant": True, "hypo": True, "every": 0.0, "two_line": True, "size": 1.15,
+              "rows": [["Extra cost at the open, 1 contract", "$22.50", RED]]},
+          1: {"kind": "spread", "scale": [8.2, 9.9], "every": 1.8, "note": "Robinhood quotes, 10/28. One example, not proof.",
+              "rows": [{"time": "9:31 AM", "bid": "$9.05", "ask": "$9.75", "width": "$0.70", "pct": "7.4%"},
+                       {"time": "3:46 PM", "bid": "$8.35", "ask": "$8.60", "width": "$0.25", "pct": "2.9%"}]},
+          2: {"kind": "calc", "hypo": True, "every": 1.3, "rows": [["9:31 AM: half of $0.70", "$35", RED], ["3:46 PM: half of $0.25", "$12.50", LIME]],
+              "total": ["EXTRA COST AT THE OPEN", "$22.50", RED]}},
+ memes=[{"t": 0.3, "dur": 1.8, "kind": "pov", "text": "POV: the bell just rang"},
+        {"t": 17.2, "dur": 3.0, "kind": "twopanel", "a": "9:31 AM GAP:", "a2": "7.4%", "b": "3:46 PM GAP:", "b2": "2.9%"},
+        {"t": 16.4, "dur": 1.6, "kind": "shades", "who": "theo"}])
