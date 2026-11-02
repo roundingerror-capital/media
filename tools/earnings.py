@@ -10,8 +10,12 @@ Sheet fields read (every number on screen comes from here, nothing is typed by h
   numbers.last_8_next_day_moves [{report, move_pct}]              the 8 bars
   numbers.summary             {up, down, average_size_of_move_pct, median_size_pct}
   numbers.put_test            {strike_pct_below, held, broke, worst_drop_pct, note}   "a put X% below the close the day before"
-                              (HYPOTHETICAL: did the next-day close stay above the strike? Theo's field when present; otherwise
-                              arithmetic on the sheet's own last_8 moves and expected move. --derive stamps TEMPLATE TEST for test renders.)
+                              (HYPOTHETICAL panel, shown ONLY when Theo's sheet carries this field (T-083). Roz 2026-11-02: counts
+                              we compute ourselves are not sheet numbers, so no sheet field = no panel and no caption sentence.
+                              --derive computes it from the sheet's own moves for TEMPLATE TESTS only, stamped TEMPLATE TEST.)
+  History labels follow numbers.report.timing: "REPORT-DAY MOVE" for a before-open report (close the day before vs close on the
+  report day), "NEXT-DAY MOVE" for an after-close report (Roz 2026-11-02, SHOP). The method slide quotes the sheet ("History, not a
+  forecast.") and Rules §8 word for word ("Hold to expiry." / "Puts are never rolled."); no "OUR RULE" claims of our own.
   Theo's JOB E layout is accepted too: last_8_moves[{report, close_before, close_after, pct}], avg_abs_move_pct, up_days, down_days,
   expected_move{pct, strike, expiry, spot, quote_time}, numbers.ticker.
   wording                     the one holding line, copied as written ("The fund holds no UBER." / "The fund holds UBER puts.")
@@ -59,7 +63,17 @@ def cast_video(ticker, month, n_scenes, sizes, save=True):
     {casts: [[names]], lines: [[name, line, pose]] per scene (one or two), xs: [[x...]], flips} and records it in the ledger.
     The same ticker in the same month gets the same casting back (re-renders stay stable)."""
     L, M = _ledger(month)
-    if ticker in M["by_ticker"]: return M["by_ticker"][ticker]
+    if ticker in M["by_ticker"]:
+        out = M["by_ticker"][ticker]
+        if len(out["casts"]) == n_scenes: return out
+        if len(out["casts"]) > n_scenes:
+            # a slide left the video since this casting was made (the optional put-test slot at index 2): drop that slot so the
+            # opening pair (the cover) and the closing trio stay as rendered and reviewed
+            keep = list(range(len(out["casts"])))
+            while len(keep) > n_scenes: keep.pop(2)
+            out = {"casts": [out["casts"][i] for i in keep], "lines": [out["lines"][i] for i in keep], "xs": [out["xs"][i] for i in keep]}
+            if save: M["by_ticker"][ticker] = out; json.dump(L, open(LEDGER, "w"), indent=1)
+            return out
     r = random.Random(f"{ticker}-{month}")
     for attempt in range(400):
         casts = []; prev = None
@@ -135,12 +149,17 @@ def normalize(sheet):
     if "ticker" not in sheet: sheet["ticker"] = n["ticker"]
     return sheet
 
+def bmo(n):
+    """True for a before-the-open report: the sheet's moves are then report-day moves, not next-day moves."""
+    return "before" in (n["report"].get("timing") or "").lower()
+
 def put_test(n, derive):
     pt = n.get("put_test")
     if pt: return pt, False
-    if straddle(n, False) is None: return None, False   # no expected move, no strike to test
-    # Not on the sheet: arithmetic on the sheet's own numbers (like the paid-twice interest math), stamped HYPOTHETICAL.
-    # A put struck the implied move below the close before the report: did the next-day close stay above it?
+    # Not on the sheet: no panel. The counts would be our arithmetic, not a Theo number (Roz, UBER audit 2026-11-02; T-083 asks
+    # Theo to add put_test to the sheet). --derive keeps the template testable: computed from the sheet's own moves, TEMPLATE TEST stamp.
+    if not derive or straddle(n, False) is None: return None, False
+    # A put struck the implied move below the close before the report: did the close after the report stay above it?
     x = straddle(n)["pct_of_spot"]; mv = [m["move_pct"] for m in n["last_8_next_day_moves"]]
     broke = sum(1 for m in mv if m <= -x)
     return {"strike_pct_below": x, "held": len(mv) - broke, "broke": broke, "worst_drop_pct": min(mv),
@@ -154,29 +173,34 @@ def build_spec(sheet, derive=False):
     hold = holding(sheet)
     pt, test = put_test(n, derive)
     one = (sheet.get("company") or {}).get("one_liner")
+    mv_day = "report-day" if bmo(n) else "next-day"   # the sheet's sources.moves: before-open = close before vs close ON the report day
     sc = [
         [0.0, 4.5, f"EARNINGS PREVIEW · {T}", [[f"{T} reports", W_], [f"{day}, {tm}.", L_]],
          ([f"Options priced a move of about {pct(x)}" + (f" ({ao})." if ao else ".")] if x else [f"Average move, last {N} reports: {pct(s['average_size_of_move_pct'])}."])
          + ([f"Analysts expect EPS of ${n['report']['eps_estimate']:.2f} (Robinhood)."] if n["report"].get("eps_estimate") is not None else []) + ([one] if one else []),
          [[0.4, 2.2, "penny", "Big one?!", "jump"], [2.4, 4.3, "theo", "Let's look back.", "nod"]], ["penny", "theo"], 0],
-        [4.5, 13.0, f"LAST {N} REPORTS · NEXT-DAY MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
+        [4.5, 13.0, f"LAST {N} REPORTS · {mv_day.upper()} MOVE", [[f"Up {s['up']}. Down {s['down']}.", W_], [f"Average size {pct(s['average_size_of_move_pct'])}.", L_]],
          [(f"Median {pct(s['median_size_pct'])}. " if s.get("median_size_pct") is not None else "") + "Close before vs close after the report."],
          [[10.6, 12.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
     charts = {1: {"draw": EC.make("coaster", [m["move_pct"] for m in moves], labels, s["average_size_of_move_pct"])}}   # the rollercoaster: Kit rides the moves
     visuals = {}; t = 13.0
     if pt:
-        sc.append([t, t + 9.5, "WOULD A PUT HAVE BEEN SAFE? · HYPOTHETICAL", [[f"A put {pct(pt['strike_pct_below'])} below", W_], ["the close before…", L_]], [],
+        # Theo's put_test field only (see put_test). No "safe": a hindsight count, not a safety claim (Roz 2026-11-02).
+        sc.append([t, t + 9.5, "HOW FAR DID IT FALL? · HYPOTHETICAL", [[f"A put {pct(pt['strike_pct_below'])} below", W_], ["the close before…", L_]], [],
                   [[t + 6.6, t + 9.3, "theo", "Past moves. No promise.", "brow"]], ["theo", "ada"], 0])
         visuals[2] = {"kind": "calc", "two_line": True, "hypo": True, "every": 1.5, "size": 1.0,
                       "stamp": "TEMPLATE TEST" if test else "HYPOTHETICAL",
                       "rows": [["Reports where the stock stayed above it", f"{pt['held']} of {N}", L_],
                                ["Reports where it broke through", f"{pt['broke']} of {N}", OR],
-                               ["Worst next-day drop", f"−{pct(abs(pt['worst_drop_pct']))}", OR]],
-                      "total": ["Hypothetical. No trade was made.", "", W_]}
+                               [f"Worst {mv_day} drop", f"−{pct(abs(pt['worst_drop_pct']))}", OR]],
+                      "total": ["Hypothetical, not a recommendation.", "", W_]}
         t += 9.5
-    sc.append([t, t + 6.5, "OUR RULE", [["We don't guess", W_], ["the direction.", L_]],
-               ["Earnings move big, both ways. We don't bet on it."] + ([hold] if hold else []),
-               [[t + 3.2, t + 6.3, "ada", "Data says: humble.", "thumbs"]], ["theo", "ada"], 1 if hold else -1]); t += 6.5
+    # The method slide: the sheet's own wording ("History, not a forecast.") and Rules §8 word for word ("Hold to expiry." /
+    # "Puts are never rolled."). Nothing of ours: Roz 2026-11-02 struck "OUR RULE · We don't guess the direction… We don't bet on it."
+    # (no sheet or decision backs it; Rules §6a lets a put span a report).
+    sc.append([t, t + 6.5, "HISTORY, NOT A FORECAST", [["Our rule:", W_], ["hold to expiry.", L_]],
+               ([hold] if hold else []) + ["Puts are never rolled."],
+               [[t + 3.2, t + 6.3, "ada", "Data says: humble.", "thumbs"]], ["theo", "ada"], 0 if hold else -1]); t += 6.5
     sc.append([t, t + 4.5, "YOUR TURN", [["Holding through", W_], ["earnings?", L_]], ["Tell us below."],
                [[t + 0.3, t + 4.3, "penny", "Comment!", "point"]], ["penny", "ada", "theo"], 0]); end = t + 4.5
     # casting: random active staff per slide, unique per video this month (the ledger), varied placement
@@ -210,8 +234,8 @@ def caption(sheet):
     sheet = normalize(sheet); n = sheet["numbers"]; T = sheet["ticker"]; day, tm = when(n["report"]); s = n["summary"]; N = len(n["last_8_next_day_moves"])
     xs = straddle(n, False); ao = asof(n); hold = holding(sheet)
     em = f"The options market priced a move of about {pct(xs['pct_of_spot'])}{' ' + ao if ao else ''}. " if xs else ""
-    pt, _ = put_test(n, False); mid = ""
-    if pt: mid = f" Hypothetical: a put {pct(pt['strike_pct_below'])} below the prior close stayed above water in {pt['held']} of those {N}. Not a trade, not a plan."
+    pt, _ = put_test(n, False); mid = ""   # only when Theo's sheet carries put_test (T-083); never our own count
+    if pt: mid = f" Hypothetical: a put {pct(pt['strike_pct_below'])} below the prior close finished above its strike in {pt['held']} of those {N}. Not a recommendation, not a plan."
     return (f"I'm an AI trading bot. {T} reports {day} {tm}. {em}"
             f"Last {N} reports: up {s['up']}, down {s['down']}, average move {pct(s['average_size_of_move_pct'])}.{mid} {hold} Holding through earnings? 👇 "
             f"Not financial advice. " + " ".join(TAGS)).replace("  ", " ")
