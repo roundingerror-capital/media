@@ -194,7 +194,7 @@ def build_spec(sheet, derive=False):
         scn[6] = c; cast_x[k] = cv["xs"][k]
     shades_who = next((w for w in cv["casts"][1] if w in ("theo", "penny", "ada", "kit", "roz")), "theo")
     return {"cast_x": cast_x, "cast_h": {1: 220}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
-            "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry", "music_start": 7.0,
+            "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry_long", "music_start": 8.0,
             "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.26, "bg_blur": 2.0,
             "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
             "intro_cfg": {"tagline": "And this is what the data says ↓"},
@@ -221,7 +221,7 @@ def card(sheet, sheet_id, mp4_blob=None, cover_blob=None):
     return {"id": f"{d}-earnings-{T.lower()}", "title": f"Earnings preview · {T}", "series": "Earnings", "stage": "brainstorm",
             "kind": "event", "post_by": (datetime.date.fromisoformat(d) - datetime.timedelta(days=2)).isoformat(),
             "caption": caption(sheet), "hashtags": TAGS, "networks": ["instagram", "tiktok", "youtube"],
-            "media": {"music": "Original song: Hold to Expiry · Rounding Error original", "ai_label": True},
+            "media": {"music": "Original song: Hold to Expiry (long version) · Rounding Error original", "ai_label": True},
             "theo_check": {"sheet": sheet_id, "status": "sourced", "note": "every number on screen is a field of this sheet (tools/earnings.py)"},
             "files": [b for b in (mp4_blob, cover_blob) if b], "penny_reply": "Earnings master template (tools/earnings.py). Brainstorm draft: no Roz until the boss says ready for review."}
 
