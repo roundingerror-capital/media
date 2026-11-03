@@ -43,7 +43,7 @@ def shadow(d, cx, by, w, a=0.55):
 def rig(img, ch, an, t, t0, cx, by, k=8, flip=False, loop=True, alpha=1.0, shade=True):
     sp = rigs.frame(ch, an, t, k=k, flip=flip, loop=loop, t0=t0)
     if shade:
-        sh = Image.new("RGBA", img.size, (0, 0, 0, 0)); ImageDraw.Draw(sh).ellipse([cx - sp.width * .4, by - 12, cx + sp.width * .4, by + 12], fill=(0, 0, 0, 120))
+        sh = Image.new("RGBA", img.size, (0, 0, 0, 0)); ImageDraw.Draw(sh).ellipse([cx - rigs.body(ch, an, k)[0] * .4, by - 12, cx + rigs.body(ch, an, k)[0] * .4, by + 12], fill=(0, 0, 0, 120))
         img.paste(sh, (0, 0), sh)
     paste(img, sp, cx, by, alpha); return sp
 def text(d, s, x, y, size, col, wdth=125, wght=900, anchor="ls", maxw=None):

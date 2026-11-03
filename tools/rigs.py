@@ -6,6 +6,8 @@ tools/anim/<char>/<anim>.json = {"w","h","frames":[[[x,y,w,h,"#hex"],...],...],"
 
     import rigs; im = rigs.frame("penny", "celebrate", t)          # RGBA at native 64 px grid
     rigs.frame("theo", "walk", t, k=7, flip=True)                  # scaled NEAREST by a whole number, mirrored
+Frames carry PAD px of empty margin left/right/top so nothing is cropped; paste them bottom-centre anchored.
+rigs.body(ch, an, k) gives the body box (w, h) for shadows and speech-bubble heights.
     rigs.anims("roz") -> ["idle","walk","talk","nod","shakehead","point","celebrate","facepalm","shrug","holdsign"]
 Characters: theo, penny, ada, kit, roz, boss (the shadow chimp), realboss, realboss_hood.
 Build: python3 tools/rigs.py build <dir with project/V2_03*.dc.html>"""
@@ -16,6 +18,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ANIM = os.path.join(HERE, "an
 CHARS = {"Theo": "theo", "Penny": "penny", "Ada": "ada", "Kit": "kit", "Roz": "roz", "Boss": "boss", "RealBossHood": "realboss_hood", "RealBoss": "realboss"}
 ANIMS = ["idle", "walk", "talk", "nod", "shakehead", "point", "celebrate", "facepalm", "shrug", "holdsign"]
 _CACHE = {}
+PAD = 24   # native px of headroom on the left, right and top: jumps, raised signs and flung arms go past Kit's 64 px grid
+           # (penny celebrate reaches x -9, holdsign y -19). Feet (bottom) and the body's centre stay where they were.
 
 
 def parse_board(html):
@@ -59,15 +63,15 @@ def load(ch, an):
     k = (ch, an)
     if k not in _CACHE:
         d = json.load(open(os.path.join(ANIM, ch, an + ".json")))
-        ims = []
+        ims = []; CW, CH = d["w"] + 2 * PAD, d["h"] + PAD
         for fr in d["frames"]:
-            im = Image.new("RGBA", (d["w"], d["h"]), (0, 0, 0, 0)); px = im.load()
+            im = Image.new("RGBA", (CW, CH), (0, 0, 0, 0)); px = im.load()
             for x, y, w, h, c in fr:
                 col = (int(c[1:3], 16), int(c[3:5], 16), int(c[5:7], 16), 255)
-                for yy in range(max(0, y), min(d["h"], y + h)):
-                    for xx in range(max(0, x), min(d["w"], x + w)): px[xx, yy] = col
+                for yy in range(max(0, y + PAD), min(CH, y + h + PAD)):
+                    for xx in range(max(0, x + PAD), min(CW, x + w + PAD)): px[xx, yy] = col
             ims.append(im)
-        _CACHE[k] = (ims, d["ticks"])
+        _CACHE[k] = (ims, d["ticks"], (d["w"], d["h"]))
     return _CACHE[k]
 
 
@@ -86,10 +90,15 @@ def frame_index(ticks, t_ms, loop=True):
 
 def frame(ch, an, t, k=1, flip=False, loop=True, t0=0.0):
     """RGBA frame of character `ch` animation `an` at time t (seconds since the animation started at t0)."""
-    ims, ticks = load(ch, an); im = ims[frame_index(ticks, int((t - t0) * 1000), loop)]
+    ims, ticks, _ = load(ch, an); im = ims[frame_index(ticks, int((t - t0) * 1000), loop)]
     if flip: im = im.transpose(Image.FLIP_LEFT_RIGHT)
     if k != 1: im = im.resize((im.width * k, im.height * k), Image.NEAREST)
     return im
+
+
+def body(ch, an, k=1):
+    """(w, h) of the character's own 64 px grid box at scale k: use it for shadows and bubble heights, not the padded frame."""
+    w, h = load(ch, an)[2]; return w * k, h * k
 
 
 def duration(ch, an): return sum(load(ch, an)[1]) / 1000.0

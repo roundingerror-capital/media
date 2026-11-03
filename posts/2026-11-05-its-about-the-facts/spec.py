@@ -92,10 +92,11 @@ def intervention(img, d, u, y):
     for i, (ch, t0) in enumerate(WALK):
         if u < t0: continue
         tw = u - t0; x = max(stops[i], int(W + 100 - 420 * tw)); moving = x > stops[i]
-        fr = rigs.frame(ch, "walk" if moving else ("holdsign" if ch == "kit" else "shakehead"), u, k=k, flip=True)
+        an = "walk" if moving else ("holdsign" if ch == "kit" else "shakehead")
+        fr = rigs.frame(ch, an, u, k=k, flip=True); bh = rigs.body(ch, an, k)[1]
         d.ellipse([x - 50, BASE - 8, x + 50, BASE + 16], fill="#1a1a1a"); img.paste(fr, (x - fr.width // 2, BASE - fr.height), fr)
         for a, b, who, ln in SAY:
-            if who == ch and a <= u < b: daily.bubble(d, x, BASE - fr.height - 150, ln)
+            if who == ch and a <= u < b: daily.bubble(d, x, BASE - bh - 150, ln)
     return y
 
 SLAMS = [(0.0, "IT'S ABOUT", "THE FACTS."), (1.6, "ALWAYS", "FACTS."), (2.5, "NEVER", "HYPE."), (3.4, "VERIFY.", ""), (4.0, "DOUBLE-CHECK.", ""), (4.6, "TRIPLE-CHECK.", ""), (5.4, "NUMBERS,", "NOT FLUFF.")]

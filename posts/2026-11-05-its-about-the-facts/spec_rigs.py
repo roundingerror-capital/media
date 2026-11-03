@@ -52,7 +52,7 @@ def rig_layer(img, d, S, t, cast, lines, text_bottom):
         if an not in rigs.anims(n): an = "talk" if talk else "idle"
         sp = rigs.frame(n, an, t, k=k, flip=FLIP.get(n, False), loop=True, t0=t0)
         ph = t * S["bpm"] / 60; hop = k * int(round(2 * abs(math.sin(math.pi * ph)))) if HOP else 0
-        d.ellipse([xc - sp.width * 0.33, BASE - 8, xc + sp.width * 0.33, BASE + 16], fill="#1a1a1a")
+        bw, _ = rigs.body(n, an, k); d.ellipse([xc - bw * 0.33, BASE - 8, xc + bw * 0.33, BASE + 16], fill="#1a1a1a")
         img.paste(sp, (xc - sp.width // 2, BASE - sp.height - hop), sp)
     for ts, te, w, ln, _ in lines:
         if ts <= t < te and w in cast:
