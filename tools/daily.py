@@ -633,6 +633,14 @@ def build_loop(S, out, cover_jpg, variant="a", workdir="/tmp"):
         p.stdin.write(fr.tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
 
+# NEW WAVE (the boss 2026-11-03): Kit's rigs, V3.01 rooms and rig covers for every video this file builds. NEW_WAVE=0 = old look.
+if os.environ.get("NEW_WAVE", "1") != "0":
+    import newwave; newwave.install(sys.modules[__name__])
+    _scene_frame_old = scene_frame
+    def scene_frame(S, t, heads_override=None):
+        if not S.get("bg") and not S.get("bgs"): S["bg"] = S.get("room", newwave.DEFAULT_ROOM); S.setdefault("bg_dim", 0.34)
+        return _scene_frame_old(S, t, heads_override)
+
 if __name__ == "__main__":
     import importlib.util
     spec = importlib.util.spec_from_file_location("spec", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)

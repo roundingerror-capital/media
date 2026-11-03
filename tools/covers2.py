@@ -16,8 +16,11 @@ def fitf(d, t, maxw, mx, wt=900, wd=125):
     while s > 20 and d.textlength(t, font=arch(s, wt, wd)) > maxw: s -= 4
     return arch(s, wt, wd)
 def sprite(name, h):
-    fn = {"ada": "ada_teal_1x.png"}.get(name, name + "_sprite_1x.png")
-    im = Image.open(SP + fn).convert("RGBA"); s = max(1, round(h / im.height)); return im.resize((im.width * s, im.height * s), Image.NEAREST)
+    if os.environ.get("NEW_WAVE", "1") != "0":   # new wave (2026-11-03): the rig's idle frame, trimmed
+        import newwave; im = newwave.sprite(name)
+    else:
+        fn = {"ada": "ada_teal_1x.png"}.get(name, name + "_sprite_1x.png"); im = Image.open(SP + fn).convert("RGBA")
+    s = max(1, round(h / im.height)); return im.resize((im.width * s, im.height * s), Image.NEAREST)
 def brand(d, col=WHITE):
     d.text((72, TOP + 50), "≈ Rounding Error", font=arch(44, 800, 100), fill=col)
 def footer(d, col=GREY):
