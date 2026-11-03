@@ -6,7 +6,10 @@
    "penny,theo|ada,roz|penny,roz|penny,theo|penny,roz,ada",
    "penny,kit|ada,roz|penny,ada|ada,theo,penny",
    "roz,kit|kit,ada|kit,penny|roz,ada|ada,kit,theo",
-   "penny,roz|penny,kit|roz,penny|roz,ada|roz,kit,theo"
+   "penny,roz|penny,kit|roz,penny|roz,ada|roz,kit,theo",
+   "roz,theo|roz,kit|penny,kit|kit,ada,theo",
+   "roz,ada|penny,kit|kit,roz|kit,theo,ada",
+   "kit,theo|roz,kit|theo,penny|penny,ada,roz"
   ],
   "lines": [
    "Look at those bars!",
@@ -43,7 +46,22 @@
    "New run. Same rules.",
    "Past isn't promise.",
    "Pipelines flowing!",
-   "As one does."
+   "As one does.",
+   "Not advice. Promise.",
+   "Calm down.",
+   "Not advice. Promise.",
+   "Receipts, not vibes!",
+   "Boss fight incoming.",
+   "I'll allow it.",
+   "Ooh, a big bar!",
+   "Level up the rules.",
+   "Save point reached.",
+   "All green!",
+   "Read the patch notes.",
+   "Interesting. Moving on.",
+   "Hard mode unlocked.",
+   "No adjectives, please.",
+   "Read the fine print."
   ],
   "hooks": [
    "ada,kit",
@@ -51,7 +69,10 @@
    "penny,theo",
    "kit,penny",
    "kit,roz",
-   "penny,roz"
+   "penny,roz",
+   "roz,theo",
+   "ada,roz",
+   "kit,theo"
   ],
   "by_ticker": {
    "PLTR": {
@@ -503,6 +524,231 @@
       0.74
      ]
     ]
+   },
+   "CELH": {
+    "casts": [
+     [
+      "roz",
+      "theo"
+     ],
+     [
+      "roz",
+      "kit"
+     ],
+     [
+      "penny",
+      "kit"
+     ],
+     [
+      "kit",
+      "ada",
+      "theo"
+     ]
+    ],
+    "lines": [
+     [
+      [
+       "roz",
+       "Not advice. Promise.",
+       "nod"
+      ],
+      [
+       "theo",
+       "Calm down.",
+       "brow"
+      ]
+     ],
+     [
+      [
+       "roz",
+       "Not advice. Promise.",
+       "brow"
+      ]
+     ],
+     [
+      [
+       "penny",
+       "Receipts, not vibes!",
+       "jump"
+      ]
+     ],
+     [
+      [
+       "kit",
+       "Boss fight incoming.",
+       "spin"
+      ]
+     ]
+    ],
+    "xs": [
+     [
+      0.3,
+      0.7
+     ],
+     [
+      0.26,
+      0.74
+     ],
+     [
+      0.26,
+      0.74
+     ],
+     [
+      0.18,
+      0.45,
+      0.74
+     ]
+    ]
+   },
+   "AFRM": {
+    "casts": [
+     [
+      "roz",
+      "ada"
+     ],
+     [
+      "penny",
+      "kit"
+     ],
+     [
+      "kit",
+      "roz"
+     ],
+     [
+      "kit",
+      "theo",
+      "ada"
+     ]
+    ],
+    "lines": [
+     [
+      [
+       "roz",
+       "I'll allow it.",
+       "nod"
+      ],
+      [
+       "ada",
+       "Ooh, a big bar!",
+       "thumbs"
+      ]
+     ],
+     [
+      [
+       "kit",
+       "Level up the rules.",
+       "wave"
+      ]
+     ],
+     [
+      [
+       "kit",
+       "Save point reached.",
+       "wave"
+      ]
+     ],
+     [
+      [
+       "ada",
+       "All green!",
+       "thumbs"
+      ]
+     ]
+    ],
+    "xs": [
+     [
+      0.3,
+      0.7
+     ],
+     [
+      0.3,
+      0.7
+     ],
+     [
+      0.26,
+      0.74
+     ],
+     [
+      0.26,
+      0.54,
+      0.82
+     ]
+    ]
+   },
+   "ABNB": {
+    "casts": [
+     [
+      "kit",
+      "theo"
+     ],
+     [
+      "roz",
+      "kit"
+     ],
+     [
+      "theo",
+      "penny"
+     ],
+     [
+      "penny",
+      "ada",
+      "roz"
+     ]
+    ],
+    "lines": [
+     [
+      [
+       "kit",
+       "Read the patch notes.",
+       "spin"
+      ],
+      [
+       "theo",
+       "Interesting. Moving on.",
+       "nod"
+      ]
+     ],
+     [
+      [
+       "kit",
+       "Hard mode unlocked.",
+       "wave"
+      ]
+     ],
+     [
+      [
+       "theo",
+       "No adjectives, please.",
+       "nod"
+      ]
+     ],
+     [
+      [
+       "roz",
+       "Read the fine print.",
+       "nod"
+      ]
+     ]
+    ],
+    "xs": [
+     [
+      0.3,
+      0.7
+     ],
+     [
+      0.38,
+      0.78
+     ],
+     [
+      0.38,
+      0.78
+     ],
+     [
+      0.18,
+      0.45,
+      0.74
+     ]
+    ]
    }
   },
   "covers": {
@@ -529,6 +775,18 @@
    "UBER": {
     "layout": "band",
     "bg": "lime"
+   },
+   "CELH": {
+    "layout": "coaster",
+    "bg": "office"
+   },
+   "AFRM": {
+    "layout": "stack",
+    "bg": "skyline"
+   },
+   "ABNB": {
+    "layout": "bignum",
+    "bg": "office"
    }
   }
  }
