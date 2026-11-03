@@ -21,17 +21,6 @@ P["DRESS"]["OFF-BOSS-01"] = dict(P["DRESS"]["OFF-BOSS-01"], wall="WALL-18")   # 
 COMMITS = ["feat: automate the posts", "feat: automate the fact sheets", "fix: automate the fixes", "chore: automate the chores",
            "feat: automate the automation", "docs: nobody reads this", "feat: auto-approve (just kidding)", "push --tired"]
 
-def boss_office(t, u, extra=None, an="walk", x=None, dark=False):
-    st = stage.load(os.path.join(ASSETS, "OFF-BOSS-01.dc.html")); extra = extra or {}
-    span = 56; ph = (u * 22) % (2 * span); xx = x if x is not None else 84 + (ph if ph < span else 2 * span - ph)
-    sp = rigs.frame("boss", an, t, flip=not (ph < span) if x is None else False)
-    place(extra, "L13", sp, int(xx - sp.width // 2), 102 - sp.height)
-    skip, extra, wall = dressed(st, "OFF-BOSS-01", ("CHR",) + tuple(skip_more), extra)
-    im = st.render(skip=skip, extra=extra, wall=wall)
-    if dark: im = Image.alpha_composite(im, Image.new("RGBA", im.size, (6, 8, 26, 150)))
-    x0, y0, w, h = st.frames["portrait"]
-    return stage.camera(im, x0, y0, w, h, 15).convert("RGB")
-
 def commits(img, u, n=5):
     d = ImageDraw.Draw(img); f = mono(34, True); y = 1180
     k = int(u * 6)
@@ -76,7 +65,7 @@ def realboss(t, u):
 
 def black(): return Image.new("RGB", (W, H))
 
-import swaps, scenes
+import swaps, scenes, math, json, subprocess, daily
 CODE = ["def automate(everything):", "    for job in firm.jobs:", "        job.run(forever=True)", "SELECT * FROM posts WHERE done = 0;",
         "git push origin main --force-with-love", "render(video, fps=30)", "while not ready: automate()", "theo.fact_sheet(today)",
         "penny.build(3, every_day=True)", "roz.audit(every_frame=True)", "ada.ship(ticket)", "kit.draw(more_rooms)"]
@@ -131,33 +120,77 @@ def button(t, u):
     if press: d.text((780, y - 40), "boop.", font=mono(64, True), fill=INK, anchor="mm", stroke_width=6, stroke_fill="#000000")
     return img
 
-def raid(t, u, wipe=False):
-    """The dream: the boss and his party vs a giant raid boss (Evil Theo, Kit's Ash colourway), generic MMO HUD (ours, not the game's)."""
-    c = P["scn"]("SCN-14", t); img = P["up"](c, 8).convert("RGBA")
-    big = swaps.recolor(rigs.frame("theo", "shakehead" if wipe else "talk", t), "theo", "Ash"); big = big.crop(big.getbbox())
-    big = big.resize((big.width * 18, big.height * 18), Image.NEAREST); img.alpha_composite(big, (W - big.width + 260, 1700 - big.height)) if False else img.paste(big, (W - big.width + 260, 1700 - big.height), big)
-    party = [("boss", 120), ("kit", 330), ("penny", 520)]
-    for i, (ch, x) in enumerate(party):
-        an = "facepalm" if wipe else ("celebrate" if int(u * 3 + i) % 2 else "point")
-        sp = rigs.frame(ch, an, t + i * 0.2); sp = sp.crop(sp.getbbox()); sp = sp.resize((sp.width * 8, sp.height * 8), Image.NEAREST)
-        if wipe: sp = sp.rotate(90, expand=True)
-        img.paste(sp, (x - sp.width // 2, 1760 - sp.height), sp)
+def fx(name, t):
+    """Kit's fantasy library (Assets Designs, Library page, EXTRAS · Fantasy), animated, trimmed."""
+    fr = P["board_frames"]("XFANTASY.dc.html", name + " at actual size", 1.0); im = fr[int(t * 10) % len(fr)]
+    return im.crop(im.getbbox())
+
+def geared(ch, an, t, gear, flip=False, k=8):
+    """A rig frame with Kit's fantasy pieces worn and held, enlarged by k: hat/helm on the head, weapon in the right hand, shield left."""
+    sp = rigs.frame(ch, an, t); bb = sp.getbbox(); sp = sp.crop(bb); c = Image.new("RGBA", (sp.width + 40, sp.height + 30)); c.alpha_composite(sp, (20, 30))
+    for g in gear:
+        im = fx(g, t)
+        if g in ("Wizard hat", "Helmet"): c.alpha_composite(im, (20 + sp.width // 2 - im.width // 2, max(0, 30 - im.height + (14 if g == "Helmet" else 8))))
+        elif g == "Shield": c.alpha_composite(im, (6, 30 + sp.height // 2 - im.height // 2))
+        else: c.alpha_composite(im, (c.width - im.width - 2, 30 + sp.height - im.height - 4))
+    if flip: c = c.transpose(Image.FLIP_LEFT_RIGHT)
+    return c.resize((c.width * k, c.height * k), Image.NEAREST)
+
+PARTY = [("boss", ["Wizard hat", "Staff"], 150), ("kit", ["Helmet", "Sword", "Shield"], 400), ("penny", ["Bow and arrow"], 650)]
+def coins(img, u0, origins, t):
+    """Hit: every hero's coins burst out and scatter (arcs, gravity, a bounce, blinking before they vanish)."""
+    coin = fx("Gold coin", t); cb = coin.resize((coin.width * 6, coin.height * 6), Image.NEAREST)
+    for oi, (ox, oy) in enumerate(origins):
+        for n in range(10):
+            a = (n / 10) * 3.14159 + 0.15; v = 900 + (n % 3) * 160; tt = u0
+            x = ox + math.cos(a) * v * tt * (1 if n % 2 else -1) * 0.8; y = oy - math.sin(a) * v * tt + 1500 * tt * tt
+            if y > 1760: y = 1760 - abs(math.sin(tt * 9)) * 60                      # bounce on the floor
+            if tt > 1.0 and int(tt * 20) % 2: continue                                 # blink out
+            if tt > 1.4: continue
+            img.paste(cb, (int(x - cb.width // 2), int(y - cb.height // 2)), cb)
+    return img
+
+def raid(t, u, wipe=False, dur=3.5):
+    """The dream: the boss's party (Kit's fantasy gear) vs a giant raid boss (Evil Theo: Theo in Kit's Ash colourway), our own HUD."""
+    c = P["scn"]("SCN-14", t)
+    for tx in (14, 120):
+        tch = fx("Torch", t + tx); c.alpha_composite(tch, (tx - tch.width // 2, 196 - tch.height))
+    ch_ = fx("Treasure chest", t); c.alpha_composite(ch_, (62, 214 - ch_.height))
+    img = P["up"](c, 8).convert("RGBA")
+    shake = (int(math.sin(t * 60) * 14), int(math.cos(t * 50) * 10)) if (wipe and u < 0.5) else (0, 0)
+    slam = "shakehead" if wipe else ("talk" if int(u * 2) % 2 else "point")
+    big = swaps.recolor(rigs.frame("theo", slam, t), "theo", "Ash"); big = big.crop(big.getbbox())
+    big = big.resize((big.width * 16, big.height * 16), Image.NEAREST)
+    img.paste(big, (W - big.width + 300 + shake[0], 1640 - big.height + shake[1] - (60 if wipe and u < 0.3 else 0)), big)
     d = ImageDraw.Draw(img)
-    hp = 0.62 - u * 0.1 if not wipe else 0.55                                                # raid-boss health bar
+    for i, (ch, gear, x) in enumerate(PARTY):
+        an = "facepalm" if wipe else ("celebrate" if int(u * 3 + i) % 2 else "point")
+        sp = geared(ch, an, t + i * 0.2, gear, k=6)
+        if wipe and u > 0.35: sp = sp.rotate(90, expand=True)                            # fainted
+        img.paste(sp, (x - sp.width // 2 + shake[0], 1780 - sp.height + shake[1]), sp)
+        if not wipe:                                                                     # spells flying at the raid boss
+            ph = (u * 1.6 + i * 0.33) % 1; st_ = fx("Star", t); st_ = st_.resize((st_.width * 5, st_.height * 5), Image.NEAREST)
+            img.paste(st_, (int(x + ph * (760 - x)), int(1450 - ph * 420 - math.sin(ph * 3.14) * 160)), st_)
+    if wipe: img = coins(img, max(0, u * dur - 0.15), [(x, 1500) for _, _, x in PARTY], t)
+    hp = max(0.12, 0.7 - u * 0.25) if not wipe else 0.45
+    d = ImageDraw.Draw(img)
     d.rectangle([60, 110, W - 60, 170], fill="#000000", outline=INK, width=4); d.rectangle([66, 116, 66 + int((W - 132) * hp), 164], fill=RED)
     d.text((80, 100), "EVIL THEO · RAID BOSS", font=mono(30, True), fill=INK, anchor="ls")
-    for i, (nm, v) in enumerate((("THE BOSS", 0.8), ("KIT", 0.6), ("PENNY", 0.9))):    # party frames
-        y = 230 + i * 86; v = 0 if wipe else v
-        d.rectangle([40, y, 380, y + 60], fill="#000000", outline=INK, width=3); d.rectangle([44, y + 30, 44 + int(332 * v), y + 56], fill=LIME)
+    for i, (nm, v) in enumerate((("THE BOSS", 0.8), ("KIT", 0.6), ("PENNY", 0.9))):
+        y = 300 + i * 86; v = 0 if (wipe and u > 0.3) else v - (u * 0.2 if not wipe else 0)
+        d.rectangle([40, y, 380, y + 60], fill="#000000", outline=INK, width=3); d.rectangle([44, y + 30, 44 + int(332 * max(0, v)), y + 56], fill=LIME)
         d.text((52, y + 24), nm, font=mono(22, True), fill=INK, anchor="ls")
-    d.rectangle([240, 1800, 840, 1890], fill="#000000", outline=INK, width=3)                # action bar
-    for i in range(6): d.rectangle([254 + i * 98, 1812, 334 + i * 98, 1878], outline=LIME if i == 0 else "#6E6E69", width=4)
+    d.rectangle([240, 1810, 840, 1900], fill="#000000", outline=INK, width=3)
+    for i, g in enumerate(["Staff", "Sword", "Shield", "Potion, red", "Crystal", "Magic wand"]):
+        ic = fx(g, t); ic = ic.resize((ic.width * 2, ic.height * 2), Image.NEAREST)
+        d.rectangle([254 + i * 98, 1822, 334 + i * 98, 1888], outline=LIME if i == int(u * 6) % 6 else "#6E6E69", width=4)
+        img.paste(ic, (294 + i * 98 - ic.width // 2, 1855 - ic.height // 2), ic)
     if wipe:
-        img = Image.alpha_composite(img.convert("RGBA"), Image.new("RGBA", img.size, (60, 60, 60, 120))).convert("RGB")
-        stamp(img, "PARTY WIPED.", RED, 960, 130)
+        if u > 0.3: img = Image.alpha_composite(img, Image.new("RGBA", img.size, (60, 60, 60, int(min(120, (u - 0.3) * 400)))))
+        if u > 0.45: stamp(img, "PARTY WIPED.", RED, 960, 130)
     else:
-        d.rectangle([240, 1720, 840, 1770], fill="#000000", outline=INK, width=3); d.rectangle([244, 1724, 244 + int(592 * min(1, u / 1.6)), 1766], fill="#7BAAF7")
-        d.text((540, 1745), "CASTING: AUTOMATE", font=mono(26, True), fill=INK, anchor="mm")
+        d.rectangle([240, 1730, 840, 1780], fill="#000000", outline=INK, width=3); d.rectangle([244, 1734, 244 + int(592 * min(1, u * 1.2)), 1776], fill="#7BAAF7")
+        d.text((540, 1755), "CASTING: AUTOMATE", font=mono(26, True), fill=INK, anchor="mm")
     return img.convert("RGB")
 
 def wake(t, u):
@@ -170,8 +203,8 @@ SHOTS = [
     (2.5, "THE WIFE WALKS IN", lambda t, u: portrait(*office(t, u, dark=True, cast=[("realboss", "walk", 70 + u * 12, 124, False)]))),
     (2.5, "SHE'S WORRIED", lambda t, u: thought(portrait(*office(t, u, dark=True, cast=[("realboss", "idle", 96, 124, False)])),
                                                ["He's been working", "nonstop. I'm worried."], 380, 760)),
-    (2.5, "HANGOVER ZOOM", lambda t, u: hangover(t, u)),
-    (2.0, "MUST AUTOMATE", lambda t, u: must(hangover(t, u + 2.5, 40), u)),
+    (2.5, "HANGOVER ZOOM", lambda t, u: hangover(t, u, [15, 18, 20, 24, 30][min(4, int(u / 0.5))])),
+    (2.0, "MUST AUTOMATE", lambda t, u: must(hangover(t, u + 2.5, 30), u)),
     (1.5, "THE BUTTON", lambda t, u: button(t, u)),
     (1.2, "ALL SYSTEMS CHECK", lambda t, u: stamp(portrait(*office(t, u, boss_an="talk")), "ALL SYSTEMS CHECK.", INK, 420, 100)),
     (0.8, "THEO", lambda t, u: stamp(desk_shot(t, u, "OFF-THEO-01", "theo", "desk_type"), "AUTOMATED.", LIME, 1500, 100)),
@@ -181,13 +214,13 @@ SHOTS = [
     (0.8, "KIT", lambda t, u: stamp(desk_shot(t, u, "OFF-KIT-01", "kit", "desk34_type"), "AUTOMATED.", LIME, 1500, 100)),
     (1.5, "EVERYTHING IS READY", lambda t, u: stamp(portrait(*office(t, u, boss_an="celebrate")), "EVERYTHING IS READY.", LIME, 420, 96)),
     (0.6, "BLINK", lambda t, u: black()),
-    (3.5, "THE RAID", lambda t, u: raid(t, u)),
-    (1.5, "PARTY WIPED", lambda t, u: raid(t, u, wipe=True)),
+    (3.5, "THE RAID", lambda t, u: raid(t, u / 3.5)),
+    (2.0, "PARTY WIPED", lambda t, u: raid(t, u / 2.0, wipe=True, dur=2.0)),
     (1.0, "HONEY...", lambda t, u: stamp(black(), "honey...", INK, 960, 90)),
     (2.5, "WAKE UP", lambda t, u: wake(t, u)),
     (3.0, "ALMOST READY", lambda t, u: stamp(stamp(stamp(black(), "WE'RE ALMOST READY", INK, 700, 90), "FOR WOW FOREVER.", LIME, 830, 90),
                                              "(the real reason this fund exists)", "#9A9A94", 980, 46)),
-    (1.5, "STAY TUNED", lambda t, u: stamp(stamp(black(), "STAY TUNED.", INK, 880, 120), "#WoWForever", LIME, 1020, 80)),
+    (2.7, "STAY TUNED", lambda t, u: stamp(stamp(black(), "STAY TUNED.", INK, 880, 120), "#WoWForever", LIME, 1020, 80)),
 ]
 
 def panels(out):
@@ -204,6 +237,26 @@ def panels(out):
         d.text((x, y + ph + 50), f"{s0:.1f}-{s0 + dur:.1f}s", font=mono(16), fill="#9A9A94", anchor="ls")
     sheet.save(out); print(out, len(items), "panels", f"{t:.1f}s")
 
+SONG = "/home/claude/out/wow/music/clock_cut.wav"
+def frame_at(tv):
+    t = 0
+    for dur, lab, fn in SHOTS:
+        if tv < t + dur or (dur, lab) == SHOTS[-1][:2]:
+            img = fn(tv, tv - t)
+            if 1.0 <= tv < 4.5: img = daily.cta_pill(img, tv - 1.0)
+            return daily.nfa(img)
+        t += dur
+
+def build(out):
+    total = sum(d for d, _, _ in SHOTS); wav = out[:-4] + "_mix.wav"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", SONG, "-af", f"apad,atrim=0:{total:.3f},afade=t=out:st={total - 1.2:.3f}:d=1.2", "-ar", "44100", wav], check=True)
+    p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
+        "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
+        "-c:a", "aac", "-b:a", "160k", "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", out], stdin=subprocess.PIPE)
+    for i in range(int(round(total * FPS))): p.stdin.write(frame_at(i / FPS).tobytes())
+    p.stdin.close(); p.wait(); print(out, f"{total:.1f}s")
+
 if __name__ == "__main__":
     a = [x for x in sys.argv[1:] if not x.startswith("--")]
-    panels(a[0] if a else "/home/claude/out/wow/storyboard_v1.png")
+    if "--panels" in sys.argv: panels(a[0] if a else "/home/claude/out/wow/storyboard_v3.png")
+    else: build(a[0] if a else "/home/claude/out/wow/wow_forever_v1.mp4")
