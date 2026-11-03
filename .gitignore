@@ -5,3 +5,7 @@ tools/assets/lib/
 
 # AI-generated render images dropped next to specs (media, never committed)
 posts/**/render_*.png
+
+# our songs are private (T-088, the boss 2026-11-02): tracks, lyrics and song metadata live on Database · Posts only;
+# tools/songs.py fetches them into this local cache at render time
+tools/music/

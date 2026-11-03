@@ -543,15 +543,16 @@ def outro_frame(S, t):
 
 MUSIC = os.path.join(HERE, "music")
 def mix_music(S, sfx_wav, total, workdir):
-    """spec["music"] = a key of tools/music/manifest.json (one of our own Gemini songs). The song enters right after the teaser
-    (1.0 s; at 0.6 s without a teaser) from its start_s, under the teaser hit and the meme sounds, then fades out at the end."""
-    import json
-    man = json.load(open(os.path.join(MUSIC, "manifest.json")))[S["music"]]
+    """spec["music"] = a song key (one of our own Gemini songs, Database · Posts songs/<key>). The song enters right after the teaser
+    (1.0 s; at 0.6 s without a teaser) from its start_s, under the teaser hit and the meme sounds, then fades out at the end.
+    The track is private (T-088): tools/songs.py fetches it from the Posts copy into the gitignored tools/music/ cache."""
+    import songs
+    man = songs.meta(S["music"]); track = songs.path(S["music"])
     loop = bool(S.get("loop"))  # loops: song from frame 1 and no fade-out (build_loop cross-fades the tail into the head)
     enter = 0.0 if loop else (COLD_F if S.get("cold_open") else COVER_F) / FPS
     start = S.get("music_start", man["start_s"]); out = sfx_wav[:-4] + "_mix.wav"
     fades = "afade=t=in:d=0.08" + ("" if loop else f",afade=t=out:st={max(0, total - enter - 1.2):.2f}:d=1.2")
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", sfx_wav, "-ss", str(start), "-i", os.path.join(MUSIC, S["music"] + ".mp3"),
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", sfx_wav, "-ss", str(start), "-i", track,
         "-filter_complex", f"[1:a]atrim=0:{total - enter:.2f},{fades},volume=0.85,adelay={int(enter*1000)}|{int(enter*1000)}[m];"
         f"[0:a][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]", "-map", "[a]", "-ar", "44100", out], check=True)
     return out
