@@ -96,14 +96,19 @@ class Stage:
             d.rectangle([x, y, x + w - 1, y + h - 1], fill=lum)
         return m
 
-    def render(self, skip=(), only=None, layers=None, extra=None):
+    def render(self, skip=(), only=None, layers=None, extra=None, wall=None):
         """RGBA 192x128. skip: asset-id prefixes left out (e.g. "DSK", "MON", "CHR"); only: the asset-id prefixes drawn;
-        layers: layer names to draw (default all); extra: {layer name: [(RGBA image, x, y), ...]} drawn after that layer."""
+        layers: layer names to draw (default all); extra: {layer name: [(RGBA image, x, y), ...]} drawn after that layer;
+        wall: another WALL tile (RGBA, from component()) in place of the stage's own, under the same light mask."""
         im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); extra = extra or {}
         for name, uses, mask in self.layers:
             if layers is not None and name not in layers: continue
             lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            if wall is not None and any(sid.startswith("WALL") for sid, _, _ in uses):
+                for y in range(0, FLOOR_TOP, wall.height):
+                    for x in range(0, W, wall.width): lay.paste(wall.crop((0, 0, wall.width, min(wall.height, FLOOR_TOP - y))), (x, y))
             for sid, x, y in uses:
+                if wall is not None and sid.startswith("WALL"): continue
                 if any(sid.startswith(s) for s in skip): continue
                 if only and not any(sid.startswith(s) for s in only): continue
                 self.draw_symbol(lay, sid, x, y)

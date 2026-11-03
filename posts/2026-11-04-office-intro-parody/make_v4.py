@@ -54,8 +54,8 @@ MONTAGE = [
                      cast=[("ada", "idle", 104, 110, True), ("theo", "idle", 76, 98, False)])),   # copier + ream box; Ada feeds it; Theo at the counter
     (4, "desk", dict(ch="kit", an="desk34_phone", st="OFF-KIT-01", name="KIT", role="GAME STUDIO",
                      back=("roz", "walk", 40, 150, 95))),                                        # Kit on the phone; Roz crosses
-    (2, "room", dict(set="break", front=[("Water cooler", 120, 122)], walker=("penny", 64, 100, 118),
-                     cast=[("theo", "idle", 78, 98, False)])),                                    # the cooler; Penny walks up to it
+    (2, "room", dict(set="break", label="COFFEE RUN", walker=("penny", 64, 92, 114),
+                     cast=[("theo", "idle", 78, 98, False)])),                                    # Penny walks up to the counter for a coffee                                    # the cooler; Penny walks up to it
     (6, "warehouse", dict(credit="THE DATA WAREHOUSE")),                                         # forklift + pallets; Kit up front
 ]
 TAIL = [(8, "desk", dict(ch="theo", an="desk_side_stare", st="OFF-THEO-01", back=("ada", "walk", 150, 60, 95))),
@@ -91,6 +91,30 @@ def prop(label, u, dur=6.0):
         _BB[label] = (min(b[0] for b in bbs), min(b[1] for b in bbs), max(b[2] for b in bbs), max(b[3] for b in bbs))
     return at(fr, u).crop(_BB[label])
 def comp(name): return stage.component(os.path.join(ASSETS, name + ".dc.html"))
+
+# ---------- set dressing per stage (the boss 2026-11-03: colour on the walls, round rugs, a lawyer's wall, monitors on desks) ----------
+# wall: WALL tile in place of Kit's; rug: (RUG, x, y) in place of the stage's; skip: pieces left out; add: [(layer, piece, x, bottom)]
+DRESS = {
+    "OFF-ADA-01":   dict(rug=("RUG-02", 88, 108), skip=("DEC06",), add=[("L6", "DEC-31", 86, 44)], mon=("MON-05", "r")),       # whiteboard out, gallery in
+    "OFF-BOSS-01":  dict(wall="WALL-15", rug=("RUG-01", 88, 108), add=[("L6", "DEC-13", 92, 36), ("L13", "DEC-10", 50, 70)]),    # walnut, antlers, a globe on the safe
+    "OFF-KIT-01":   dict(wall="WALL-11", rug=("RUG-07", 88, 108), add=[("L6", "DEC-02", 120, 40), ("L13", "DEC-18", 60, 70)], mon=("MON-02", "r")),  # dusty blue, poster, balloons
+    "OFF-ROZ-01":   dict(wall="WALL-04", rug=("RUG-07", 88, 108), skip=("DEC11",),
+                         add=[("L6", "DEC-31", 78, 42), ("L6", "DEC-31", 112, 42), ("L6", "DEC-01", 94, 62), ("L13", "DEC-10", 46, 64)], mon=("MON-05", "r")),  # oak + a wall of frames (Kit: diplomas)
+    "OFF-PENNY-01": dict(rug=("RUG-01", 88, 110), mon=("MON-05", "r")),
+    "OFF-THEO-01":  dict(mon=("MON-01", "r")),
+}
+def dressed(st, name, skip=(), extra=None):
+    """Kit's stage with this shot's dressing applied: returns (skip, extra, wall tile)."""
+    d = DRESS.get(name, {}); extra = dict(extra or {}); skip = tuple(skip) + tuple(d.get("skip", ()))
+    if d.get("rug"): skip += ("RUG",); r, x, y = d["rug"]; place(extra, "L7", comp(r), x, y)
+    for lay, pc, x, bottom in d.get("add", []):
+        im = comp(pc); place(extra, lay, im, x, bottom - im.height)
+    return skip, extra, (comp(d["wall"]) if d.get("wall") else None)
+def desk_monitor(st, name, extra, dx):
+    """Kit's monitor on the rig's desk end (screen to camera, as in Kit's own layouts) until his monitor-back piece lands."""
+    d = DRESS.get(name, {})
+    if d.get("mon"):
+        m = comp(d["mon"][0]); place(extra, "L15", m, dx + 56 - m.width + 4 if d["mon"][1] == "r" else dx - 4, 98 - m.height)
 
 # ---------- cast on a stage ----------
 DESK_SET = ("DSK", "MON", "TEC08", "TEC04", "TEC05", "TEC07", "FOD", "DEC09", "CHR")   # Kit's desk set: the rig brings its own
@@ -139,8 +163,8 @@ def break_room():
     _SETS["break"] = s; return s
 
 # ---------- one shot -> one 1080x1920 frame ----------
-def frame_portrait(st, extra, skip=()):
-    im = st.render(skip=skip, extra=extra); x, y, w, h = st.frames["portrait"]
+def frame_portrait(st, extra, skip=(), wall=None):
+    im = st.render(skip=skip, extra=extra, wall=wall); x, y, w, h = st.frames["portrait"]
     return stage.camera(im, x, y, w, h, PORTRAIT).convert("RGB")
 
 def shot_frame(t):
@@ -170,15 +194,18 @@ def shot_frame(t):
         place(extra, "L14", p, cx - p.width // 2 + ox, rest - p.height + oy)
         if a.get("ghost"):
             sp = rigs.frame(a["ghost"], "idle", t, k=1, t0=s0); stand_at(extra, st, ghost(sp), dx + 28, 100)
-        im = st.render(skip=("CHR", "MON", "TEC08", "TEC04", "TEC05", "TEC07", "FOD", "DEC09"), extra=extra)
+        skip, extra, wall = dressed(st, a["st"], ("CHR", "MON", "TEC08", "TEC04", "TEC05", "TEC07", "FOD", "DEC09"), extra)
+        im = st.render(skip=skip, extra=extra, wall=wall)
         w, h, k = INSERT; return stage.camera(im, cx - w // 2, rest + 8 - h, w, h, k).convert("RGB")
     if kind == "desk":
         st = stage.load(os.path.join(ASSETS, a["st"] + ".dc.html")); extra = {}
         if a.get("back"): back_cast(st, extra, a["back"], t, u, dur * 0.9, s0)
         sp, x, y = desk_rig(st, a["ch"], a["an"], t, s0); place(extra, "L13", sp, x, y)
+        desk_monitor(st, a["st"], extra, next(x_ for n, uses, _ in st.layers for s_, x_, y_ in uses if s_.startswith("DSK")))
         for lab, cx, feet in a.get("front", []):
             p = prop(lab, u); place(extra, "L15", p, cx - p.width // 2, feet - p.height)
-        img = frame_portrait(st, extra, skip=DESK_SET)
+        skip, extra, wall = dressed(st, a["st"], DESK_SET, extra)
+        img = frame_portrait(st, extra, skip=skip, wall=wall)
         return credit(img, a.get("name"), a.get("role"), u)
     if kind == "room":
         s_ = break_room(); extra = {}
@@ -190,14 +217,14 @@ def shot_frame(t):
             ch, xa, xb, feet = a["walker"]; walk = 0.75; x = int(xa + (xb - xa) * min(1, u / walk))
             sp = rigs.frame(ch, "walk" if u < walk else "idle", t, k=1, t0=s0); place(extra, "mid", sp, x - sp.width // 2, feet - sp.height)
         im = s_.render(extra=extra)
-        return stage.camera(im, 60, 0, 72, 128, PORTRAIT).convert("RGB")
+        return credit(stage.camera(im, 60, 0, 72, 128, PORTRAIT).convert("RGB"), a.get("label"), "", u)
     if kind == "warehouse":
         c = at(board_frames("SCN18V3_00.dc.html", "A warehouse", dur + 0.2), u).copy()        # 135x240 at x8
         for ch, an, cx, feet, flip in (("ada", "walk", 30 + int(u * 8), 186, False), ("roz", "idle", 100, 184, True)):
             sp = rigs.frame(ch, an, t, k=1, flip=flip, t0=s0); c.alpha_composite(sp, (cx - sp.width // 2, feet - sp.height))
         img = up(c, 8)
-        K = 28; big = rigs.frame("kit", "talk", t, k=1, t0=s0); big = big.crop(big.getbbox()); big = big.resize((big.width * K, big.height * K), Image.NEAREST)
-        lay = Image.new("RGBA", (W, H)); lay.alpha_composite(big, (W - int(big.width * 0.72), H - big.height - 40))   # 70% tall, on the right
+        K = 36; big = rigs.frame("kit", "talk", t, k=1, t0=s0); big = big.crop(big.getbbox()); big = big.resize((big.width * K, big.height * K), Image.NEAREST)
+        lay = Image.new("RGBA", (W, H)); lay.paste(big, (W - int(big.width * 0.64), H - int(big.height * 0.6)), big)   # from the belly up, on the right
         img.paste(lay.convert("RGB"), (0, 0), lay)
         return credit(img, a.get("credit"), "", u)
     if kind == "title":
@@ -205,6 +232,9 @@ def shot_frame(t):
         d.text((W // 2, 900), "ROUNDING", font=f, fill=INK, anchor="ms"); d.text((W // 2, 1060), "ERROR", font=f, fill=LIME, anchor="ms")
         d.rectangle([W // 2 - int(300 * k), 1100, W // 2 + int(300 * k), 1108], fill=LIME)
         if u > 0.6: d.text((W // 2, 1176), "AN AI TRADING FIRM. ALLEGEDLY.", font=mono(34, True), fill="#9A9A94", anchor="ms")
+        if u > 1.2:                                                                       # the one disclaimer, as the joke (the boss 2026-11-03: trailer, no numbers)
+            f = fit("NOT FINANCIAL ADVICE", W - 240, 64, wdth=125, wght=900); d.text((W // 2, 1330), "NOT FINANCIAL ADVICE", font=f, fill=INK, anchor="ms")
+            d.text((W // 2, 1380), "(there were no numbers. you're welcome.)", font=mono(28), fill="#9A9A94", anchor="ms")
         return img
     img = Image.new("RGB", (W, H)); d = ImageDraw.Draw(img)
     d.text((W // 2, 760), "LIKE + FOLLOW", font=fit("LIKE + FOLLOW", W - 180, 118, wdth=125, wght=900), fill=LIME, anchor="ms")
@@ -221,17 +251,17 @@ def teaser_frame(fr):
     return img
 
 def frame_at(tv):
-    if tv < TEASE: return daily.nfa(teaser_frame(int(tv * FPS)))
+    if tv < TEASE: return teaser_frame(int(tv * FPS))
     st = tv - TEASE; img = shot_frame(st)
     if st < 3.5: img = daily.cta_pill(img, st)
-    return daily.nfa(img)
+    return img                              # no corner disclaimer on this one: it lives on the title card (the boss 2026-11-03)
 
 def panels(out):
     items = [(0.6, "0 · TEASER", "pickup")]
     for i, (s0, s1, kind, a) in enumerate(SHOTS):
         key = s0 + (s1 - s0) * (0.75 if kind == "desk" else 0.5)
         what = a.get("name") or a.get("prop") or a.get("credit") or {"car": "CAR RIDE + ROAD SIGN", "tower": "TOWER (Kit: lights)",
-                "room": " + ".join(p for p, _, _ in a.get("front", [])), "title": "TITLE CARD", "end": "END CARD"}.get(kind, kind.upper())
+                "room": a.get("label") or " + ".join(p for p, _, _ in a.get("front", [])), "title": "TITLE CARD", "end": "END CARD"}.get(kind, kind.upper())
         if kind == "desk" and not a.get("name"): what = "THEO TURNS TO CAMERA (music drops)"
         items.append((TEASE + key, f"{i + 1} · {what}", f"{TEASE + s0:.1f}-{TEASE + s1:.1f}s · {round((s1 - s0) / bt)} beats · {a.get('st', a.get('set', ''))}"))
     pw, ph = 270, 480; cols = 6; rows = (len(items) + cols - 1) // cols
