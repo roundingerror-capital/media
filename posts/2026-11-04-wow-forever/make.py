@@ -203,7 +203,7 @@ SHOTS = [
     (2.5, "THE WIFE WALKS IN", lambda t, u: portrait(*office(t, u, dark=True, cast=[("realboss", "walk", 70 + u * 12, 124, False)]))),
     (2.5, "SHE'S WORRIED", lambda t, u: thought(portrait(*office(t, u, dark=True, cast=[("realboss", "idle", 96, 124, False)])),
                                                ["He's been working", "nonstop. I'm worried."], 380, 760)),
-    (2.5, "HANGOVER ZOOM", lambda t, u: hangover(t, u, [15, 18, 20, 24, 30][min(4, int(u / 0.5))])),
+    (2.5, "HANGOVER ZOOM", lambda t, u: hangover(t, u, [15, 20, 24, 30, 40][min(4, int(u / 0.5))])),
     (2.0, "MUST AUTOMATE", lambda t, u: must(hangover(t, u + 2.5, 30), u)),
     (1.5, "THE BUTTON", lambda t, u: button(t, u)),
     (1.2, "ALL SYSTEMS CHECK", lambda t, u: stamp(portrait(*office(t, u, boss_an="talk")), "ALL SYSTEMS CHECK.", INK, 420, 100)),
@@ -244,7 +244,8 @@ def frame_at(tv):
         if tv < t + dur or (dur, lab) == SHOTS[-1][:2]:
             img = fn(tv, tv - t)
             if 1.0 <= tv < 4.5: img = daily.cta_pill(img, tv - 1.0)
-            return daily.nfa(img)
+            if img.size != (W, H): img = img.resize((W, H), Image.NEAREST)   # a camera window that doesn't divide 1080x1920 would shear the stream
+            return daily.nfa(img.convert("RGB"))
         t += dur
 
 def build(out):
