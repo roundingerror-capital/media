@@ -398,6 +398,7 @@ def frames_1x(sid):
 _CACHE = {}
 def frame(sid, t):
     """1080x1920 RGB frame of scene sid at time t (loops)."""
+    import approved; approved.check("scene", sid)   # the star gate (the boss 2026-11-02)
     if sid not in _CACHE: _CACHE[sid] = frames_1x(sid)
     fr, tk = _CACHE[sid]; total = sum(tk); u = (t * 10) % total; acc = 0; im = fr[-1]
     for im_, k in zip(fr, tk):

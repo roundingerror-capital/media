@@ -1351,6 +1351,7 @@ def ids(code=None): return [pid for pid, c, i in PROP_IDS if code is None or c =
 def entry(pid):
     code, i = PROP_INDEX[pid]; return FAMILY_ITEMS[code][i]
 def frames(pid):
+    import approved; approved.check("prop", pid)   # the star gate (the boss 2026-11-02)
     d, p, _ = entry(pid); return render(d, p)
 def still(pid):
     d, p, _ = entry(pid); fr, _ = render(d, p); return fr[DRAW[d]["still"]]

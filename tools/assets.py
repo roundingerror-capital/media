@@ -574,6 +574,7 @@ for _i, _f in enumerate(FLAVORS):
     REG[f"BLD-03-F{_i + 1}"] = dict(kind="building", v="2.02", fn=(lambda t=0.0, n=_i: prewar_v3(n, t)), title=f"BLD-03 · flavor {_i + 1} · {_f[0]}", grid="300x600 · upper floors only · 58 px floors", scale=1.5)
 def get(aid, t=0.0):
     """The asset as RGBA at native size. Pass t for animated bits (TVs, vacuums, steam, tails, the beacon)."""
+    import approved; approved.check("asset", aid)   # the star gate (the boss 2026-11-02)
     return REG[aid]["fn"](t)
 
 # ---------------------------------------------------------------- canvas artboards (vector: one <rect> per same-colour run)

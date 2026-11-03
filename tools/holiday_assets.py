@@ -1439,6 +1439,7 @@ def ids(code): return [f"HOL-{code}-{i + 1:02d}" for i in range(len(SET_ITEMS[co
 def entry(aid):
     _, code, n = aid.split("-"); return SET_ITEMS[code][int(n) - 1]
 def frames(aid):
+    import approved; approved.check("holiday", aid)   # the star gate (the boss 2026-11-02)
     d, p, _ = entry(aid); return render(d, p)
 def still(aid):
     d, p, _ = entry(aid); fr, _ = render(d, p); return fr[DRAW[d]["still"]]
