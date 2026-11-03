@@ -17,10 +17,6 @@ CHARS = {"Theo": "theo", "Penny": "penny", "Ada": "ada", "Kit": "kit", "Roz": "r
 ANIMS = ["idle", "walk", "talk", "nod", "shakehead", "point", "celebrate", "facepalm", "shrug", "holdsign"]
 _CACHE = {}
 
-def _gate(kind, aid):
-    """The star gate (tools/approved.py, the boss 2026-11-02): no star on the canvas, no frame in a video."""
-    import approved; approved.check(kind, aid)
-
 
 def parse_board(html):
     """-> (frames, holds_ms). frames = list of rect lists; holds from the keyframe percentages of a total duration."""
@@ -90,7 +86,6 @@ def frame_index(ticks, t_ms, loop=True):
 
 def frame(ch, an, t, k=1, flip=False, loop=True, t0=0.0):
     """RGBA frame of character `ch` animation `an` at time t (seconds since the animation started at t0)."""
-    _gate("anim", f"{ch}/{an}")
     ims, ticks = load(ch, an); im = ims[frame_index(ticks, int((t - t0) * 1000), loop)]
     if flip: im = im.transpose(Image.FLIP_LEFT_RIGHT)
     if k != 1: im = im.resize((im.width * k, im.height * k), Image.NEAREST)

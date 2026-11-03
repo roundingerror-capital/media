@@ -91,7 +91,6 @@ NOTES = {"NYD": "The ball, the clock, the pop, the confetti. No year digits anyw
          "TG": "The bird, the pies, the cornucopia, maple leaves and the pilgrim hat.", "XMAS": "The tree, baubles, stockings, cocoa, snowman and the fireplace."}
 
 if __name__ == "__main__":
-    os.environ["REC_UNSTARRED"] = "1"   # drawing the canvas sheets is how assets get their star in the first place
     cmd, out = sys.argv[1], sys.argv[2]; os.makedirs(os.path.join(out, "sheets"), exist_ok=True)
     if cmd == "sheets":
         for code in HA.SETS:
