@@ -67,6 +67,7 @@ class Stage:
             x, y, w, h = [int(float(v)) for v in vb.split()]
             key = "wide" if "wide" in lab else "stage" if "whole stage" in lab else "tight" if "tight" in lab else "portrait" if "portrait" in lab else "pan" if "pan" in lab else lab
             self.frames.setdefault(key, (x, y, w, h))
+        sw = self.frames.get("stage", (0, 0, W, H)); self.w, self.h = sw[2], sw[3]      # ROOM stages are 320 wide (V3.01)
         self.title = (re.search(r"<title>(.*?)</title>", html) or [None, os.path.basename(path)])[1]
         self.note = (re.search(r'<p[^>]*>([^<]*)', html) or [None, ""])[1]
 
@@ -90,7 +91,7 @@ class Stage:
                         px[xx, yy] = (int(r + (col[0] - r) * k), int(g + (col[1] - g) * k), int(bb + (col[2] - bb) * k), max(a0, col[3]))
 
     def mask_image(self, name):
-        m = Image.new("L", (W, H), 0); d = ImageDraw.Draw(m)
+        m = Image.new("L", (self.w, self.h), 0); d = ImageDraw.Draw(m)
         for x, y, w, h, col in self.masks[name]:
             lum = int((0.2126 * col[0] + 0.7152 * col[1] + 0.0722 * col[2]) * col[3] / 255)
             d.rectangle([x, y, x + w - 1, y + h - 1], fill=lum)
@@ -100,6 +101,7 @@ class Stage:
         """RGBA 192x128. skip: asset-id prefixes left out (e.g. "DSK", "MON", "CHR"); only: the asset-id prefixes drawn;
         layers: layer names to draw (default all); extra: {layer name: [(RGBA image, x, y), ...]} drawn after that layer;
         wall: another WALL tile (RGBA, from component()) in place of the stage's own, under the same light mask."""
+        W, H = self.w, self.h
         im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); extra = extra or {}
         for name, uses, mask in self.layers:
             if layers is not None and name not in layers: continue
@@ -114,7 +116,9 @@ class Stage:
                 self.draw_symbol(lay, sid, x, y)
             if mask: lay.putalpha(Image.eval(Image.composite(lay.getchannel("A"), Image.new("L", (W, H), 0), self.mask_image(mask)), lambda v: v))
             im.alpha_composite(lay)
-            for sp, x, y in extra.get(name, []): im.alpha_composite(sp, (int(x), int(y)))
+            for sp, x, y in extra.get(name, []):
+                if 0 <= x and 0 <= y and x + sp.width <= W and y + sp.height <= H: im.alpha_composite(sp, (int(x), int(y)))
+                else: im.paste(sp, (int(x), int(y)), sp)
         return im
 
 FURNITURE = ("DSK", "CHR", "DEC", "PLT", "TEC", "MON", "PET", "FOD")   # pieces that stand in the room (wall art is above the floor anyway)

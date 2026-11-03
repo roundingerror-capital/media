@@ -16,7 +16,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__)); ANIM = os.path.join(HERE, "anim")
 CHARS = {"Theo": "theo", "Penny": "penny", "Ada": "ada", "Kit": "kit", "Roz": "roz", "Boss": "boss", "RealBossHood": "realboss_hood", "RealBoss": "realboss"}
-ANIMS = ["idle", "walk", "talk", "nod", "shakehead", "point", "celebrate", "facepalm", "shrug", "holdsign"]
+ANIMS = ["idle", "walk", "talk", "nod", "shakehead", "point", "celebrate", "facepalm", "shrug", "holdsign", "standing"]
 _CACHE = {}
 PAD = 24   # native px of headroom on the left, right and top: jumps, raised signs and flung arms go past Kit's 64 px grid
            # (penny celebrate reaches x -9, holdsign y -19). Feet (bottom) and the body's centre stay where they were.
@@ -46,7 +46,7 @@ def parse_board(html):
 def build(src_dir):
     n = 0
     for f in sorted(os.listdir(src_dir)):
-        m = re.match(r'V2_03([A-Za-z]+?)(Idle|Walk|Talk|Nod|Shakehead|Point|Celebrate|Facepalm|Shrug|Holdsign)\.dc\.html$', f)
+        m = re.match(r'V2_0[36]([A-Za-z]+?)(Idle|Walk|Talk|Nod|Shakehead|Point|Celebrate|Facepalm|Shrug|Holdsign|Standing)\.dc\.html$', f)
         if not m or m.group(1) not in CHARS: continue
         ch, an = CHARS[m.group(1)], m.group(2).lower()
         frames, holds, total = parse_board(open(os.path.join(src_dir, f), encoding="utf-8").read())
@@ -105,7 +105,7 @@ def body(ch, an, k=1):
 def duration(ch, an): return sum(load(ch, an)[1]) / 1000.0
 
 
-DESK = {"V2_05([A-Za-z]+?)Desk34\\.dc\\.html$": "desk34", "V2_05([A-Za-z]+?)Desk\\.dc\\.html$": "desk"}
+DESK = {"V2_0[56]([A-Za-z]+?)Desk34\\.dc\\.html$": "desk34", "V2_0[56]([A-Za-z]+?)Desk\\.dc\\.html$": "desk"}
 def build_desk(src_dir):
     """Kit's V2.05 desk boards (2026-11-03): several animations per board, each an <svg aria-label="<Name> at the desk: <action>, looping">
     of <use href="#<frame>" class="<anim>_<i>">; holds from each use's @keyframes. -> tools/anim/<char>/<desk|desk34>_<action>.json
@@ -122,6 +122,7 @@ def build_desk(src_dir):
         frames = {k + i: [(int(x), int(y), int(w), int(h), c) for x, y, w, h, c in
                   re.findall(r'<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" fill="(#[0-9A-Fa-f]{6})"', body)]
                   for k, i, body in re.findall(r'<g id="([A-Za-z]+?)(\d+)">(.*?)</g>', defs, re.S)}
+        if not any(frames.values()): print("skip (not the desk-board format):", f); continue
         W = max(x + w for fr in frames.values() for x, y, w, h, c in fr); H = max(y + h for fr in frames.values() for x, y, w, h, c in fr)
         for label, body in re.findall(r'<svg[^>]*aria-label="[^"]*at the desk: ([^",]+), looping"[^>]*>(.*?)</svg>', html, re.S):
             act = label.strip().replace("turn to camera", "stare").replace(" ", "_")
@@ -142,3 +143,28 @@ def build_desk(src_dir):
 if __name__ == "__main__":
     if sys.argv[1] == "build": build(sys.argv[2])
     elif sys.argv[1] == "desk": build_desk(sys.argv[2])
+
+
+def build_captured(src_dir, items, fps=10):
+    """Boards whose groups can't be parsed alone (V2.06: the board also draws Theo for scale): capture the '<Name> <Anim>, looping'
+    svg in Chromium at fps over one loop and store each frame as 1 px row-runs. items: [(file, label, ch, anim, seconds)]."""
+    from board_capture import capture
+    for f, label, ch, an, dur in items:
+        n = max(1, int(round(dur * fps))); ims = capture(os.path.join(src_dir, f), label, [i / fps + 0.02 for i in range(n)], scale=1)
+        frames = []
+        for im in ims:
+            px = im.load(); rects = []
+            for y in range(im.height):
+                x = 0
+                while x < im.width:
+                    r, g, b, a = px[x, y]
+                    if a < 128: x += 1; continue
+                    x0 = x; col = (r, g, b)
+                    while x < im.width and px[x, y][3] >= 128 and px[x, y][:3] == col: x += 1
+                    rects.append((x0, y, x - x0, 1, "#%02X%02X%02X" % col))
+            frames.append(rects)
+        Wd = max(x + w for fr in frames for x, y, w, h, c in fr); Hd = max(y + h for fr in frames for x, y, w, h, c in fr)
+        os.makedirs(os.path.join(ANIM, ch), exist_ok=True)
+        json.dump({"w": Wd, "h": Hd, "frames": frames, "ticks": [int(1000 / fps)] * n, "ms": int(n * 1000 / fps), "source": f"Mascot Designs · {f} (captured)"},
+                  open(os.path.join(ANIM, ch, an + ".json"), "w"), separators=(",", ":"))
+        print(f"{ch:6s} {an:10s} {n} frames {Wd}x{Hd}")
