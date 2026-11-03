@@ -76,6 +76,7 @@ def load(ch, an):
 
 
 def anims(ch): return [a for a in ANIMS if os.path.exists(os.path.join(ANIM, ch, a + ".json"))]
+def desk_anims(ch): return sorted(f[:-5] for f in os.listdir(os.path.join(ANIM, ch)) if f.startswith("desk"))
 
 
 def frame_index(ticks, t_ms, loop=True):
@@ -104,5 +105,40 @@ def body(ch, an, k=1):
 def duration(ch, an): return sum(load(ch, an)[1]) / 1000.0
 
 
+DESK = {"V2_05([A-Za-z]+?)Desk34\\.dc\\.html$": "desk34", "V2_05([A-Za-z]+?)Desk\\.dc\\.html$": "desk"}
+def build_desk(src_dir):
+    """Kit's V2.05 desk boards (2026-11-03): several animations per board, each an <svg aria-label="<Name> at the desk: <action>, looping">
+    of <use href="#<frame>" class="<anim>_<i>">; holds from each use's @keyframes. -> tools/anim/<char>/<desk|desk34>_<action>.json
+    Actions: idle, type, phone, sip, stare (Theo's front board also side_idle, side_type, side_stare)."""
+    n = 0
+    for f in sorted(os.listdir(src_dir)):
+        kind = None
+        for pat, k in DESK.items():
+            m = re.match(pat, f)
+            if m: kind = k; break
+        if not kind or m.group(1) not in CHARS: continue
+        ch = CHARS[m.group(1)]; html = open(os.path.join(src_dir, f), encoding="utf-8").read()
+        defs = re.search(r'<svg[^>]*>\s*<defs>(.*?)</defs>', html, re.S).group(1)
+        frames = {k + i: [(int(x), int(y), int(w), int(h), c) for x, y, w, h, c in
+                  re.findall(r'<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" fill="(#[0-9A-Fa-f]{6})"', body)]
+                  for k, i, body in re.findall(r'<g id="([A-Za-z]+?)(\d+)">(.*?)</g>', defs, re.S)}
+        W = max(x + w for fr in frames.values() for x, y, w, h, c in fr); H = max(y + h for fr in frames.values() for x, y, w, h, c in fr)
+        for label, body in re.findall(r'<svg[^>]*aria-label="[^"]*at the desk: ([^",]+), looping"[^>]*>(.*?)</svg>', html, re.S):
+            act = label.strip().replace("turn to camera", "stare").replace(" ", "_")
+            uses = re.findall(r'<use href="#([A-Za-z]+\d+)" class="([A-Za-z0-9_]+)"', body)
+            seq, holds = [], []
+            for ref, cls in uses:
+                dur = float(re.search(r'\.' + cls + r'\{animation:' + cls + r' ([\d.]+)s', html).group(1))
+                kf = re.search(r'@keyframes ' + cls + r'\{(.*?)\}\s*\.', html, re.S).group(1)
+                pcts = [float(p) for p in re.findall(r'([\d.]+)%\{opacity:1\}', kf)]
+                seq.append(frames[ref]); holds.append(max(1, round((max(pcts) - min(pcts)) / 100 * dur * 1000)))
+            os.makedirs(os.path.join(ANIM, ch), exist_ok=True)
+            json.dump({"w": W, "h": H, "frames": seq, "ticks": holds, "ms": sum(holds), "source": f"Mascot Designs · {f}"},
+                      open(os.path.join(ANIM, ch, f"{kind}_{act}.json"), "w"), separators=(",", ":"))
+            n += 1; print(f"{ch:6s} {kind}_{act:12s} {len(seq):2d} frames {W}x{H} {sum(holds)} ms")
+    print(n, "desk animations")
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "build": build(sys.argv[2])
+    elif sys.argv[1] == "desk": build_desk(sys.argv[2])
