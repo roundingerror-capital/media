@@ -43,6 +43,23 @@ SHOTS = [
     (27.4, 30.9, "end", {}),
 ]
 END = SHOTS[-1][1]
+SONG_WAV = None
+
+# Music-led cut (the boss 2026-11-03, two Gemini songs at 123 BPM): PARODY_CUT=<cut.json> from tools/song_cut.py re-times every shot
+# onto the song's beat grid. The teaser is the song's pickup (story starts on the first downbeat), the montage fills the 12 kept
+# bars, the music drops into the breakdown exactly when Theo turns to camera, the title card sits on the quiet bars, and the end
+# card rides the song's own ending.
+CUT = os.environ.get("PARODY_CUT")
+if CUT:
+    c = json.load(open(CUT)); SONG_WAV = CUT[:-5] + ".wav"; bt = c["beat"]
+    TEASE = c["pickup"] if c["pickup"] >= 0.9 else c["pickup"] + 2 * bt
+    head = [6 if c["pickup"] >= 0.9 else 4, 4, 4, 2, 4, 6, 2, 4, 2, 2, 4, 2, 6]      # beats per montage shot
+    edges = [c["join"] - TEASE - sum(head) * bt + sum(head[:i]) * bt for i in range(len(head) + 1)]
+    edges[0] = 0.0; j = c["join"] - TEASE
+    tail = [j, j + 8 * bt, j + 16 * bt, c["total"] - TEASE]
+    SHOTS = [(edges[i], edges[i + 1], k, a) for i, (_, _, k, a) in enumerate(SHOTS[:13])] + \
+            [(tail[i], tail[i + 1], k, a) for i, (_, _, k, a) in enumerate(SHOTS[13:])]
+    END = SHOTS[-1][1]
 
 # ---------- Kit's CSS boards -> frames (cached) ----------
 CACHE = os.path.join(WORK, "cache"); os.makedirs(CACHE, exist_ok=True)
@@ -141,14 +158,18 @@ def teaser_frame(fr):
 def build():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     total = TEASE + END
-    man = songs.meta(SONG); track = songs.path(SONG); wav = os.path.join(WORK, "mix.wav")
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(man["start_s"]), "-i", track, "-af",
-                    f"atrim=0:{total:.2f},afade=t=in:d=0.05,afade=t=out:st={total - 1.4:.2f}:d=1.4,volume=0.9", "-ar", "44100", wav], check=True)
+    wav = os.path.join(WORK, "mix.wav")
+    if SONG_WAV:   # already cut to length on bar lines, with its own ending
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", SONG_WAV, "-af", f"apad,atrim=0:{total:.3f},volume=0.9", "-ar", "44100", wav], check=True)
+    else:
+        man = songs.meta(SONG); track = songs.path(SONG)
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(man["start_s"]), "-i", track, "-af",
+                        f"atrim=0:{total:.2f},afade=t=in:d=0.05,afade=t=out:st={total - 1.4:.2f}:d=1.4,volume=0.9", "-ar", "44100", wav], check=True)
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
         "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "20",
         "-c:a", "aac", "-b:a", "160k", "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", "-movflags", "+faststart", OUT], stdin=subprocess.PIPE)
-    for fr in range(int(TEASE * FPS)): p.stdin.write(daily.nfa(teaser_frame(fr)).tobytes())
-    for i in range(int(END * FPS)):
+    for fr in range(int(round(TEASE * FPS))): p.stdin.write(daily.nfa(teaser_frame(fr)).tobytes())
+    for i in range(int(round(END * FPS))):
         t = i / FPS; img = shot_frame(t)
         if t < 3.5: img = daily.cta_pill(img, t)            # small CTA as the story starts
         p.stdin.write(daily.nfa(img).tobytes())
