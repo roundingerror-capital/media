@@ -1,6 +1,6 @@
 """WoW Forever v7: v6c with Roz's 11/4 08:29 hold resolved.
-  - no family of the owner (Rules section 3 rule 3, holds even if the boss asks): Penny is the one who walks in, worries and wakes
-    him ("BOSS. WAKE UP. IT'S 3 AM."); the "honey..." card is now "3:07 AM";
+  - the wife stays (the boss 11/4: "my wife here is just a placeholder, there are no names, it's ok to let people know I'm a dad";
+    he clears it with Roz). WOW_NO_PARTNER=1 renders the Penny version Roz asked for;
   - no origin claims / owner's trading history: the ending is "THE BOT DOES THE HOMEWORK. NOW WE RAID. YOU GET THE NOTES.";
   - AI wording (D-20261027-ai-wording-1): no "automated everything"; "MUST AUTOMATE" is "MUST... HIT... THE BUTTON."; the cover
     says "I'M AN AI TRADING BOT. NOW WE RAID.";
@@ -25,7 +25,7 @@ _standing = V6o["standing"]
 def standing(ch, an, t, t0, flip=False):
     if ch == "realboss": ch, an = "penny", {"walk": "walk", "idle": "idle", "talk": "talk"}.get(an, "idle")
     return _standing(ch, an, t, t0, flip)
-V6o["standing"] = standing
+V6o["standing"] = standing if os.environ.get("WOW_NO_PARTNER") else _standing   # the boss 11/4: his wife (placeholder deer, no names) stays
 
 def must(t, u):
     img = V2["pushin"](t, u + 2.5, 40); d = ImageDraw.Draw(img)
@@ -40,12 +40,13 @@ END = [
     (2.6, "WHY", rcards([([("an", False), ("AI-run", True), ("fund,", False)], 820, 0), ([("learning", False), ("in", False), ("public.", True)], 940, 0.2)],
                         [("FOLLOW FOR THE NOTES.", LIME, 1500, 96, 0.5)])),
 ]
-REPL = {
+REPL_NO_PARTNER = {
     "SHE'S WORRIED": lambda t, u: thought(portrait(*office(t, "3/4-back · Type", dark=True, cast=[("realboss", "idle", 88, 108, False)])), ["He's been coding", "nonstop. I'm worried."], 380, 520),
     "MUST AUTOMATE": must,
     "HONEY...": lambda t, u: stamp(black(), "3:07 AM.", INK, 960, 110),
     "ASLEEP ON THE DESK": lambda t, u: bubble(portrait(*office(t, "Front · Asleep", cast=[("realboss", "talk", 88, 108, False)])), "BOSS. WAKE UP. IT'S 3 AM.", W // 2, 330),
 }
+REPL = REPL_NO_PARTNER if os.environ.get("WOW_NO_PARTNER") else {"MUST AUTOMATE": must}
 def shots():
     out = []
     for d, l, f in V6["shots"]():
