@@ -36,6 +36,24 @@ def office(t, view="Back · Type", cast=(), dark=False):
     return st, im
 G3["office"] = office; V2["office"].__globals__["office"] = office; V5["office"].__globals__["office"] = office
 
+
+# ---------- player cards: room between the frame and the text (the boss: the name sat a pixel from the border) ----------
+def player_card(img, who, u):
+    nm, job, cls, race, role = V3["ROSTER"][who]; d = ImageDraw.Draw(img)
+    k = min(1, u / 0.18); y0 = int(1250 + (1 - k) * 680); L = 112
+    d.rectangle([70, y0 + 14, W - 56, y0 + 534], fill="#000000")
+    d.rectangle([56, y0, W - 70, y0 + 520], fill="#0E0E14", outline=LIME, width=6)
+    d.text((L, y0 + 140), nm, font=fit(nm, 580, 104, wdth=125, wght=900), fill=INK, anchor="ls")
+    d.text((L, y0 + 196), job, font=mono(34, True), fill="#9A9A94", anchor="ls")
+    d.line([L, y0 + 230, W - 126, y0 + 230], fill="#2A2A33", width=4)
+    d.text((L, y0 + 292), "CLASS", font=mono(26, True), fill="#9A9A94", anchor="ls")
+    d.text((L, y0 + 360), cls, font=fit(cls, 410, 66, wdth=120, wght=900), fill=LIME, anchor="ls")
+    d.text((570, y0 + 292), "RACE", font=mono(26, True), fill="#9A9A94", anchor="ls")
+    d.text((570, y0 + 360), race, font=fit(race, 380, 66, wdth=120, wght=900), fill=V3["GOLD"], anchor="ls")
+    d.text((L, y0 + 462), role, font=mono(34, True), fill=INK, anchor="ls")
+    return img
+G3["player_card"] = player_card
+
 # ---------- raid floor ----------
 def arena(t):
     st = load("ROOM-19"); flat = tuple(f"fbROOMFLRFLAG{y}" for y in (88, 96, 104, 112, 120))
