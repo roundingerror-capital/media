@@ -80,7 +80,19 @@ def room_frame(name, t, dim=0.42, t0=0.0):
         x = max(0, min(span, x0 - amp // 2 + off))
     else: x = 0
     im = big.crop((x, py * K, x + 1080, py * K + 1920))
-    return ImageEnhance.Brightness(im).enhance(dim)
+    im = ImageEnhance.Brightness(im).enhance(dim)
+    return Image.composite(Image.new("RGB", im.size), im, _shade())   # text band darker, floor (where the cast stands) as is
+
+_SH = []
+def _shade():
+    """Readability mask: y 270-1150 (headline, body, panels) darkened ~45 %, easing back to none by y 1350."""
+    if not _SH:
+        m = Image.new("L", (1080, 1920), 0); d = ImageDraw.Draw(m)
+        for y in range(1920):
+            a = 115 if 200 <= y <= 1150 else (int(115 * (1 - (y - 1150) / 200)) if 1150 < y < 1350 else (int(115 * y / 200) if y < 200 else 0))
+            d.line([(0, y), (1079, y)], fill=a)
+        _SH.append(m)
+    return _SH[0]
 
 def sprite(name, anim="idle", t=0.0):
     """A rig frame trimmed to its drawing (the new 'sticker')."""
