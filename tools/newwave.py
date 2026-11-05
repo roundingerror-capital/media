@@ -116,7 +116,10 @@ def install(D):
     def office_bg(S, path=None, t=0.0):
         name = room_of(path or S.get("bg"))
         if not name: return old_bg(S, path, t)
-        return room_frame(name, t, max(0.34, S.get("bg_dim", 0.42)))
+        im = room_frame(name, t, max(0.34, S.get("bg_dim", 0.42)))
+        if S.get("tod"):
+            import earn_recipe; im = earn_recipe.wash(im, S["tod"])                     # recipe time of day (earnings, 2026-11-05)
+        return im
 
     def sprite_state(name, blink, t):
         an = "celebrate" if name == "penny" else "idle"
@@ -141,6 +144,8 @@ def install(D):
                 if an not in rigs.anims(n): an = "talk" if talk else "idle"
                 sp = rigs.frame(n, an, t, k=k, flip=flip, loop=True, t0=t0)
                 ph = t * S["bpm"] / 60; hop = k * int(round(2 * abs(math.sin(math.pi * ph)))) if not talk else 0
+            if (S.get("swaps") or {}).get(n):
+                import earn_recipe; sp = earn_recipe.recolor(sp, n, S["swaps"][n])      # Kit's palette swap from the recipe
             bw, _ = rigs.body(n, "idle", k)
             d.ellipse([xc - bw * 0.33, BASE - 8, xc + bw * 0.33, BASE + 16], fill="#1a1a1a")
             img.paste(sp, (xc - sp.width // 2, BASE - sp.height - hop), sp)

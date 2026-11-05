@@ -124,6 +124,17 @@ def cast_video(ticker, month, n_scenes, sizes, save=True):
     raise RuntimeError("casting: no unique combo left this month")
 
 TAGS = ["#earnings", "#optionstrading", "#stockmarket", "#thewheel", "#aitrading"]  # the generic set (legacy)
+def recipe(T, report_date, save=True):
+    """The video's recipe (tools/earn_recipe.py): same ticker + report date -> same recipe; never one already used (ledger, all months)."""
+    import earn_recipe as R
+    L = json.load(open(LEDGER)) if os.path.exists(LEDGER) else {}
+    book = L.setdefault("recipes", {}); mine = f"{T}|{report_date}"
+    for k, v in book.items():
+        if v.get("video") == mine: return v["recipe"]
+    rec = R.roll(T, report_date, set(book))
+    if save: book[rec["key"]] = {"video": mine, "recipe": rec}; json.dump(L, open(LEDGER, "w"), indent=1)
+    return rec
+
 def tags(T):
     """Exactly 5 Instagram hashtags (Posts rule), two of them the ticker's own, because the earnings series exists for reach
     (the boss 2026-11-02: the PLTR post went out without #PLTR). YouTube adds #Shorts; TikTok takes the same five."""
@@ -208,7 +219,9 @@ def build_spec(sheet, derive=False):
          [[8.4, 9.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
     # The history slide is 7.5 s (was 8.5: the boss 2026-11-02, twice: "a solid awkward moment" after Kit's cart stopped). Kit's ride
     # ends about u=4.0 (track 2.2 s + flight + bounces), the first bubble lands at 3.9, the second cast member reacts at 5.5.
-    charts = {1: {"draw": EC.make("coaster", [m["move_pct"] for m in moves], labels, s["average_size_of_move_pct"])}}   # the rollercoaster: Kit rides the moves
+    # RECIPE (the boss 2026-11-05): room, time of day, chart style, palette swaps and cleared lines rolled per video (tools/earn_recipe.py)
+    rec = recipe(T, n["report"]["date"], save=not test)
+    charts = {1: {"draw": EC.make(rec["chart"], [m["move_pct"] for m in moves], labels, s["average_size_of_move_pct"])}}
     visuals = {}; t = 12.0
     if pt:
         # Theo's put_test field only (see put_test). No "safe": a hindsight count, not a safety claim (Roz 2026-11-02).
@@ -259,14 +272,14 @@ def build_spec(sheet, derive=False):
     shades_who = next((w for w in cv["casts"][1] if w in ("theo", "penny", "ada", "kit", "roz")), "theo")
     spec = {"cast_x": cast_x, "cast_h": {1: 220}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry_long", "music_start": 8.0,
-            "bg": ST, "bgs": {0: PN, len(sc) - 1: PN}, "bg_dim": 0.26, "bg_blur": 2.0,
-            "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": "HOW BIG A MOVE?!", "tone": "win"},
+            "bg": rec["room"], "bgs": {0: rec["bookend"], len(sc) - 1: rec["bookend"]}, "bg_dim": 0.34, "tod": rec["tod"], "swaps": rec["swaps"], "recipe": rec,
+            "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": rec["shout"], "tone": "win"},
             "intro_cfg": {"tagline": "And this is what the data says ↓"},
             "endcard": {"line1": "LIKE + FOLLOW", "line2": "FOR MORE UPDATES", "show_positions": False},
             "scenes": sc, "charts": charts, "visuals": visuals,
-            "memes": [{"t": 0.2, "dur": 2.0, "kind": "pov", "text": f"POV: {T} reports {day}"},
-                      {"t": 4.8, "dur": 1.6, "kind": "pov", "text": "POV: you held through earnings", "y": 330},
-                      {"t": 6.8, "dur": 1.2, "kind": "zoom", "text": "HOLD ON", "y": 330},   # as the cart flies off the end
+            "memes": [{"t": 0.2, "dur": 2.0, "kind": "pov", "text": rec["pov1"].format(T=T, day=day)},
+                      {"t": 4.8, "dur": 1.6, "kind": "pov", "text": rec["pov2"].format(T=T, day=day), "y": 330},
+                      {"t": 6.8, "dur": 1.2, "kind": "zoom", "text": rec["zoom"], "y": 330},
                       {"t": 5.0, "dur": 1.6, "kind": "shades", "who": shades_who}, twist],
             "_test": test}
     gaps = check_pace(spec)
