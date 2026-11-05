@@ -82,7 +82,7 @@ V1 = verse_scene("ROOM-01", "theo"); V2 = [f for f in verse_scene("ROOM-09", "pe
 V2 = [verse_scene("ROOM-09", "penny", True)[0], verse_scene("ROOM-11", "penny", True)[1], verse_scene("ROOM-04", "penny", True)[2], verse_scene("ROOM-15", "penny", True)[3]]
 def chorus(name, t0, dur):
     def f(t, u):
-        img = band(t, g, name, None, 0.62); return sunrise(img, min(1, u / dur))
+        return band(t, g, name, None, 0.62, bg=lambda im: sunrise(im, min(1, u / dur)))
     return f
 def s_solo(t, u): return MV.solo(t, g, "kit", "play" if int(g.of(t) / 4) % 2 else "dance", "OFF-KIT-01", "KIT'S SOLO", "(still only on paper)")
 def s_wait(t, u):
@@ -92,7 +92,7 @@ def s_wait(t, u):
 def s_bridge(t, u):
     img = room("ROOM-01", t, 0.35); rig(img, "penny", "talk", t, 250, 1460, 7, False, g, hop=False); return phone(img, t, u)
 def s_after(t, u):
-    img = band(t, g, "ROOM-03", {"theo": "nod", "penny": "celebrate", "ada": "nod", "roz": "nod", "kit": "dance"}, 0.7); img = sunrise(img, 1.0)
+    img = band(t, g, "ROOM-03", {"theo": "nod", "penny": "celebrate", "ada": "nod", "roz": "nod", "kit": "dance"}, 0.7, bg=lambda im: sunrise(im, 1.0))
     return MV.confetti(img, t, 114.0) if t > 114 else img
 def s_outro(t, u):
     img = sunrise(room("ROOM-03", t, 0.7), 1.0); rig(img, "theo", "nod", t, 360, 1440, 8, False, g); rig(img, "penny", "celebrate", t, 740, 1440, 8, True, g)
@@ -107,5 +107,5 @@ KW = dict(tape_words=TAPE, tape_kw=dict(bad=("MARK: OUCH",), good=("EXPIRY: LATE
 if __name__ == "__main__":
     a = [x for x in sys.argv[1:] if not x.startswith("--")]
     if "--panels" in sys.argv: MV.panels(a[0], SHOTS, LINES, g, END, **KW)
-    elif "--cover" in sys.argv: MV.cover(a[0], ["ONLY", "ON PAPER"], COLOR, sunrise(band(40.0, g, "ROOM-03", None, 0.6), 1.0))
+    elif "--cover" in sys.argv: MV.cover(a[0], ["ONLY", "ON PAPER"], COLOR, band(40.0, g, "ROOM-03", None, 0.6, bg=lambda im: sunrise(im, 1.0)))
     else: MV.build(a[0] if a else "/home/claude/out/mv/only_on_paper_v1.mp4", "only_on_paper", SHOTS, LINES, g, END, **KW)

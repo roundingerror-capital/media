@@ -93,8 +93,9 @@ def confetti(img, t, t0, n=70):
     return img
 
 BAND = (("ada", 230, 1180, 5, False), ("roz", 540, 1170, 5, False), ("kit", 850, 1180, 5, True), ("theo", 330, 1440, 7, False), ("penny", 760, 1440, 7, True))
-def band(t, g, name="ROOM-03", anims=None, dim=0.66, lit=True):
+def band(t, g, name="ROOM-03", anims=None, dim=0.66, lit=True, bg=None):
     img = room(name, t, dim)
+    if bg: img = bg(img)                      # sky effects go behind the cast
     if lit: img = lights(img, t, g)
     a = anims or {}
     for ch, cx, feet, k, fl in BAND: rig(img, ch, a.get(ch, "celebrate"), t + cx * 0.001, cx, feet, k, fl, g)
