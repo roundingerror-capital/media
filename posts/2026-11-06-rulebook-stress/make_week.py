@@ -213,7 +213,7 @@ def s_mon(t, u):
     place(img, P(BOSS, "Cook · pancake flip", t), (30 - 25) * 12 + 78 * 6, 384 + 94 * 12)   # the boss 11/6: 6 px down, the room is drawn at an angle
     day(img, "MONDAY.", "9:30 AM")
     if s > 1.3: bubble(img, "large, tail down", "WHO WANTS\nCHOCOLATE CHIPS?", 470, 640, s - 1.3, 11, size=56)
-    for i, (kind, x, y, at) in enumerate((("small, tail left", 930, 1000, 3.4), ("medium, tail right", 150, 1120, 3.9), ("small, tail left", 960, 1260, 4.3), ("small, tail right", 130, 1400, 4.7))):
+    for i, (kind, x, y, at) in enumerate((("small, tail right", 930, 1000, 3.4), ("medium, tail left", 150, 1120, 3.9), ("small, tail right", 960, 1260, 4.3), ("small, tail left", 130, 1400, 4.7))):
         bubble(img, kind, "ME!", x, y, s - at, 9 if "small" in kind else 8, size=78)
     return nfa(img)
 
@@ -241,7 +241,7 @@ def s_raid_mon(t, u):
 def s_tue(t, u):
     s = u
     img = home("ROOM-22", 20, t)
-    fl = up(water_out(P(BOSS, "Float · top-down, donut pool float", t)), 6); img.paste(fl, (540 - fl.width // 2 + int(math.sin(t * 0.7) * 30), 1000 - fl.height // 2 + int(math.sin(t * 2.2) * 10)), fl)   # zoomed out (the boss 11/6)
+    fl = up(water_out(P(BOSS, "Float · top-down, donut pool float", t)), 9); img.paste(fl, (540 - fl.width // 2 + int(math.sin(t * 0.7) * 30), 1000 - fl.height // 2 + int(math.sin(t * 2.2) * 10)), fl)   # zoomed out (the boss 11/6)
     rp = up(P("ROOMKITWEEK", "Water ripple ring", t), 10); img.paste(rp, (200, 1600), rp); img.paste(rp, (800, 560), rp)
     day(img, "TUESDAY.")
     return nfa(img)
@@ -286,9 +286,9 @@ def s_raid_thu(t, u):
 
 def s_fri(t, u):
     s = u
-    img = fan(home("ROOM-23", 95, t), t, 95); place(img, once(BOSS, "Play · blocks on the rug", s), 540, 1780)
+    img = fan(home("ROOM-23", 95, t), t, 95); place(img, no_shadow(once(BOSS, "Play · blocks on the rug", s)), 540, 1780)
     day(img, "FRIDAY.")
-    for i, (kind, x, y, at) in enumerate((("medium, tail left", 900, 900, 1.5), ("medium, tail right", 180, 1060, 1.9), ("small, tail left", 930, 1200, 2.3))):
+    for i, (kind, x, y, at) in enumerate((("medium, tail right", 900, 900, 1.5), ("medium, tail left", 180, 1060, 1.9), ("small, tail right", 930, 1200, 2.3))):
         bubble(img, kind, "AGAIN!", x, y, s - at, 9, size=64)
     return nfa(img)
 
