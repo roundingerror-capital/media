@@ -16,8 +16,12 @@ def capture(html_path, label_prefix, times, scale=1, transparent=True):
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1400, "height": 2000})
         pg.goto("file://" + os.path.abspath(html_path)); pg.wait_for_timeout(200)
+        nth = 0
+        if "#" in label_prefix: label_prefix, nth = label_prefix.rsplit("#", 1); nth = int(nth) - 1   # "Label#2" = the 2nd board with that label
         sel = f'svg[aria-label^="{label_prefix}"]'
-        el = pg.query_selector(sel)
+        els = pg.query_selector_all(sel); el = els[nth] if len(els) > nth else None
+        if el is not None and nth:
+            pg.evaluate("([s, n]) => { document.querySelectorAll(s).forEach((e, i) => { if (i !== n) e.removeAttribute('aria-label'); }); }", [sel, nth]); sel = f'svg[aria-label^="{label_prefix}"]'
         if el is None: raise KeyError(f"no svg labelled {label_prefix!r} in {html_path}")
         vb = [float(v) for v in el.get_attribute("viewBox").split()]
         w, h = int(vb[2] * scale), int(vb[3] * scale)

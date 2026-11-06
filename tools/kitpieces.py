@@ -19,8 +19,11 @@ def frames(board, name=None, dur=None, fps=10):
     path = board if board.endswith(".dc.html") else os.path.join(ASSETS, board + ".dc.html"); html = open(path, encoding="utf-8").read()
     import html as _h
     labels = [_h.unescape(l) for l in re.findall(r'aria-label="([^"]+)"', html) if l.endswith("actual size")]
+    nth = ""
+    if name and "#" in name: name, nth = name.rsplit("#", 1); nth = "#" + nth          # "Label#2": the 2nd board with that label
     label = next((l for l in labels if name is None or l.startswith(name)), None)
     if label is None: raise KeyError(f"{board}: no '{name} at actual size'")
+    label = label + nth
     if dur is None:
         ds = [float(x) for x in re.findall(r'animation:[^;"]*?([\d.]+)s', html)]; dur = min(4.0, max(ds)) if ds else 0.1
     d = os.path.join(CACHE, re.sub(r"[^A-Za-z0-9]+", "_", f"{os.path.basename(board)}_{label}")); os.makedirs(d, exist_ok=True)
@@ -28,7 +31,7 @@ def frames(board, name=None, dur=None, fps=10):
     have = sorted(glob.glob(os.path.join(d, "f*.png")))
     if len(have) != n:
         ims = capture(path, label.split(" at actual size")[0], [i / fps + 0.02 for i in range(n)], scale=1) if False else \
-              capture(path, label, [i / fps + 0.02 for i in range(n)], scale=1)
+              capture(path, label.replace(" at actual size", "") if nth else label, [i / fps + 0.02 for i in range(n)], scale=1)
         for i, im in enumerate(ims): im.save(os.path.join(d, f"f{i:03d}.png"))
         have = sorted(glob.glob(os.path.join(d, "f*.png")))
     ims = [Image.open(f).convert("RGBA") for f in have]

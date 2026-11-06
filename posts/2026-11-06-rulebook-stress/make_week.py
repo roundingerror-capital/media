@@ -43,7 +43,9 @@ def water_out(im):
     for c in cols: m |= (a[..., 0] == c[0]) & (a[..., 1] == c[1]) & (a[..., 2] == c[2])
     a[m, 3] = 0; return Image.fromarray(a)
 
+NFA_BADGE = False   # the boss 2026-11-06: no NOT FINANCIAL ADVICE badge on videos with no data or positions (caption keeps the line)
 def nfa(img):
+    if not NFA_BADGE: return img
     d = ImageDraw.Draw(img); f = mono(24, True); w = d.textlength("NOT FINANCIAL ADVICE", font=f)
     d.rectangle([60, 300, 60 + w + 24, 340], fill="#000000", outline="#3A3A3A", width=2); d.text((72, 320), "NOT FINANCIAL ADVICE", font=f, fill=INK, anchor="lm"); return img
 
@@ -132,6 +134,47 @@ def raid(t, u, dur, boss, party, title, beats, retreat_at=None):
     d.text((70, 455), title, font=mono(30, True), fill=INK, anchor="ls")
     return img.convert("RGB")
 
+def dialog(img, text, u):
+    """Battle text box (classic RPG style): typed out, bottom of the frame."""
+    d = ImageDraw.Draw(img); x0, y0, x1, y1 = 50, 1640, W - 50, 1860
+    d.rectangle([x0, y0, x1, y1], fill="#0B0B0B", outline=INK, width=8); d.rectangle([x0 + 14, y0 + 14, x1 - 14, y1 - 14], outline="#3A3A3A", width=3)
+    n = max(1, int(len(text) * min(1.0, u / 0.3))); txt = text[:n]
+    f = fit(text, x1 - x0 - 90, 60, wdth=100, wght=800)
+    d.text((x0 + 44, (y0 + y1) // 2), txt, font=f, fill=INK, anchor="lm")
+    if n == len(text) and int(u * 3) % 2: d.polygon([(x1 - 70, y1 - 60), (x1 - 40, y1 - 60), (x1 - 55, y1 - 40)], fill=LIME)
+    return img
+
+def raid2(t, s, room, x0, name, hp, boss_pose, party, poses, hit=False, huge=False, retreat=None):
+    """Kit's day arena at 1:1 x10 (108x128 crop, floor at y88). Party in gear at x6 (Kit's size for them next to the
+    huge dragon: about a third of its head). The huge LIQUIDATOR at x10, body cropped by the frame; other bosses at x7."""
+    big = newwave.room_big(room, t); k = newwave.K
+    lay = big.crop((x0 * k, 0, (x0 + 108) * k, 128 * k)).resize((1080, 1280), Image.NEAREST).convert("RGBA")
+    TOP = 330; FEET = TOP + 92 * 10
+    if huge:
+        b = up(K.piece("RAID-01H", t, boss_pose.replace("#2", "")), 10); bx = 1080 - b.width + 470 - (40 if "Swipe" in boss_pose else 0)
+        lay.alpha_composite(b, (bx, 1280 - b.height)) if bx >= 0 else lay.paste(b, (bx, 1280 - b.height), b)
+    else:
+        bd = {"THE HEADLINE HYDRA": "RAID-02", "THE VOLATILITY STORM": "RAID-03"}[name]
+        b = once(bd, boss_pose, retreat) if retreat is not None else K.piece(bd, t, boss_pose); b = up(b, 7)
+        bx = 1080 - b.width + 140 + (int(retreat * 500) if retreat is not None else 0) - (60 if boss_pose == "Attack" else 0)
+        lay.paste(b, (bx, 92 * 10 - b.height + 30), b)
+    pose = {w: "idle" for w, _ in party}
+    for t0, w, p in poses:
+        if s >= t0: pose[w] = p
+    for i, (w, x) in enumerate(party):
+        board, names = GEAR[w]; im = up(K.piece(board, t + i * 0.15, names[pose[w]]), 6); dx = 18 if pose[w] == "atk" else 0
+        lay.paste(im, (x * 10 - im.width // 2 + dx, 92 * 10 - im.height), im)
+        if pose[w] == "block" and int(t * 10) % 3 == 0:
+            fl = up(K.piece("FXRAID", t, "FX-BLOCKFLASH"), 6); lay.paste(fl, (x * 10 + 40, 92 * 10 - im.height // 2 - fl.height // 2), fl)
+    if hit and int(s * 12) % 2: lay = Image.alpha_composite(lay, Image.new("RGBA", lay.size, (255, 40, 40, 46)))
+    shake = (int(math.sin(t * 70) * 12), int(math.cos(t * 55) * 8)) if hit else (0, 0)
+    img = Image.new("RGB", (W, H), "#05060A"); img.paste(lay.convert("RGB"), (shake[0], TOP + shake[1]))
+    d = ImageDraw.Draw(img)
+    d.text((60, 120), name, font=fit(name, W - 120, 88, wdth=125, wght=900), fill=INK, anchor="ls")
+    d.rectangle([60, 160, W - 60, 220], fill="#000000", outline=INK, width=5); d.rectangle([68, 168, 68 + int((W - 136) * hp), 212], fill=RED if hp > 0.3 else GOLD)
+    d.text((W - 60, 270), "HP", font=mono(30, True), fill=INK, anchor="rs")
+    return img
+
 # ---------------------------------------------------------------- shots (times in seconds, cut on bars of the 143.6 BPM grid)
 T = lambda bars: round(bars * BAR, 3)
 
@@ -144,7 +187,7 @@ def s_open(t, u):
 def s_mon(t, u):
     s = u
     img = home("ROOM-21", 25, t)                     # the boss 11/6: cook at the range against the wall, under the cabinets
-    place(img, P(BOSS, "Cook · pancake flip", t), (30 - 25) * 12 + 78 * 6, 384 + 88 * 12)
+    place(img, P(BOSS, "Cook · pancake flip", t), (30 - 25) * 12 + 78 * 6, 384 + 94 * 12)   # the boss 11/6: 6 px down, the room is drawn at an angle
     day(img, "MONDAY.", "9:30 AM")
     if s > 1.3: bubble(img, "large, tail down", "WHO WANTS\nCHOCOLATE CHIPS?", 470, 640, s - 1.3, 11, size=56)
     for i, (kind, x, y, at) in enumerate((("small, tail left", 930, 1000, 3.4), ("medium, tail right", 150, 1120, 3.9), ("small, tail left", 960, 1260, 4.3), ("small, tail right", 130, 1400, 4.7))):
@@ -158,12 +201,18 @@ def s_wipe(t, u):
     return nfa(img)
 
 def s_raid_mon(t, u):
-    d = T(3.5); s = u
-    img = raid(t, u, d, 1, [("theo", 30), ("penny", 66)], "MONDAY · THE CANDLE DRAGON", [(0.2, "theo", "shout"), (1.5, "penny", "shout"), (2.9, "theo", "shout"), (4.4, "theo", "atk"), (4.4, "penny", "atk")])
-    if s < 1.5: warcry(img, "IT'S DROPPING!", 360, 820, s - 0.2)
-    elif s < 2.9: warcry(img, "HOLD THE LINE!", 520, 820, s - 1.5)
-    elif s < 4.4: warcry(img, "WHAT DOES THE\nRULEBOOK SAY?", 400, 820, s - 2.9)
-    else: stamp(img, "HOLD TO EXPIRY!", LIME, 780, 120)
+    s = u
+    img = raid2(t, s, "ROOM-25", 20, "THE LIQUIDATOR", huge=True,
+                hp=0.95 if s < 4.3 else max(0.55, 0.95 - (s - 4.3) * 0.6),
+                boss_pose="Huge · Roar#2" if 0.8 < s < 1.8 else "Huge · Swipe#2" if 1.8 <= s < 2.8 else "Huge · Hurt#2" if s >= 4.3 else "Huge · Idle#2",
+                party=[("theo", 18), ("penny", 42)],
+                poses=[(0.0, "theo", "idle"), (1.8, "theo", "block"), (1.8, "penny", "block"), (2.9, "theo", "shout"), (4.3, "theo", "atk"), (4.3, "penny", "atk")],
+                hit=1.8 <= s < 2.6)
+    if s < 0.8: dialog(img, "THE LIQUIDATOR appears!", s)
+    elif s < 1.8: dialog(img, "THE LIQUIDATOR used MARGIN CALL!", s - 0.8)
+    elif s < 2.9: dialog(img, "It's super effective!", s - 1.8)
+    elif s < 4.3: warcry(img, "WHAT DOES THE\nRULEBOOK SAY?", 420, 760, s - 2.9); dialog(img, "THEO checks the rulebook...", s - 2.9)
+    else: stamp(img, "HOLD TO EXPIRY!", LIME, 760, 120); dialog(img, "The party holds the line!", s - 4.3)
     return nfa(img)
 
 def s_tue(t, u):
@@ -175,10 +224,16 @@ def s_tue(t, u):
     return nfa(img)
 
 def s_raid_tue(t, u):
-    d = T(2.5); s = u
-    img = raid(t, u, d, 2, [("ada", 30), ("roz", 64)], "TUESDAY · THE HEADLINE HYDRA", [(0.1, "roz", "block"), (0.1, "ada", "shout"), (1.9, "ada", "atk"), (1.9, "roz", "shout")])
-    if s < 1.9: warcry(img, "NO PANIC!", 360, 820, s - 0.1)
-    else: warcry(img, "PUTS ARE\nNEVER ROLLED!", 520, 820, s - 1.9)
+    s = u
+    img = raid2(t, s, "ROOM-26", 30, "THE HEADLINE HYDRA",
+                hp=0.9 if s < 2.6 else max(0.5, 0.9 - (s - 2.6) * 0.5),
+                boss_pose="Attack" if 0.7 < s < 1.7 else "Hurt" if s >= 2.6 else "Idle",
+                party=[("ada", 18), ("roz", 42)],
+                poses=[(0.0, "ada", "idle"), (0.7, "roz", "block"), (1.7, "ada", "shout"), (2.6, "ada", "atk"), (2.6, "roz", "shout")], hit=0.9 <= s < 1.5)
+    if s < 0.7: dialog(img, "THE HEADLINE HYDRA appears!", s)
+    elif s < 1.7: dialog(img, "THE HEADLINE HYDRA used BREAKING NEWS!", s - 0.7)
+    elif s < 2.6: warcry(img, "NO PANIC!", 380, 760, s - 1.7); dialog(img, "It's not very effective...", s - 1.7)
+    else: warcry(img, "PUTS ARE\nNEVER ROLLED!", 480, 760, s - 2.6); dialog(img, "ROZ reads the rules out loud!", s - 2.6)
     return nfa(img)
 
 def s_wed(t, u):
@@ -190,11 +245,19 @@ def s_wed(t, u):
     return nfa(img)
 
 def s_raid_thu(t, u):
-    d = T(2); s = u
-    img = raid(t, u, d, 3, [("theo", 24), ("ada", 50), ("roz", 76), ("penny", 100)], "THURSDAY · THE STORM GOLEM",
-               [(0.0, "theo", "shout"), (0.0, "ada", "shout"), (0.0, "roz", "shout"), (0.0, "penny", "shout"), (1.4, "theo", "atk"), (1.4, "ada", "atk"), (1.4, "roz", "block")], retreat_at=1.6)
-    if s < 1.6: warcry(img, "STICK TO\nTHE RULES!", 540, 800, s)
-    else: stamp(img, "HELD THE LINE.", LIME, 780, 130)
+    s = u
+    ret = s >= 2.2
+    img = raid2(t, s, "ROOM-28", 20, "THE VOLATILITY STORM",
+                hp=0.8 if s < 1.6 else max(0.0, 0.8 - (s - 1.6) * 0.9),
+                boss_pose="Retreat" if ret else "Attack" if 0.5 < s < 1.4 else "Hurt" if s >= 1.6 else "Idle", retreat=s - 2.2 if ret else None,
+                party=[("theo", 12), ("ada", 28), ("roz", 44), ("penny", 60)],
+                poses=[(0.0, "theo", "block"), (0.0, "roz", "block"), (1.4, "theo", "shout"), (1.4, "ada", "shout"), (1.4, "roz", "shout"), (1.4, "penny", "shout"), (1.9, "theo", "atk"), (1.9, "ada", "atk")],
+                hit=0.6 <= s < 1.3)
+    if s < 1.4:
+        dialog(img, "THE VOLATILITY STORM used BOOM BOOM BOOM!", s)
+        if 0.6 <= s < 1.3: stamp(img, ["BOOM!", "BOOM! BOOM!", "BOOM! BOOM! BOOM!"][min(2, int((s - 0.6) / 0.24))], RED, 760, 110)
+    elif s < 2.2: warcry(img, "STICK TO\nTHE RULES!", 500, 760, s - 1.4); dialog(img, "The whole fund sticks to the rules!", s - 1.4)
+    else: stamp(img, "HELD THE LINE.", LIME, 760, 130); dialog(img, "THE VOLATILITY STORM fled!", s - 2.2)
     return nfa(img)
 
 def s_fri(t, u):
