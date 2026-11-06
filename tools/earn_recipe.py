@@ -21,6 +21,10 @@ SWAP_P = 0.35                                                                   
 
 # Lines the dice may use. Only lines already on approved videos (Roz-cleared in context) are here today.
 ROZ_CLEARED = {
+    # slide headlines: two lines each, (text, "w"|"l") = white or lime. {T} ticker, {day} "Mon 11/9", {tm} "after the close".
+    "h_open": [[["{T} reports", "w"], ["{day}, {tm}.", "l"]]],
+    "h_method": [[["Our rule:", "w"], ["hold to expiry.", "l"]]],
+    "h_turn": [[["Holding through", "w"], ["earnings?", "l"]]],
     "shout": ["HOW BIG A MOVE?!"],
     "pov1": ["POV: {T} reports {day}"],
     "pov2": ["POV: you held through earnings"],
@@ -29,14 +33,40 @@ ROZ_CLEARED = {
 # Drafted 2026-11-05 by Penny, NOT usable until Roz clears each line once (board ask 20261105-171500-penny-recipe1).
 # Rules for every line: no numbers, no picks, no outcome hype, no "safe", no promises.
 PENDING_ROZ = {
+    # The rule itself is always Rules §8 word for word ("Hold to expiry." / "Puts are never rolled.", in the body or the lime line);
+    # only the framing around it varies.
+    "h_open": [[["Report day:", "w"], ["{T}, {day}.", "l"]], [["Next on the calendar:", "w"], ["{T}, {day}.", "l"]],
+               [["{T} reports {day}", "w"], ["{tm}.", "l"]], [["Earnings check:", "w"], ["{T}, {day}.", "l"]]],
+    "h_method": [[["What do the rules say?!", "w"], ["Hold to expiry.", "l"]], [["According to our rulebook,", "w"], ["we HOLD.", "l"]],
+                 [["Rulebook check:", "w"], ["hold to expiry.", "l"]], [["Big move or not,", "w"], ["hold to expiry.", "l"]],
+                 [["The plan doesn't change:", "w"], ["hold to expiry.", "l"]]],
+    "h_turn": [[["Would you hold", "w"], ["through this?", "l"]], [["Your call:", "w"], ["hold through earnings?", "l"]],
+               [["What do YOU do", "w"], ["on earnings day?", "l"]]],
     "shout": ["BIG MOVE OR NAP?!", "WHAT DOES HISTORY SAY?", "HERE WE GO AGAIN?!", "REPORT CARD DAY!", "BRACE OR YAWN?!",
               "PLOT TWIST INCOMING?", "ROLL THE TAPE!", "RECEIPTS FIRST.", "HOLD ONTO SOMETHING?!"],
-    "pov1": ["POV: {T} reports {day}, you check the history first", "POV: it's {T}'s turn", "POV: {day} has {T} on it"],
+    "pov1": ["POV: it's {T}'s turn", "POV: {day} has {T} on it"],
     "pov2": ["POV: you looked at the last 8 reports", "POV: the data, not the hype", "POV: you read before you react"],
     "zoom": ["WAIT FOR IT", "BUCKLE UP", "NOT SO FAST", "AND THEN…"],
 }
 
-def menu(slot): return ROZ_CLEARED[slot]
+PREVIEW_PENDING = os.environ.get("RECIPE_PREVIEW_PENDING") == "1"   # internal previews only: lets the dice use PENDING_ROZ lines. Never set when building a card.
+def menu(slot): return ROZ_CLEARED[slot] + (PENDING_ROZ.get(slot, []) if PREVIEW_PENDING else [])
+
+# ---------------------------------------------------------------- layout and props
+ALIGN = ["left", "center"]                       # headline block; the block stays in the top text band either way
+# Props that make sense per slide (Kit's FINANCE / OFFICE families, no digits, no brands). Left out on purpose: up/down charts and arrows,
+# bull, bear, rocket, money bag, coin stack, the Safe, crystal ball, dartboard, target, trophy, medal (direction, picks, hype or "safe").
+PROPS = {
+    "open":   ["Calendar", "Clock", "Hourglass", "Stopwatch", "Opening bell", "Desk bell", "Newspaper", "Desk coffee", "Binoculars"],
+    "history": ["Magnifying glass", "Ledger", "Newspaper", "Abacus", "Calculator (blank)", "Telescope", "Rolodex", "Stack of paper", "Clipboard", "Folder"],
+    "method": ["Ledger", "Gavel", "Scales", "Rubber stamp", "Anchor", "Umbrella, black", "Hourglass", "Clipboard"],
+    "turn":   ["Phone", "Paper plane", "Coffee mug", "Desk plant", "Rubber duck", "Sticky note", "Desk coffee"],
+}
+def prop_id(label):
+    import props
+    for pid, code, i in props.PROP_IDS:
+        if props.FAMILY_ITEMS[code][i][2] == label: return pid
+    raise KeyError(label)
 
 def roll(ticker, report_date, used, attempt_cap=50):
     """Deterministic for (ticker, report_date); re-rolls past any recipe key in `used` (a set of keys)."""
@@ -45,20 +75,25 @@ def roll(ticker, report_date, used, attempt_cap=50):
         r = random.Random(f"{ticker}|{report_date}|{a}")
         rec = {"room": r.choice(ROOMS), "bookend": r.choice(BOOKENDS), "tod": r.choice(list(TOD)), "chart": r.choice(CHARTS),
                "swaps": {c: (r.choice(swaps.names(c)) if r.random() < SWAP_P else None) for c in ["theo", "penny", "ada", "kit", "roz"]},
-               "shout": r.choice(menu("shout")), "pov1": r.choice(menu("pov1")), "pov2": r.choice(menu("pov2")), "zoom": r.choice(menu("zoom"))}
+               "shout": r.choice(menu("shout")), "pov1": r.choice(menu("pov1")), "pov2": r.choice(menu("pov2")), "zoom": r.choice(menu("zoom")),
+               "h_open": r.choice(menu("h_open")), "h_method": r.choice(menu("h_method")), "h_turn": r.choice(menu("h_turn")),
+               "align": r.choice(ALIGN), "props": {s_: r.sample(PROPS[s_], r.choice([1, 2])) for s_ in PROPS}}
         k = key(rec)
         if k not in used: rec["key"] = k; rec["attempt"] = a; return rec
     raise RuntimeError("recipe: no unused combination after 50 rolls")
 
 def key(rec):
-    return hashlib.sha1(json.dumps({k: rec[k] for k in ("room", "bookend", "tod", "chart", "swaps", "shout", "pov1", "pov2", "zoom")},
+    return hashlib.sha1(json.dumps({k: rec[k] for k in ("room", "bookend", "tod", "chart", "swaps", "shout", "pov1", "pov2", "zoom", "h_open", "h_method", "h_turn", "align", "props")},
                                    sort_keys=True).encode()).hexdigest()[:12]
 
 def combos():
     import swaps
     n = len(ROOMS) * len(BOOKENDS) * len(TOD) * len(CHARTS)
     for c in ["theo", "penny", "ada", "kit", "roz"]: n *= len(swaps.names(c)) + 1
-    for s in ROZ_CLEARED: n *= len(ROZ_CLEARED[s])
+    for s in ROZ_CLEARED: n *= len(menu(s))
+    from math import comb
+    n *= len(ALIGN)
+    for s_ in PROPS: n *= len(PROPS[s_]) + comb(len(PROPS[s_]), 2)
     return n
 
 # ---------------------------------------------------------------- render helpers (fast palette swap, time-of-day wash)
@@ -76,6 +111,24 @@ def recolor(img, ch, swap):
     idx = np.clip(np.searchsorted(srt, p), 0, len(srt) - 1); hit = (srt[idx] == p) & (a[..., 3] > 0)
     a[..., :3][hit] = dst[order][idx[hit]]
     return Image.fromarray(a, "RGBA")
+
+def draw_props(img, labels, t, cast_x, base, W, k, safe_r=880):
+    """Props on the floor lane behind the cast, in the gaps between characters. A spot is used only if the prop clears every
+    character by a margin and stays left of the app-button column (x < safe_r); otherwise that prop is skipped (never overlaps)."""
+    import props
+    pk = k + 2; spots = [0.5, 0.11, 0.36, 0.64, 0.22, 0.78]; used = []
+    for lab in labels:
+        fr, tk = props.frames(prop_id(lab)); total = sum(tk); u = int(t * 10) % total; acc = 0; im = fr[-1]
+        for f_, k_ in zip(fr, tk):
+            acc += k_
+            if u < acc: im = f_; break
+        im = im.resize((im.width * pk, im.height * pk), Image.NEAREST); w = im.width
+        for sx in spots:
+            x = int(W * sx)
+            if x - w // 2 < 16 or x + w // 2 > safe_r: continue
+            if any(abs(x - cx) < w // 2 + 95 for cx in cast_x): continue
+            if any(abs(x - ux) < w for ux in used): continue
+            img.paste(im, (x - w // 2, base - im.height + 6), im); used.append(x); break
 
 def wash(img, tod):
     c = TOD.get(tod)

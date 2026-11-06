@@ -457,16 +457,18 @@ def scene_frame(S, t, heads_override=None):
     t0, t1, kick, heads, body, lines, cast, hl = sc[k]
     if k == 0 and heads_override: heads = heads_override
     a = 1.0 if k == 0 else fade(t, t0, t0 + 0.3)
-    d.text((M, 352), kick, font=mono(30, True), fill=blend(LIME, a), anchor="ls")
+    cen = S.get("align") == "center"                       # recipe placement (earnings, 2026-11-05): same text band, centred or left
+    def TX(y_, w_): return ((M + w_) // 2, "ms") if cen else (M, "ls")
+    xk, ak = M, "ls"; d.text((xk, 352), kick, font=mono(30, True), fill=blend(LIME, a), anchor=ak)
     f = min((fit(h, W - 2 * M - 8, 160 if len(heads) == 1 else 132, wdth=110, wght=900) for h, _ in heads), key=lambda q: q.size)
     y = 362 + int(f.size * 1.05)
     for i, (h, c) in enumerate(heads):
         ha = a * fade(t, t0 + i * 0.12, t0 + 0.3 + i * 0.12) if k else (1.0 if t > 0.25 else fade(t, i * 0.06, 0.2 + i * 0.06))
-        d.text((M, y), h, font=f, fill=blend(c, ha), anchor="ls"); y += int(f.size * 1.05)
+        xh, ah = TX(y, W - M); d.text((xh, y), h, font=f, fill=blend(c, ha), anchor=ah); y += int(f.size * 1.05)
     y += 30
     for i, ln in enumerate(body):
-        ba = a * fade(t, t0 + 0.5 + i * 0.3, t0 + 0.8 + i * 0.3)
-        d.text((M, y), ln, font=fit_mono(ln, (W - M if y < SAFE_Y else SAFE_R) - M, 38), fill=blend(LIME if i == hl else INK, ba), anchor="ls"); y += 62
+        ba = a * fade(t, t0 + 0.5 + i * 0.3, t0 + 0.8 + i * 0.3); wr = W - M if y < SAFE_Y else SAFE_R
+        xb, ab = TX(y, wr); d.text((xb, y), ln, font=fit_mono(ln, wr - M, 38), fill=blend(LIME if i == hl else INK, ba), anchor=ab); y += 62
     tw = (S.get("threeway") or {}).get(k)
     if tw:
         threeway_panel(d, tw["cards"], y + 10, tw.get("quote", "")); y += 660

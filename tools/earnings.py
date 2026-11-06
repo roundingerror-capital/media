@@ -209,8 +209,11 @@ def build_spec(sheet, derive=False):
     pt, test = put_test(n, derive)
     one = (sheet.get("company") or {}).get("one_liner")
     mv_day = "report-day" if bmo(n) else "next-day"   # the sheet's sources.moves: before-open = close before vs close ON the report day
+    # RECIPE (the boss 2026-11-05): room, time of day, chart style, palette swaps, headlines, placement, props, cleared lines (tools/earn_recipe.py)
+    rec = recipe(T, n["report"]["date"], save=not test)
+    def H(v): return [[h.format(T=T, day=day, tm=tm), W_ if c == "w" else L_] for h, c in v]
     sc = [
-        [0.0, 4.5, f"EARNINGS PREVIEW · {T}", [[f"{T} reports", W_], [f"{day}, {tm}.", L_]],
+        [0.0, 4.5, f"EARNINGS PREVIEW · {T}", H(rec["h_open"]),
          ([f"Options priced a move of about {pct(x)}" + (f" ({ao})." if ao else ".")] if x else [f"Average move, last {N} reports: {pct(s['average_size_of_move_pct'])}."])
          + ([f"Analysts expect EPS of ${n['report']['eps_estimate']:.2f} (Robinhood)."] if n["report"].get("eps_estimate") is not None else []) + ([one] if one else []),
          [[0.4, 2.2, "penny", "Big one?!", "jump"], [2.4, 4.3, "theo", "Let's look back.", "nod"]], ["penny", "theo"], 0],
@@ -219,8 +222,6 @@ def build_spec(sheet, derive=False):
          [[8.4, 9.8, "theo", "Numbers, not vibes.", "brow"]], ["theo", "ada"], 0]]
     # The history slide is 7.5 s (was 8.5: the boss 2026-11-02, twice: "a solid awkward moment" after Kit's cart stopped). Kit's ride
     # ends about u=4.0 (track 2.2 s + flight + bounces), the first bubble lands at 3.9, the second cast member reacts at 5.5.
-    # RECIPE (the boss 2026-11-05): room, time of day, chart style, palette swaps and cleared lines rolled per video (tools/earn_recipe.py)
-    rec = recipe(T, n["report"]["date"], save=not test)
     charts = {1: {"draw": EC.make(rec["chart"], [m["move_pct"] for m in moves], labels, s["average_size_of_move_pct"])}}
     visuals = {}; t = 12.0
     if pt:
@@ -237,10 +238,11 @@ def build_spec(sheet, derive=False):
     # The method slide: the sheet's own wording ("History, not a forecast.") and Rules §8 word for word ("Hold to expiry." /
     # "Puts are never rolled."). Nothing of ours: Roz 2026-11-02 struck "OUR RULE · We don't guess the direction… We don't bet on it."
     # (no sheet or decision backs it; Rules §6a lets a put span a report).
-    sc.append([t, t + 6.0, "HISTORY, NOT A FORECAST", [["Our rule:", W_], ["hold to expiry.", L_]],
-               ([hold] if hold else []) + ["Puts are never rolled."],
+    hm = H(rec["h_method"]); quote = [] if "expiry" in hm[-1][0].lower() else ["Hold to expiry."]   # Rules §8 always on screen word for word
+    sc.append([t, t + 6.0, "HISTORY, NOT A FORECAST", hm,
+               ([hold] if hold else []) + quote + ["Puts are never rolled."],
                [[t + 1.2, t + 3.3, "ada", "Data says: humble.", "thumbs"]], ["theo", "ada"], 0 if hold else -1]); t += 6.0
-    sc.append([t, t + 4.5, "YOUR TURN", [["Holding through", W_], ["earnings?", L_]], ["Tell us below."],
+    sc.append([t, t + 4.5, "YOUR TURN", H(rec["h_turn"]), ["Tell us below."],
                [[t + 0.3, t + 4.3, "penny", "Comment!", "point"]], ["penny", "ada", "theo"], 0]); end = t + 4.5
     # casting: random active staff per slide, unique per video this month (the ledger), varied placement
     month = n["report"]["date"][:7]; sizes = [2, 2] + ([2] if pt else []) + [2, 3]
@@ -272,7 +274,8 @@ def build_spec(sheet, derive=False):
     shades_who = next((w for w in cv["casts"][1] if w in ("theo", "penny", "ada", "kit", "roz")), "theo")
     spec = {"cast_x": cast_x, "cast_h": {1: 220}, "label": "EARNINGS", "end": end, "bpm": 126, "root": 49.0, "seed": sum(map(ord, T)) + 1101, "mel": 1, "chart": "zigzag",
             "hook": f"<< {T} EARNINGS. WHAT THE DATA SAYS.", "music": "hold_to_expiry_long", "music_start": 8.0,
-            "bg": rec["room"], "bgs": {0: rec["bookend"], len(sc) - 1: rec["bookend"]}, "bg_dim": 0.34, "tod": rec["tod"], "swaps": rec["swaps"], "recipe": rec,
+            "bg": rec["room"], "bgs": {0: rec["bookend"], len(sc) - 1: rec["bookend"]}, "bg_dim": 0.34, "tod": rec["tod"], "swaps": rec["swaps"], "recipe": rec, "align": rec["align"],
+            "props": {0: rec["props"]["open"], 1: rec["props"]["history"], len(sc) - 2: rec["props"]["method"], len(sc) - 1: rec["props"]["turn"]},
             "cold_open": {"big": f"±{pct(x)}" if x else T, "line": f"{T} EARNINGS {day.upper()}.", "shout": rec["shout"], "tone": "win"},
             "intro_cfg": {"tagline": "And this is what the data says ↓"},
             "endcard": {"line1": "LIKE + FOLLOW", "line2": "FOR MORE UPDATES", "show_positions": False},

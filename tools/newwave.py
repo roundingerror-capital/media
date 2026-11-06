@@ -131,6 +131,9 @@ def install(D):
     def char_layer(img, d, S, t, cast, lines, text_bottom):
         hpx = S.get("_hpx") or (430 if len(cast) < 3 else 380); k = max(3, round(hpx / 60))
         xs = S.get("_xs") or D.XS[len(cast)]
+        pk = [i for i, sc_ in enumerate(S["scenes"]) if t >= sc_[0]]; slide = pk[-1] if pk else 0
+        if (S.get("props") or {}).get(slide):                                    # recipe props (earnings, 2026-11-05): floor lane, never on a face
+            import earn_recipe; earn_recipe.draw_props(img, S["props"][slide], t, [int(W * x) for x in xs], BASE, W, k)
         for i, n in enumerate(cast):
             xc = int(W * xs[i]); flip = FLIP.get(n, False) and xs[i] > 0.5
             talk = [(ts, te, pose) for ts, te, w, _, pose in lines if w == n and ts <= t < te]
