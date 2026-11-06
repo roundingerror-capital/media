@@ -44,6 +44,23 @@ def water_out(im):
     a[m, 3] = 0; return Image.fromarray(a)
 
 NFA_BADGE = False   # the boss 2026-11-06: no NOT FINANCIAL ADVICE badge on videos with no data or positions (caption keeps the line)
+def mixed(img, parts, y, size):
+    """One centred line in several colours (white with a lime accent word, the boss 11/6), black stroke like stamp()."""
+    d = ImageDraw.Draw(img); full = "".join(p for p, _ in parts); f = fit(full, W - 160, size, wdth=125, wght=900)
+    x = W / 2 - f.getlength(full) / 2; sw = max(6, size // 12)
+    for txt, col in parts:
+        d.text((x, y), txt, font=f, fill=col, anchor="lm", stroke_width=sw, stroke_fill="#000000"); x += f.getlength(txt)
+    return img
+
+def no_shadow(im):
+    """Drop the dark contact shadow under a standing piece (the boss 11/6: 'looks like I'm on a black skateboard')."""
+    a = np.array(im.convert("RGBA")); h = a.shape[0]
+    rows = range(max(0, h - 4), h)
+    for y in rows:
+        dark = (a[y, :, :3].astype(int).sum(1) < 160) & (a[y, :, 3] > 0) & (a[y, :, 3] < 255)
+        a[y, dark, 3] = 0
+    bb = Image.fromarray(a).getbbox(); return Image.fromarray(a).crop(bb) if bb else im
+
 def nfa(img):
     if not NFA_BADGE: return img
     d = ImageDraw.Draw(img); f = mono(24, True); w = d.textlength("NOT FINANCIAL ADVICE", font=f)
@@ -151,19 +168,21 @@ def raid2(t, s, room, x0, name, hp, boss_pose, party, poses, hit=False, huge=Fal
     lay = big.crop((x0 * k, 0, (x0 + 108) * k, 128 * k)).resize((1080, 1280), Image.NEAREST).convert("RGBA")
     TOP = 330; FEET = TOP + 92 * 10
     if huge:
-        b = up(K.piece("RAID-01H", t, boss_pose.replace("#2", "")), 10); bx = 1080 - b.width + 470 - (40 if "Swipe" in boss_pose else 0)
+        b = up(K.piece("RAID-01H", t, boss_pose.replace("#2", "")), 10); bx = 1080 - b.width + 700 - (40 if "Swipe" in boss_pose else 0)
         lay.alpha_composite(b, (bx, 1280 - b.height)) if bx >= 0 else lay.paste(b, (bx, 1280 - b.height), b)
     else:
         bd = {"THE HEADLINE HYDRA": "RAID-02", "THE VOLATILITY STORM": "RAID-03"}[name]
         b = once(bd, boss_pose, retreat) if retreat is not None else K.piece(bd, t, boss_pose); b = up(b, 7)
         bx = 1080 - b.width + 140 + (int(retreat * 500) if retreat is not None else 0) - (60 if boss_pose == "Attack" else 0)
         lay.paste(b, (bx, 92 * 10 - b.height + 30), b)
-    pose = {w: "idle" for w, _ in party}
+    pose = {m[0]: "idle" for m in party}
     for t0, w, p in poses:
         if s >= t0: pose[w] = p
-    for i, (w, x) in enumerate(party):
+    order = sorted(enumerate(party), key=lambda e: (len(e[1]) > 2 and e[1][2]) or 0)   # back row (raised) first
+    for i, m in order:
+        w, x = m[0], m[1]; lift = m[2] if len(m) > 2 else 0
         board, names = GEAR[w]; im = up(K.piece(board, t + i * 0.15, names[pose[w]]), 6); dx = 18 if pose[w] == "atk" else 0
-        lay.paste(im, (x * 10 - im.width // 2 + dx, 92 * 10 - im.height), im)
+        lay.paste(im, (x * 10 - im.width // 2 + dx, (92 + lift) * 10 - im.height), im)
         if pose[w] == "block" and int(t * 10) % 3 == 0:
             fl = up(K.piece("FXRAID", t, "FX-BLOCKFLASH"), 6); lay.paste(fl, (x * 10 + 40, 92 * 10 - im.height // 2 - fl.height // 2), fl)
     if hit and int(s * 12) % 2: lay = Image.alpha_composite(lay, Image.new("RGBA", lay.size, (255, 40, 40, 46)))
@@ -178,8 +197,12 @@ def raid2(t, s, room, x0, name, hp, boss_pose, party, poses, hit=False, huge=Fal
 # ---------------------------------------------------------------- shots (times in seconds, cut on bars of the 143.6 BPM grid)
 T = lambda bars: round(bars * BAR, 3)
 
+def fan(img, t, x0):
+    """Kit's turning ceiling fan (LIBROOMS8) over the room's static one (stage x ~140-195, top of the room)."""
+    f = up(K.piece("LIBROOMS8", t, "Ceiling fan, turning"), 12); img.paste(f, (int((167 - x0) * 12 - f.width / 2), 384), f); return img
+
 def s_open(t, u):
-    img = home("ROOM-23", 95, t); place(img, P(BOSS, "Sip · coffee mug", t), 540, 1700)
+    img = fan(home("ROOM-23", 95, t), t, 95); place(img, P(BOSS, "Sip · coffee mug", t), 540, 1700)
     stamp(img, "MY WEEK.", LIME, 150, 150)
     if u > 0.9: stamp(img, "(my fund runs on rules)", INK, 268, 52)
     return nfa(img)
@@ -240,8 +263,9 @@ def s_wed(t, u):
     s = u
     img = home("ROOM-24", 190, t); place(img, once(BOSS, "Desk · type, phone, one tap", s), 520, 1800)
     day(img, "WEDNESDAY.", "at work")
-    if s > 1.6: bubble(img, "medium, tail down", "QUICK CHECK.", 560, 760, s - 1.6, 10, size=54)
-    if s > 2.6: stamp(img, "BY THE RULES. BACK TO WORK.", LIME, 900, 56)
+    if s > 0.9: bubble(img, "medium, tail down", "QUICK CHECK.", 560, 760, s - 0.9, 10, size=54)
+    if s > 1.7: mixed(img, [("ALL BY THE ", INK), ("RULES.", LIME)], 1640, 76)
+    if s > 2.3: mixed(img, [("BACK TO ", INK), ("WORK.", LIME)], 1750, 76)
     return nfa(img)
 
 def s_raid_thu(t, u):
@@ -250,7 +274,7 @@ def s_raid_thu(t, u):
     img = raid2(t, s, "ROOM-28", 20, "THE VOLATILITY STORM",
                 hp=0.8 if s < 1.6 else max(0.0, 0.8 - (s - 1.6) * 0.9),
                 boss_pose="Retreat" if ret else "Attack" if 0.5 < s < 1.4 else "Hurt" if s >= 1.6 else "Idle", retreat=s - 2.2 if ret else None,
-                party=[("theo", 12), ("ada", 28), ("roz", 44), ("penny", 60)],
+                party=[("theo", 14), ("roz", 40), ("ada", 22, -16), ("penny", 50, -16)],
                 poses=[(0.0, "theo", "block"), (0.0, "roz", "block"), (1.4, "theo", "shout"), (1.4, "ada", "shout"), (1.4, "roz", "shout"), (1.4, "penny", "shout"), (1.9, "theo", "atk"), (1.9, "ada", "atk")],
                 hit=0.6 <= s < 1.3)
     if s < 1.4:
@@ -262,7 +286,7 @@ def s_raid_thu(t, u):
 
 def s_fri(t, u):
     s = u
-    img = home("ROOM-23", 95, t); place(img, once(BOSS, "Play · blocks on the rug", s), 540, 1780)
+    img = fan(home("ROOM-23", 95, t), t, 95); place(img, once(BOSS, "Play · blocks on the rug", s), 540, 1780)
     day(img, "FRIDAY.")
     for i, (kind, x, y, at) in enumerate((("medium, tail left", 900, 900, 1.5), ("medium, tail right", 180, 1060, 1.9), ("small, tail left", 930, 1200, 2.3))):
         bubble(img, kind, "AGAIN!", x, y, s - at, 9, size=64)
@@ -271,15 +295,16 @@ def s_fri(t, u):
 def s_end(t, u):
     s = u
     img = Image.new("RGB", (W, H), "#05060A")
-    lines = [(0.0, "WHY STRESS?", INK, 480, 120), (0.6, "KNOW YOUR RULES.", INK, 630, 100), (1.2, "LET THE BOT", LIME, 800, 120), (1.45, "DO THE GRIND.", LIME, 930, 120), (1.9, "YOU DO THE LIVING.", INK, 1090, 100)]
-    for at, txt, col, y, sz in lines:
-        if s >= at: stamp(img, txt, col, y, sz)
+    lines = [(0.0, [("WHY ", INK), ("STRESS?", LIME)], 300, 110), (0.6, [("KNOW YOUR ", INK), ("RULES.", LIME)], 430, 96),
+             (1.2, [("LET THE ", INK), ("BOT", LIME)], 580, 110), (1.45, [("DO THE ", INK), ("GRIND.", LIME)], 700, 110), (1.9, [("YOU DO THE ", INK), ("LIVING.", LIME)], 840, 96)]
+    for at, parts, y, sz in lines:
+        if s >= at: mixed(img, parts, y, sz)
     if s > 2.5:                                      # Kit's LIKE + FOLLOW neon (DEC-59), the closer the boss loves (WoW video)
         n = K.piece("DEC-59", t); k = max(1, min(820 // n.width, 420 // n.height)); sg = up(n, k)
-        if int(s * 6) % 7: img.paste(sg, (W // 2 - sg.width // 2, 1300), sg)
-        stamp(img, "An AI-run fund, learning in public.", INK, 1300 + sg.height + 70, 40)
+        if int(s * 6) % 7: img.paste(sg, (W // 2 - sg.width // 2, 1000), sg)
+        stamp(img, "An AI-run fund, learning in public.", INK, 1000 + sg.height + 70, 40)
     else:
-        place(img, P(BOSS, "Sip · coffee mug", t), 300, 1840, 6); place(img, K.piece(M4 + "V2_08TheoRaid.dc.html", t, "In gear · idle"), 760, 1840, 6)
+        place(img, no_shadow(P(BOSS, "Sip · coffee mug", t)), 300, 1800, 7); place(img, no_shadow(K.piece(M4 + "V2_08TheoRaid.dc.html", t, "In gear · idle")), 760, 1800, 7)
     return nfa(img)
 
 SHOTS = [(0.0, s_open), (T(2), s_mon), (T(6), s_wipe), (T(6.5), s_raid_mon), (T(10), s_tue), (T(12), s_raid_tue), (T(14.5), s_wed),
