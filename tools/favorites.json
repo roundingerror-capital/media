@@ -1,0 +1,9 @@
+{
+  "_about": "The boss's favorite assets (the boss 2026-11-06: 'put a heart on it'). Kit marks them with a heart on the canvases; this file mirrors the list so the video tools can cameo them. A cameo is decoration only: no words, no numbers, never over a face or text.",
+  "favorites": [
+    {"id": "first-dollar", "board": "Kit's First Dollar frame (pending, board 20261106-173000-penny-kitdollar)", "added": "2026-11-06",
+     "cameo": {"where": "office walls (OFF-* rooms, trading floor, boardroom)", "how": "small, framed, on the back wall above desk height", "how_often": "every office scene once it exists"}},
+    {"id": "like-follow-neon", "board": "DEC-59", "added": "2026-11-06", "cameo": {"where": "end cards", "how": "the closer", "how_often": "every video's end card"}},
+    {"id": "the-liquidator", "board": "RAID-01H", "added": "2026-11-06", "cameo": {"where": "raid scenes", "how": "the market's boss when the market drops", "how_often": "when a video needs a villain"}}
+  ]
+}
