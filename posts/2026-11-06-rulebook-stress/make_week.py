@@ -35,6 +35,14 @@ def home(room, x0, t):
 def place(img, im, x, feet, k=12):                      # x = centre, feet = bottom y on the 1080x1920 frame
     b = up(im, k); img.paste(b, (int(x - b.width / 2), int(feet - b.height)), b); return img
 
+def water_out(im):
+    """Kit's top-down float comes on its own square of water; drop the water colours (sampled from its border) so it sits in the pool."""
+    a = np.array(im.convert("RGBA")); edge = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
+    cols = {tuple(c[:3]) for c in edge if c[3] > 0}
+    m = np.zeros(a.shape[:2], bool)
+    for c in cols: m |= (a[..., 0] == c[0]) & (a[..., 1] == c[1]) & (a[..., 2] == c[2])
+    a[m, 3] = 0; return Image.fromarray(a)
+
 def nfa(img):
     d = ImageDraw.Draw(img); f = mono(24, True); w = d.textlength("NOT FINANCIAL ADVICE", font=f)
     d.rectangle([60, 300, 60 + w + 24, 340], fill="#000000", outline="#3A3A3A", width=2); d.text((72, 320), "NOT FINANCIAL ADVICE", font=f, fill=INK, anchor="lm"); return img
@@ -51,17 +59,26 @@ def bubble(img, kind, text, x, y, u, k=8, col="#0B0B0B", size=None):
     s = min(1.0, 0.55 + u * 3.0) if u < 0.15 else (1.08 - 0.08 * min(1, (u - 0.15) * 8))
     b = K.frames("ROOMKITWEEK", f"Speech bubble, {kind}")[-1]; kk = max(1, int(round(k * s)))
     bb = up(b, kk); img.paste(bb, (int(x - bb.width / 2), int(y - bb.height / 2)), bb)
-    d = ImageDraw.Draw(img); f = fit(text, int(bb.width * 0.78), size or int(bb.height * 0.36), wdth=110, wght=900)
-    d.text((x, y - bb.height * 0.08), text, font=f, fill=col, anchor="mm"); return img
+    bx, by, bw, bh = body_box(bb); cx = x - bb.width / 2 + bx + bw / 2; cy = y - bb.height / 2 + by + bh / 2
+    d = ImageDraw.Draw(img); ls = text.split("\n")
+    f = min((fit(l, int(bw * 0.8), size or int(bh * 0.42), wdth=110, wght=900) for l in ls), key=lambda q: q.size)
+    for i, l in enumerate(ls): d.text((cx, cy + (i - (len(ls) - 1) / 2) * f.size * 1.08), l, font=f, fill=col, anchor="mm")
+    return img
+
+def body_box(im):
+    """The bubble's body without its tail: rows at least 85% as wide as the widest row, and their column span."""
+    a = np.array(im.split()[-1]) > 0; w = a.sum(1); rows = np.where(w >= 0.85 * w.max())[0]
+    cols = np.where(a[rows].any(0))[0]; return int(cols.min()), int(rows.min()), int(cols.max() - cols.min() + 1), int(rows.max() - rows.min() + 1)
 
 def warcry(img, text, x, y, u, k=10):
     if u < 0: return img
     kk = k if u > 0.12 else max(2, int(k * (0.5 + u * 4)))
     b = up(K.frames("FXRAID", "FX-WARCRY")[-1], kk); jx = int(math.sin(u * 60) * 4)
     img.paste(b, (int(x - b.width / 2) + jx, int(y - b.height / 2)), b)
+    bx, by, bw, bh = body_box(b); cx = x + jx - b.width / 2 + bx + bw / 2; cy = y - b.height / 2 + by + bh / 2
     d = ImageDraw.Draw(img); ls = text.split("\n")
-    f = min((fit(l, int(b.width * 0.58), 64, wdth=110, wght=900) for l in ls), key=lambda q: q.size)
-    for i, l in enumerate(ls): d.text((x + jx, y - 6 + (i - (len(ls) - 1) / 2) * f.size * 1.05), l, font=f, fill="#0B0B0B", anchor="mm")
+    f = min((fit(l, int(bw * 0.62), 64, wdth=110, wght=900) for l in ls), key=lambda q: q.size)
+    for i, l in enumerate(ls): d.text((cx, cy + (i - (len(ls) - 1) / 2) * f.size * 1.05), l, font=f, fill="#0B0B0B", anchor="mm")
     return img
 
 # ---------------------------------------------------------------- the raid (x8 arena from the WoW video, new party + day bosses)
@@ -119,18 +136,17 @@ def raid(t, u, dur, boss, party, title, beats, retreat_at=None):
 T = lambda bars: round(bars * BAR, 3)
 
 def s_open(t, u):
-    img = home("ROOM-23", 135, t); place(img, P(BOSS, "Sip · coffee mug", t), 540, 1700)
+    img = home("ROOM-23", 95, t); place(img, P(BOSS, "Sip · coffee mug", t), 540, 1700)
     stamp(img, "MY WEEK.", LIME, 150, 150)
     if u > 0.9: stamp(img, "(my fund runs on rules)", INK, 268, 52)
     return nfa(img)
 
 def s_mon(t, u):
     s = u
-    img = home("ROOM-21", 160, t)
-    place(img, P(BOSS, "Cook · pancake flip", t), 520, 1760)
+    img = home("ROOM-21", 25, t)                     # the boss 11/6: cook at the range against the wall, under the cabinets
+    place(img, P(BOSS, "Cook · pancake flip", t), (30 - 25) * 12 + 78 * 6, 384 + 88 * 12)
     day(img, "MONDAY.", "9:30 AM")
-    if s > 1.3: bubble(img, "large, tail down", "WHO WANTS", 560, 700, s - 1.3, 11, size=58); \
-        ImageDraw.Draw(img).text((560, 745), "CHOCOLATE CHIPS?", font=fit("CHOCOLATE CHIPS?", 440, 48, wdth=110, wght=900), fill="#0B0B0B", anchor="mm")
+    if s > 1.3: bubble(img, "large, tail down", "WHO WANTS\nCHOCOLATE CHIPS?", 470, 640, s - 1.3, 11, size=56)
     for i, (kind, x, y, at) in enumerate((("small, tail left", 930, 1000, 3.4), ("medium, tail right", 150, 1120, 3.9), ("small, tail left", 960, 1260, 4.3), ("small, tail right", 130, 1400, 4.7))):
         bubble(img, kind, "ME!", x, y, s - at, 9 if "small" in kind else 8, size=78)
     return nfa(img)
@@ -153,7 +169,7 @@ def s_raid_mon(t, u):
 def s_tue(t, u):
     s = u
     img = home("ROOM-22", 20, t)
-    fl = up(P(BOSS, "Float · top-down, donut pool float", t), 12); img.paste(fl, (540 - fl.width // 2, 1150 - fl.height // 2 + int(math.sin(t * 2.2) * 10)), fl)
+    fl = up(water_out(P(BOSS, "Float · top-down, donut pool float", t)), 6); img.paste(fl, (540 - fl.width // 2 + int(math.sin(t * 0.7) * 30), 1000 - fl.height // 2 + int(math.sin(t * 2.2) * 10)), fl)   # zoomed out (the boss 11/6)
     rp = up(P("ROOMKITWEEK", "Water ripple ring", t), 10); img.paste(rp, (200, 1600), rp); img.paste(rp, (800, 560), rp)
     day(img, "TUESDAY.")
     return nfa(img)
@@ -183,7 +199,7 @@ def s_raid_thu(t, u):
 
 def s_fri(t, u):
     s = u
-    img = home("ROOM-23", 2, t); place(img, once(BOSS, "Play · blocks on the rug", s), 540, 1780)
+    img = home("ROOM-23", 95, t); place(img, once(BOSS, "Play · blocks on the rug", s), 540, 1780)
     day(img, "FRIDAY.")
     for i, (kind, x, y, at) in enumerate((("medium, tail left", 900, 900, 1.5), ("medium, tail right", 180, 1060, 1.9), ("small, tail left", 930, 1200, 2.3))):
         bubble(img, kind, "AGAIN!", x, y, s - at, 9, size=64)
@@ -192,12 +208,15 @@ def s_fri(t, u):
 def s_end(t, u):
     s = u
     img = Image.new("RGB", (W, H), "#05060A")
-    lines = [(0.0, "WHY STRESS?", INK, 520, 120), (1.1, "KNOW YOUR RULES.", INK, 680, 100), (2.2, "LET THE BOT", LIME, 860, 120), (2.6, "DO THE GRIND.", LIME, 990, 120), (3.6, "YOU DO THE LIVING.", INK, 1160, 100)]
+    lines = [(0.0, "WHY STRESS?", INK, 480, 120), (0.6, "KNOW YOUR RULES.", INK, 630, 100), (1.2, "LET THE BOT", LIME, 800, 120), (1.45, "DO THE GRIND.", LIME, 930, 120), (1.9, "YOU DO THE LIVING.", INK, 1090, 100)]
     for at, txt, col, y, sz in lines:
         if s >= at: stamp(img, txt, col, y, sz)
-    if s > 4.4:
-        stamp(img, "An AI-run fund, learning in public.", INK, 1320, 40); stamp(img, "FOLLOW FOR THE NOTES", LIME, 1400, 56)
-    place(img, P(BOSS, "Sip · coffee mug", t), 300, 1840, 6); place(img, K.piece(M4 + "V2_08TheoRaid.dc.html", t, "In gear · idle"), 760, 1840, 6)
+    if s > 2.5:                                      # Kit's LIKE + FOLLOW neon (DEC-59), the closer the boss loves (WoW video)
+        n = K.piece("DEC-59", t); k = max(1, min(820 // n.width, 420 // n.height)); sg = up(n, k)
+        if int(s * 6) % 7: img.paste(sg, (W // 2 - sg.width // 2, 1300), sg)
+        stamp(img, "An AI-run fund, learning in public.", INK, 1300 + sg.height + 70, 40)
+    else:
+        place(img, P(BOSS, "Sip · coffee mug", t), 300, 1840, 6); place(img, K.piece(M4 + "V2_08TheoRaid.dc.html", t, "In gear · idle"), 760, 1840, 6)
     return nfa(img)
 
 SHOTS = [(0.0, s_open), (T(2), s_mon), (T(6), s_wipe), (T(6.5), s_raid_mon), (T(10), s_tue), (T(12), s_raid_tue), (T(14.5), s_wed),
