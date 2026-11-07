@@ -149,14 +149,24 @@ def s_book(t, u):
     mixed(img, [("FIRST ONE ", INK), ("KEPT IN FULL.", LIME)], 190, 96)
     return nfa(img)
 
+def kp(img, board, name, t, cx, feet, k, flip=False):
+    im = K.piece(board, t, name)
+    if flip: im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    im = up(im, k); img.paste(im, (int(cx - im.width / 2), int(feet - im.height)), im); return im
+
 def s_vault(t, u):
-    img = band(vault_open(room("ROOM-16", t, 0.62), u))
-    rig(img, "penny", "celebrate", t, 240, 1760, 8, False, g)
-    for who, t0 in (("kit", 0.3), ("ada", 1.0)):                        # walk in from the right, into the doorway, gone
-        s_ = u - t0
-        if 0 <= s_ < 1.5:
-            x = int(1120 - s_ / 1.5 * 480); kk = 8 if x > 760 else max(4, int(8 - (760 - x) / 30))
-            carry(img, who, t, x, 1700 - (8 - kk) * 40, kk)
+    """The boss 11/7: Kit's own assets, everyone at floor height, nobody vanishes. Forklift (LIBOFFICE) brings a pallet of
+    gold bars (LIBROOMS4) to the vault; Kit pushes the cash cart (LIBROOMS4); Ada carries the gold piggy bank (PROP-457)."""
+    img = room("ROOM-16", t, 0.62); FL = 1880                            # everyone on the floor, front of the vault
+    q = min(1.0, u / 1.6); fx = int(1500 - q * 1060)                      # forklift drives in from the right (forks lead) and parks left
+    kp(img, "LIBOFFICE", "Pallet", t, fx - 240, FL - 7 * 5, 7)
+    gb = kp(img, "LIBROOMS4", "Gold bars, stacked", t, fx - 240, FL - 7 * 5 - 7 * 10, 7)
+    prop(img, "Piggy bank, gold", t, fx - 240, FL - 7 * 15 - gb.height + 14, 6)
+    kp(img, "LIBOFFICE", "Forklift with a driver", t, fx, FL, 7)
+    if u > 0.4:                                                           # Kit pushes the cash cart in behind it
+        kx = int(1260 - min(1.0, (u - 0.4) / 1.6) * 370)
+        kp(img, "LIBROOMS4", "Cash cart", t, kx - 135, FL - 10, 6); rig(img, "kit", "walk" if u < 2.0 else "celebrate", t * 1.4, kx, FL - 10, 7, True, g, hop=False)
+    img = band(img)
     mixed(img, [("INTO THE ", INK), ("VAULT.", LIME)], 170, 110)
     if u > 0.8: stamp(img, "Premium kept: $230", INK, 280, 60)
     return nfa(img)
@@ -191,13 +201,13 @@ def s_hang(t, u):
     elif u < 2.8:                                          # at the wall, frame up against it, taps (sound)
         rig(img, "theo", "idle", t, 300, FLOOR, 9, True, g, hop=False); img = framed(img, *WALL, 7)
     else:
-        img = framed(img, *WALL, 7, glow=min(1, (u - 2.8) * 2)); rig(img, "theo", "celebrate", t, 330, FLOOR, 9, True, g)
+        img = framed(img, *WALL, 7, glow=min(1, (u - 2.8) * 2)); rig(img, "theo", "celebrate", t, 330, FLOOR, 9, True, g, hop=False)
     stamp(img, "THEO DOES", INK, 150, 90); mixed(img, [("THE ", INK), ("HONORS.", LIME)], 270, 110)
     return nfa(img)
 
 def s_honest(t, u):
     img = band(room("OFF-THEO-01", t, 0.4)); img = framed(img, *WALL, 7, glow=0.5)
-    rig(img, "theo", "nod", t, 640, FLOOR, 9, True, g, hop=False)
+    rig(img, "theo", "nod", t, 330, FLOOR, 9, True, g, hop=False)
     mixed(img, [("THE FUND ", INK), ("OVERALL:", LIME)], 150, 96)
     if u > 0.6: stamp(img, "-5.68% since day one.", RED, 262, 76)
     if u > 1.6:
@@ -249,4 +259,4 @@ if __name__ == "__main__":
     if "--panels" in sys.argv: MV.panels(a[0], SHOTS, [], g, END, **KW)
     elif "--cover" in sys.argv: MV.frame_at(19.6, SHOTS, [], g, **KW).save(a[0], quality=92)
     else:
-        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v3.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
+        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v4.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
