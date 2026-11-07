@@ -16,7 +16,7 @@ import musicvideo as MV, props, earn_recipe, kitpieces as K, sfx
 from musicvideo import W, H, FPS, LIME, INK, RED, GREEN, GOLD, stamp, rig, fit, mono
 
 SONG, START = "robots_got_manners", 6.0
-g = MV.Grid(161.5, 0.07); END = 25.0; SHEET = "20261106-161123-weekly"
+g = MV.Grid(161.5, 0.07); END = 31.5; SHEET = "20261106-161123-weekly"
 
 def up(im, k): return im.resize((im.width * k, im.height * k), Image.NEAREST)
 
@@ -83,24 +83,86 @@ def panel(img, title, rows, foot, u):
         d.text((x0 + 36, y0 + 150 + 110 * i), txt, font=fit(txt, x1 - x0 - 72, 64, wdth=110, wght=800), fill=col, anchor="lm")
     if foot: d.text((W // 2, y1 + 60), foot, font=mono(30, True), fill=INK, anchor="mm")
 
+# ---------------------------------------------------------------- rooms are places, not pictures
+import newwave
+def room(name, t, dim=0.62):
+    """Locked camera (the boss 11/7: rooms used as ROOMS): the room still animates but never pans, so anyone standing on its
+    floor or anything hung on its wall stays put."""
+    return newwave.room_frame(name, t, dim, t0=t)
+
+def burst(img, cx, cy, s):
+    """Fist-pump hit (the boss 11/7 0:01): chunky pixel star-burst + ring, lime/white, 0.35 s; drawn on a 6-px grid."""
+    if not 0 <= s < 0.35: return img
+    q = s / 0.35; P = 6; ov = Image.new("RGBA", (W // P, H // P)); d = ImageDraw.Draw(ov); x, y = cx / P, cy / P
+    r0, r1 = 6 + 30 * q, 14 + 60 * q; a = int(255 * (1 - q) ** 0.6)
+    for i in range(12):
+        ang = i * math.pi / 6 + 0.15; w = 0.09 if i % 2 else 0.14; rr = r1 if i % 2 == 0 else r1 * 0.7
+        pts = [(x + r0 * math.cos(ang - w), y + r0 * math.sin(ang - w)), (x + rr * math.cos(ang), y + rr * math.sin(ang)), (x + r0 * math.cos(ang + w), y + r0 * math.sin(ang + w))]
+        d.polygon(pts, fill=(213, 255, 64, a) if i % 2 == 0 else (255, 255, 255, a))
+    rr = 10 + 46 * q; d.ellipse([x - rr, y - rr, x + rr, y + rr], outline=(255, 255, 255, a), width=2)
+    ov = ov.resize((W, H), Image.NEAREST); img = Image.alpha_composite(img.convert("RGBA"), ov)
+    if s < 0.18: img = Image.alpha_composite(img, Image.new("RGBA", (W, H), (255, 255, 230, int(120 * (1 - s / 0.18)))))   # the light boom
+    return img.convert("RGB")
+
+VAULT = (640, 760, 470)     # ROOM-16 left vault door at the locked camera: centre x, y and outer radius (video px)
+def vault_open(img, u):
+    """STAND-IN until Kit draws the open vault door (board 20261107-093500-penny-rozdollar): the door swings off to the left,
+    the round doorway shows a warm lit room with gold bars. 12-px grid like the room."""
+    P = 12; cx, cy, R = VAULT; q = max(0.0, min(1.0, u / 0.6))
+    ov = Image.new("RGBA", (W // P, H // P)); d = ImageDraw.Draw(ov); x, y, r = cx / P, cy / P, R / P * 0.86
+    if q > 0:
+        d.ellipse([x - r, y - r, x + r, y + r], fill=(26, 18, 10, 255))
+        d.ellipse([x - r * 0.8, y - r * 0.8, x + r * 0.8, y + r * 0.8], fill=(92, 64, 28, 255))
+        d.ellipse([x - r * 0.55, y - r * 0.55, x + r * 0.55, y + r * 0.55], fill=(150, 108, 44, 255))
+        for i, (bx, by) in enumerate([(-10, 14), (-2, 14), (6, 14), (-6, 10), (2, 10), (-2, 6)]):
+            d.rectangle([x + bx - 3, y + by - 1, x + bx + 3, y + by + 1], fill=(227, 179, 65, 255)); d.line([x + bx - 3, y + by - 1, x + bx + 3, y + by - 1], fill=(255, 235, 150, 255))
+        sw = r * (1 - 0.82 * q); dx = x - r - sw * 0.3                               # the door slab, swinging open to the left
+        d.ellipse([dx - sw, y - r * 1.05, dx + sw, y + r * 1.05], fill=(70, 74, 86, 255), outline=(30, 32, 40, 255), width=1)
+        d.rectangle([x - r - 2, y - 2, x - r + 1, y + 2], fill=(40, 42, 50, 255))   # hinge
+    img = Image.alpha_composite(img.convert("RGBA"), ov.resize((W, H), Image.NEAREST)); return img.convert("RGB")
+
+def bubble(img, txt, cx, cy, tail_x, tail_y, size=56):
+    d = ImageDraw.Draw(img); f = fit(txt, 520, size, wdth=110, wght=900); w = f.getlength(txt) + 60; h = size + 44
+    d.polygon([(cx - 30, cy + h / 2 - 4), (cx + 10, cy + h / 2 - 4), (tail_x, tail_y)], fill="#FFFFFF", outline="#000000")
+    d.rounded_rectangle([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], 18, fill="#FFFFFF", outline="#000000", width=6)
+    d.text((cx, cy), txt, font=f, fill="#000000", anchor="mm")
+
+def carry(img, who, t, x, feet, k=8):
+    rig(img, who, "walk", t * 1.4, x, feet, k, True, g, hop=False); prop(img, "Money bag", t, x - 10, feet - int(k * 13), 5)
+
 # ---------------------------------------------------------------- shots
 def s_ping(t, u):
-    img = band(MV.room("ROOM-01", t, 0.45))
-    rig(img, "penny", "point", t, 360, 1500, 9, False, g, hop=False); rig(img, "ada", "shrug", t, 760, 1500, 9, True, g, hop=False)
+    img = band(room("ROOM-01", t, 0.45))
+    if u < 1.4: rig(img, "penny", "point", t, 360, 1500, 9, False, g, hop=False)
+    else: rig(img, "penny", "celebrate", t, 360, 1500, 9, False, g)
+    rig(img, "ada", "shrug" if u < 1.6 else "celebrate", t, 760, 1500, 9, True, g, hop=u >= 1.6)
+    img = burst(img, 380, 1080, u - 1.4); img = burst(img, 740, 1080, u - 1.6)
     mixed(img, [("THE ", INK), ("P&L", LIME), (" LOADS…", INK)], 170, 110)
     if u > 1.4: stamp(img, "ONE GREEN LINE?!", LIME, 270, 84)
     return nfa(img)
 
 def s_book(t, u):
-    img = band(MV.room("ROOM-16", t, 0.6))
-    rig(img, "theo", "point", t, 820, 1640, 7, True, g, hop=False)
+    img = band(room("ROOM-16", t, 0.45))
+    rig(img, "theo", "point", t, 860, 1820, 7, True, g, hop=False)
     panel(img, "THEO'S BOOK · FRI 11/6", [("UBER $66 puts: expired", INK), ("Premium kept: $230", LIME), ("Our first one to expire.", INK)],
           "Kept in full. Rules: hold to expiry.", u)
     mixed(img, [("FIRST ONE ", INK), ("KEPT IN FULL.", LIME)], 190, 96)
     return nfa(img)
 
+def s_vault(t, u):
+    img = band(vault_open(room("ROOM-16", t, 0.62), u))
+    rig(img, "penny", "celebrate", t, 240, 1760, 8, False, g)
+    for who, t0 in (("kit", 0.3), ("ada", 1.0)):                        # walk in from the right, into the doorway, gone
+        s_ = u - t0
+        if 0 <= s_ < 1.5:
+            x = int(1120 - s_ / 1.5 * 480); kk = 8 if x > 760 else max(4, int(8 - (760 - x) / 30))
+            carry(img, who, t, x, 1700 - (8 - kk) * 40, kk)
+    mixed(img, [("INTO THE ", INK), ("VAULT.", LIME)], 170, 110)
+    if u > 0.8: stamp(img, "Premium kept: $230", INK, 280, 60)
+    return nfa(img)
+
 def s_party(t, u):
-    img = band(MV.lights(MV.room("ROOM-01", t, 0.5), t, g))
+    img = band(MV.lights(room("ROOM-01", t, 0.5), t, g))
     rig(img, "kit", "dance", t, 170, 1560, 8, False, g); rig(img, "ada", "celebrate", t, 400, 1560, 8, False, g)
     rig(img, "boss", "celebrate", t, 650, 1560, 9, False, g); rig(img, "roz", "celebrate", t, 900, 1560, 8, True, g)
     rig(img, "penny", "celebrate", t, 290, 1820, 8, False, g); rig(img, "theo", "celebrate", t, 790, 1820, 8, True, g)
@@ -109,64 +171,82 @@ def s_party(t, u):
     if u > 1.0: mixed(img, [("THIS ", INK), ("OFFICE!", LIME)], 270, 110)
     return nfa(img)
 
-def s_toast(t, u):
-    img = band(MV.lights(MV.room("ROOM-01", t, 0.5), t, g))
-    rig(img, "boss", "celebrate", t, 540, 1620, 11, False, g)
-    rig(img, "kit", "celebrate", t, 190, 1640, 8, False, g); rig(img, "penny", "celebrate", t, 890, 1640, 8, True, g)
-    confetti(img, t, -3, 0.6)
-    stamp(img, "TO THE", INK, 150, 90); mixed(img, [("FIRST ", LIME), ("DOLLAR!", INK)], 270, 120)
-    return nfa(img)
+def solo(who, anim, flip):
+    def s(t, u):
+        z = 1.0 + 0.08 * min(1, u / 1.2)                                   # slow push-in on the soloist
+        img = MV.lights(room("ROOM-01", t, 0.4), t, g)
+        rig(img, who, anim, t * 1.3, 540, 1980, int(17 * z), flip, g)
+        img = band(img); confetti(img, t, -6, 0.5)
+        mixed(img, [(who.upper() + ", ", INK), ("SOLO!", LIME)], 220, 130)
+        return nfa(img)
+    return s
 
-WALL = (250, 720)      # left of Theo's framed chart on OFF-THEO-01's back wall
+WALL = (240, 735)      # on OFF-THEO-01's back wall, left of Theo's framed chart (locked camera)
+FLOOR = 1850           # front of the rug: where people stand in this room
 def s_hang(t, u):
-    img = band(MV.room("OFF-THEO-01", t, 0.62))
+    img = band(room("OFF-THEO-01", t, 0.62))
     if u < 2.0:
-        x = int(1000 - (u / 2.0) * 700); rig(img, "theo", "walk", t * 1.4, x, 1620, 9, True, g, hop=False)
-        img = framed(img, x, 1480, 5)                      # held in front of him, below the face
+        x = int(1000 - (u / 2.0) * 700); rig(img, "theo", "walk", t * 1.4, x, FLOOR, 9, True, g, hop=False)
+        img = framed(img, x, FLOOR - 140, 5)                # held in front of him, below the face
+    elif u < 2.8:                                          # at the wall, frame up against it, taps (sound)
+        rig(img, "theo", "idle", t, 300, FLOOR, 9, True, g, hop=False); img = framed(img, *WALL, 7)
     else:
-        if u < 2.8:                                        # at the wall, still holding it; taps (sound) then it's up
-            rig(img, "theo", "idle", t, 300, 1620, 9, True, g, hop=False); img = framed(img, 300, 1480, 5)
-        else:
-            img = framed(img, *WALL, 7, glow=min(1, (u - 2.8) * 2)); rig(img, "theo", "celebrate", t, 300, 1620, 9, True, g)
+        img = framed(img, *WALL, 7, glow=min(1, (u - 2.8) * 2)); rig(img, "theo", "celebrate", t, 330, FLOOR, 9, True, g)
     stamp(img, "THEO DOES", INK, 150, 90); mixed(img, [("THE ", INK), ("HONORS.", LIME)], 270, 110)
     return nfa(img)
 
 def s_honest(t, u):
-    img = band(MV.room("OFF-THEO-01", t, 0.4)); img = framed(img, *WALL, 7, glow=0.5)
-    rig(img, "theo", "nod", t, 640, 1620, 9, True, g, hop=False)
+    img = band(room("OFF-THEO-01", t, 0.4)); img = framed(img, *WALL, 7, glow=0.5)
+    rig(img, "theo", "nod", t, 640, FLOOR, 9, True, g, hop=False)
     mixed(img, [("THE FUND ", INK), ("OVERALL:", LIME)], 150, 96)
     if u > 0.6: stamp(img, "-5.68% since day one.", RED, 262, 76)
     if u > 1.6:
-        d = ImageDraw.Draw(img); d.rectangle([90, 1700, W - 90, 1830], fill="#0B0B0B", outline="#3A3A3A", width=4)
-        d.text((W // 2, 1765), "It's a start. Week of 11/6, Theo's sheet.", font=mono(34, True), fill=INK, anchor="mm")
+        d = ImageDraw.Draw(img); d.rectangle([90, 1100, W - 90, 1230], fill="#0B0B0B", outline="#3A3A3A", width=4)
+        d.text((W // 2, 1165), "It's a start. Week of 11/6, Theo's sheet.", font=mono(34, True), fill=INK, anchor="mm")
+    return nfa(img)
+
+def s_profit(t, u):
+    img = Image.new("RGB", (W, H), "#05060A"); confetti(img, t, -2, 0.5)
+    mixed(img, [("OUR FIRST ", INK), ("PROFIT.", LIME)], 470, 120)
+    img = framed(img, W // 2, 1050, 11, glow=0.5 + 0.3 * math.sin(u * 4))
+    if u > 1.2: mixed(img, [("FRAMED ", INK), ("FOREVER.", LIME)], 1460, 110)
+    return nfa(img)
+
+def s_more(t, u):
+    img = Image.new("RGB", (W, H), "#05060A")
+    for i, (who, x) in enumerate((("kit", 130), ("ada", 330), ("theo", 540), ("penny", 750), ("roz", 950))):
+        rig(img, who, "celebrate" if u > 0.5 + 0.12 * i else "idle", t, x, 1640, 6, x > 540, g)
+    if u > 0.4: bubble(img, "MORE TO COME!", 540, 900, 700, 1180, 80)
+    mixed(img, [("ONE ", INK), ("DOWN.", LIME)], 470, 120)
     return nfa(img)
 
 def s_end(t, u):
     img = Image.new("RGB", (W, H), "#05060A")
-    mixed(img, [("ONE DOWN.", LIME)], 480, 120); mixed(img, [("FRAMED ", INK), ("FOREVER.", LIME)], 620, 92)
-    if u > 1.2:
-        n = K.piece("DEC-59", t); k = max(1, min(820 // n.width, 420 // n.height)); sg = up(n, k)
-        if int(u * 6) % 7: img.paste(sg, (W // 2 - sg.width // 2, 1000), sg)
-        stamp(img, "An AI-run fund, learning in public.", INK, 1000 + sg.height + 70, 40)
-    else: img = framed(img, W // 2, 1100, 9, glow=0.6)
+    n = K.piece("DEC-59", t); k = max(1, min(820 // n.width, 420 // n.height)); sg = up(n, k)
+    if int(u * 6) % 7: img.paste(sg, (W // 2 - sg.width // 2, 760), sg)
+    stamp(img, "Rounding Error Capital", INK, 760 + sg.height + 80, 54); stamp(img, "An AI-run fund, learning in public.", INK, 760 + sg.height + 160, 40)
     return nfa(img)
 
-SHOTS = [(0.0, s_ping), (3.2, s_book), (7.4, s_party), (12.2, s_toast), (14.6, s_hang), (19.0, s_honest), (21.6, s_end)]
+SHOTS = [(0.0, s_ping), (3.2, s_book), (6.4, s_vault), (9.0, s_party), (13.4, solo("kit", "dance", False)), (14.8, solo("penny", "celebrate", True)),
+         (16.2, s_hang), (20.6, s_honest), (23.2, s_profit), (26.4, s_more), (29.2, s_end)]
 
 def mix(out_mp3):
     import librosa, soundfile as sf
     y, sr = librosa.load(MV.song_path(SONG), sr=sfx.SR, mono=False, offset=START, duration=END + 0.5); y = y.T if y.ndim == 2 else y
     bus = sfx.Bus(END + 1)
-    bus.add(sfx.ding(), 1.6, 0.2); bus.add(sfx.coin(), 4.2, 0.2); bus.add(sfx.coin(1), 4.6, 0.2)
-    bus.add(sfx.impact(), 7.4, 0.35); bus.add(sfx.thump(), 7.45, 0.3); bus.add(sfx.arp_up(), 8.6, 0.15)
-    for k in range(3): bus.add(sfx.bonk(), 14.6 + 2.1 + k * 0.22, 0.12)
-    bus.add(sfx.sparkle(), 17.4, 0.3); bus.add(sfx.sparkle(), 22.8, 0.25)
+    bus.add(sfx.impact(), 1.4, 0.4); bus.add(sfx.thump(), 1.42, 0.35); bus.add(sfx.impact(), 1.6, 0.25)     # fist-pump booms
+    bus.add(sfx.coin(), 4.4, 0.2); bus.add(sfx.coin(1), 4.8, 0.2)
+    bus.add(sfx.thump(), 6.45, 0.35); bus.add(sfx.coin(), 7.5, 0.18); bus.add(sfx.coin(1), 8.2, 0.18)             # vault door, deposits
+    bus.add(sfx.impact(), 9.0, 0.35); bus.add(sfx.thump(), 9.05, 0.3); bus.add(sfx.arp_up(), 10.2, 0.15)
+    bus.add(sfx.impact(), 13.4, 0.2); bus.add(sfx.impact(), 14.8, 0.2)
+    for k in range(3): bus.add(sfx.bonk(), 16.2 + 2.1 + k * 0.22, 0.12)
+    bus.add(sfx.sparkle(), 19.0, 0.3); bus.add(sfx.sparkle(), 23.3, 0.3); bus.add(sfx.arp_up(), 26.9, 0.15); bus.add(sfx.sparkle(), 29.3, 0.25)
     m = bus.mix_into(y[: int(END * sfx.SR)]); wav = out_mp3.replace(".mp3", ".wav"); sf.write(wav, m, sfx.SR)
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav, "-b:a", "256k", out_mp3], check=True)
 
 if __name__ == "__main__":
     a = [x for x in sys.argv[1:] if not x.startswith("--")]; KW = dict(karaoke_on=False, end_fn=s_end)
     if "--panels" in sys.argv: MV.panels(a[0], SHOTS, [], g, END, **KW)
-    elif "--cover" in sys.argv: MV.frame_at(18.2, SHOTS, [], g, **KW).save(a[0], quality=92)
+    elif "--cover" in sys.argv: MV.frame_at(19.6, SHOTS, [], g, **KW).save(a[0], quality=92)
     else:
-        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v1.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
+        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v3.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
