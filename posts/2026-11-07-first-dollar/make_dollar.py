@@ -64,15 +64,19 @@ def frame_piece(state="hung"):
     d.point([(3, 3), (36, 3)], fill="#FFF3B0")
     return im
 
-def framed(img, cx, cy, k, glow=0.0):
-    f = up(frame_piece(), k)
+T_NOW = [0.0]          # current video time, so Kit's pieces play their glint loops
+def framed(img, cx, cy, k, glow=0.0, lit=False):
+    """Kit's First Dollar (the boss's starred favorite): DEC-64 on its own, DEC-65 hung under its picture light (lit=True).
+    k is the old stand-in scale (40 px wide); Kit's frame is 23 px wide, so it is drawn at k*40/23. (cx, cy) = the frame's centre."""
+    kk = max(1, round(k * 40 / 23))
+    f = up(K.piece("DEC-65" if lit else "DEC-64", T_NOW[0]), kk)
     if glow > 0:
         ov = Image.new("RGBA", (W, H)); dd = ImageDraw.Draw(ov)
         for i in range(8, 0, -1):
-            r = int(f.width * 0.55 + i * 18); dd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 220, 120, int(glow * (10 + 6 * (8 - i)))))
+            r = int(23 * kk * 0.55 + i * 18); dd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 220, 120, int(glow * (10 + 6 * (8 - i)))))
         img = Image.alpha_composite(img.convert("RGBA"), ov).convert("RGB")
-    img.paste(f, (int(cx - f.width / 2), int(cy - f.height / 2)), f)
-    d = ImageDraw.Draw(img); fs = mono(int(k * 5), True); d.text((cx, cy + k), "$1", font=fs, fill="#F2EBD3", anchor="mm", stroke_width=max(2, k // 3), stroke_fill="#3D5E2E")
+    top = cy - (18 * kk if lit else f.height // 2)                       # DEC-65: the frame sits under 9 rows of lamp
+    img.paste(f, (int(cx - f.width / 2), int(top)), f)
     return img
 
 def panel(img, title, rows, foot, u):
@@ -205,21 +209,23 @@ def s_hang(t, u):
     if u < 1.6:                                                          # walks in to the middle of the room, frame in hand
         x = int(1000 - (u / 1.6) * (1000 - MID)); rig(img, "theo", "walk", t * 1.4, x, FLOOR, 9, True, g, hop=False)
         img = framed(img, x, FLOOR - 140, 5)
+    elif u < 2.0:                                                        # stops and shows it off: Kit's DEC-66, Theo holding the frame
+        kp(img, "DEC-66", "", t, MID, FLOOR, 11)
     else:
-        q = min(1.0, (u - 1.6) / 0.9); e = q * q * (3 - 2 * q)              # arms up; the frame rises from his hands onto the wall
+        q = min(1.0, (u - 2.0) / 0.9); e = q * q * (3 - 2 * q)              # arms up; the frame rises from his hands onto the wall
         if q < 1.0:
-            fx = MID + (WALL[0] - MID) * e; fy = (FLOOR - 300) + (WALL[1] - (FLOOR - 300)) * e
+            fx = MID + (WALL[0] - MID) * e; fy = (FLOOR - 230) + (WALL[1] - (FLOOR - 230)) * e
             img = framed(img, int(fx), int(fy), 5 + round(2 * e))
         else:
-            img = framed(img, *WALL, 7, glow=0.6 + 0.3 * math.sin(u * 4))
+            img = framed(img, *WALL, 6, glow=0.4 + 0.2 * math.sin(u * 4), lit=True)
         rig(img, "theo", "celebrate", t, MID, FLOOR, 9, True, g)
-        img = burst(img, WALL[0], WALL[1], u - 2.5)                      # the splash as it lands
+        img = burst(img, WALL[0], WALL[1], u - 2.9)                      # the splash as it lands
     img = band(img)
     stamp(img, "THEO DOES", INK, 150, 90); mixed(img, [("THE ", INK), ("HONORS.", LIME)], 270, 110)
     return nfa(img)
 
 def s_honest(t, u):
-    img = band(room("OFF-THEO-01", t, 0.4)); img = framed(img, *WALL, 7, glow=0.5)
+    img = band(framed(room("OFF-THEO-01", t, 0.4), *WALL, 6, glow=0.4, lit=True))
     rig(img, "theo", "nod", t, MID, FLOOR, 9, True, g, hop=False)
     mixed(img, [("THE FUND ", INK), ("OVERALL:", LIME)], 150, 96)
     if u > 0.6: stamp(img, "-5.68% since day one.", RED, 262, 76)
@@ -231,7 +237,7 @@ def s_honest(t, u):
 def s_profit(t, u):
     img = Image.new("RGB", (W, H), "#05060A"); confetti(img, t, -2, 0.5)
     mixed(img, [("OUR FIRST ", INK), ("PROFIT.", LIME)], 470, 120)
-    img = framed(img, W // 2, 1050, 11, glow=0.5 + 0.3 * math.sin(u * 4))
+    img = framed(img, W // 2, 1090, 10, glow=0.5 + 0.3 * math.sin(u * 4), lit=True)
     if u > 1.2: mixed(img, [("FRAMED ", INK), ("FOREVER.", LIME)], 1460, 110)
     return nfa(img)
 
@@ -250,8 +256,13 @@ def s_end(t, u):
     stamp(img, "Rounding Error Capital", INK, 760 + sg.height + 80, 54); stamp(img, "An AI-run fund, learning in public.", INK, 760 + sg.height + 160, 40)
     return nfa(img)
 
+def _clock(fn):
+    def w(t, u): T_NOW[0] = t; return fn(t, u)
+    return w
+
 SHOTS = [(0.0, s_ping), (3.2, s_vault), (5.8, s_book), (9.0, s_party), (13.4, solo("kit", "dance", False)), (14.8, solo("penny", "celebrate", True)),
          (16.2, s_hang), (20.6, s_honest), (23.2, s_profit), (26.4, s_more), (29.2, s_end)]
+SHOTS = [(a, _clock(f)) for a, f in SHOTS]
 
 def mix(out_mp3):
     import librosa, soundfile as sf
@@ -262,7 +273,7 @@ def mix(out_mp3):
     bus.add(sfx.coin(), 6.6, 0.2); bus.add(sfx.coin(1), 7.0, 0.2)             # vault door, deposits
     bus.add(sfx.impact(), 9.0, 0.35); bus.add(sfx.thump(), 9.05, 0.3); bus.add(sfx.arp_up(), 10.2, 0.15)
     bus.add(sfx.impact(), 13.4, 0.2); bus.add(sfx.impact(), 14.8, 0.2)
-    bus.add(sfx.arp_up(), 17.8, 0.18); bus.add(sfx.impact(), 18.7, 0.35); bus.add(sfx.sparkle(), 18.72, 0.3); bus.add(sfx.sparkle(), 23.3, 0.3); bus.add(sfx.arp_up(), 26.9, 0.15); bus.add(sfx.sparkle(), 29.3, 0.25)
+    bus.add(sfx.arp_up(), 18.2, 0.18); bus.add(sfx.impact(), 19.1, 0.35); bus.add(sfx.sparkle(), 19.12, 0.3); bus.add(sfx.sparkle(), 23.3, 0.3); bus.add(sfx.arp_up(), 26.9, 0.15); bus.add(sfx.sparkle(), 29.3, 0.25)
     m = bus.mix_into(y[: int(END * sfx.SR)]); wav = out_mp3.replace(".mp3", ".wav"); sf.write(wav, m, sfx.SR)
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav, "-b:a", "256k", out_mp3], check=True)
 
@@ -271,4 +282,4 @@ if __name__ == "__main__":
     if "--panels" in sys.argv: MV.panels(a[0], SHOTS, [], g, END, **KW)
     elif "--cover" in sys.argv: MV.frame_at(19.6, SHOTS, [], g, **KW).save(a[0], quality=92)
     else:
-        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v7.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
+        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v8.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
