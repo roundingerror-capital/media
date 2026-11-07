@@ -32,7 +32,7 @@ def prop(img, label, t, cx, feet, k=8, once_u=None):
 
 def nfa(img):
     """Small fixed footnote, same spot on every frame (the boss 11/7: the big box ruined the video)."""
-    d = ImageDraw.Draw(img); d.text((W // 2, H - 34), "Not financial advice.", font=mono(22, True), fill=(205, 205, 205), anchor="mm",
+    d = ImageDraw.Draw(img); d.text((W - 24, H - 22), "Not financial advice.", font=mono(22, True), fill=(205, 205, 205), anchor="rb",
                                    stroke_width=2, stroke_fill=(0, 0, 0)); return img
 
 def mixed(img, parts, y, size):
@@ -144,7 +144,7 @@ def s_ping(t, u):
 
 def s_book(t, u):
     img = vault_stage(room("ROOM-16", t, 0.45), t, 9.0)                  # same room, forklift parked at the door, Kit at the cart
-    rig(img, "theo", "point", t, 290, 2080, 11, False, g, hop=False)      # the focal point: big, bottom-left, cut at the waist
+    rig(img, "theo", "point", t, 290, 2070, 11, False, g, hop=False)      # the focal point: big, bottom-left, cut at the waist
     img = band(img)
     panel(img, "THEO'S BOOK · FRI 11/6", [("UBER $66 puts: expired", INK), ("Premium kept: $230", LIME), ("Our first one to expire.", INK)],
           "Kept in full. Rules: hold to expiry.", u)
@@ -170,7 +170,9 @@ def vault_stage(img, t, u, kit=True):
 
 def s_vault(t, u):
     """The boss 11/7: Kit's own assets, everyone at floor height, nobody vanishes."""
-    img = vault_stage(room("ROOM-16", t, 0.62), t, u); img = band(img)
+    img = vault_stage(room("ROOM-16", t, 0.62), t, u)
+    rig(img, "theo", "idle" if u < 1.2 else "point", t, 290, 2070, 11, False, g, hop=False)   # here from the first frame (no magic entrance)
+    img = band(img)
     mixed(img, [("INTO THE ", INK), ("VAULT.", LIME)], 170, 110)
     if u > 0.8: stamp(img, "Premium kept: $230", INK, 280, 60)
     return nfa(img)
@@ -197,21 +199,28 @@ def solo(who, anim, flip):
 
 WALL = (240, 735)      # on OFF-THEO-01's back wall, left of Theo's framed chart (locked camera)
 FLOOR = 1850           # front of the rug: where people stand in this room
+MID = 560               # halfway across Theo's office
 def s_hang(t, u):
-    img = band(room("OFF-THEO-01", t, 0.62))
-    if u < 2.0:
-        x = int(1000 - (u / 2.0) * 700); rig(img, "theo", "walk", t * 1.4, x, FLOOR, 9, True, g, hop=False)
-        img = framed(img, x, FLOOR - 140, 5)                # held in front of him, below the face
-    elif u < 2.8:                                          # at the wall, frame up against it, taps (sound)
-        rig(img, "theo", "idle", t, 300, FLOOR, 9, True, g, hop=False); img = framed(img, *WALL, 7)
+    img = room("OFF-THEO-01", t, 0.62)
+    if u < 1.6:                                                          # walks in to the middle of the room, frame in hand
+        x = int(1000 - (u / 1.6) * (1000 - MID)); rig(img, "theo", "walk", t * 1.4, x, FLOOR, 9, True, g, hop=False)
+        img = framed(img, x, FLOOR - 140, 5)
     else:
-        img = framed(img, *WALL, 7, glow=min(1, (u - 2.8) * 2)); rig(img, "theo", "celebrate", t, 330, FLOOR, 9, True, g, hop=False)
+        q = min(1.0, (u - 1.6) / 0.9); e = q * q * (3 - 2 * q)              # arms up; the frame rises from his hands onto the wall
+        if q < 1.0:
+            fx = MID + (WALL[0] - MID) * e; fy = (FLOOR - 300) + (WALL[1] - (FLOOR - 300)) * e
+            img = framed(img, int(fx), int(fy), 5 + round(2 * e))
+        else:
+            img = framed(img, *WALL, 7, glow=0.6 + 0.3 * math.sin(u * 4))
+        rig(img, "theo", "celebrate", t, MID, FLOOR, 9, True, g)
+        img = burst(img, WALL[0], WALL[1], u - 2.5)                      # the splash as it lands
+    img = band(img)
     stamp(img, "THEO DOES", INK, 150, 90); mixed(img, [("THE ", INK), ("HONORS.", LIME)], 270, 110)
     return nfa(img)
 
 def s_honest(t, u):
     img = band(room("OFF-THEO-01", t, 0.4)); img = framed(img, *WALL, 7, glow=0.5)
-    rig(img, "theo", "nod", t, 330, FLOOR, 9, True, g, hop=False)
+    rig(img, "theo", "nod", t, MID, FLOOR, 9, True, g, hop=False)
     mixed(img, [("THE FUND ", INK), ("OVERALL:", LIME)], 150, 96)
     if u > 0.6: stamp(img, "-5.68% since day one.", RED, 262, 76)
     if u > 1.6:
@@ -253,8 +262,7 @@ def mix(out_mp3):
     bus.add(sfx.coin(), 6.6, 0.2); bus.add(sfx.coin(1), 7.0, 0.2)             # vault door, deposits
     bus.add(sfx.impact(), 9.0, 0.35); bus.add(sfx.thump(), 9.05, 0.3); bus.add(sfx.arp_up(), 10.2, 0.15)
     bus.add(sfx.impact(), 13.4, 0.2); bus.add(sfx.impact(), 14.8, 0.2)
-    for k in range(3): bus.add(sfx.bonk(), 16.2 + 2.1 + k * 0.22, 0.12)
-    bus.add(sfx.sparkle(), 19.0, 0.3); bus.add(sfx.sparkle(), 23.3, 0.3); bus.add(sfx.arp_up(), 26.9, 0.15); bus.add(sfx.sparkle(), 29.3, 0.25)
+    bus.add(sfx.arp_up(), 17.8, 0.18); bus.add(sfx.impact(), 18.7, 0.35); bus.add(sfx.sparkle(), 18.72, 0.3); bus.add(sfx.sparkle(), 23.3, 0.3); bus.add(sfx.arp_up(), 26.9, 0.15); bus.add(sfx.sparkle(), 29.3, 0.25)
     m = bus.mix_into(y[: int(END * sfx.SR)]); wav = out_mp3.replace(".mp3", ".wav"); sf.write(wav, m, sfx.SR)
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav, "-b:a", "256k", out_mp3], check=True)
 
@@ -263,4 +271,4 @@ if __name__ == "__main__":
     if "--panels" in sys.argv: MV.panels(a[0], SHOTS, [], g, END, **KW)
     elif "--cover" in sys.argv: MV.frame_at(19.6, SHOTS, [], g, **KW).save(a[0], quality=92)
     else:
-        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v6.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
+        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v7.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
