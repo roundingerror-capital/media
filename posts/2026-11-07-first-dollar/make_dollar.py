@@ -142,8 +142,7 @@ def s_ping(t, u):
     return nfa(img)
 
 def s_book(t, u):
-    img = band(room("ROOM-16", t, 0.45))
-    rig(img, "theo", "point", t, 860, 1820, 7, True, g, hop=False)
+    img = band(vault_stage(room("ROOM-16", t, 0.45), t, 9.0))            # same room, everyone where they parked
     panel(img, "THEO'S BOOK · FRI 11/6", [("UBER $66 puts: expired", INK), ("Premium kept: $230", LIME), ("Our first one to expire.", INK)],
           "Kept in full. Rules: hold to expiry.", u)
     mixed(img, [("FIRST ONE ", INK), ("KEPT IN FULL.", LIME)], 190, 96)
@@ -154,19 +153,22 @@ def kp(img, board, name, t, cx, feet, k, flip=False):
     if flip: im = im.transpose(Image.FLIP_LEFT_RIGHT)
     im = up(im, k); img.paste(im, (int(cx - im.width / 2), int(feet - im.height)), im); return im
 
-def s_vault(t, u):
-    """The boss 11/7: Kit's own assets, everyone at floor height, nobody vanishes. Forklift (LIBOFFICE) brings a pallet of
-    gold bars (LIBROOMS4) to the vault; Kit pushes the cash cart (LIBROOMS4); Ada carries the gold piggy bank (PROP-457)."""
-    img = room("ROOM-16", t, 0.62); FL = 1880                            # everyone on the floor, front of the vault
-    q = min(1.0, u / 1.6); fx = int(1500 - q * 1060)                      # forklift drives in from the right (forks lead) and parks left
+def vault_stage(img, t, u):
+    """Forklift (gold bars + gold piggy bank on its pallet) and Kit with the cash cart, on ROOM-16's floor. u = seconds into the
+    arrival; u >= 2.2 = parked (same spot in every later shot of this room, the boss 11/7: no teleporting)."""
+    FL = 1880; q = min(1.0, u / 1.6); fx = int(1500 - q * 1060)
     kp(img, "LIBOFFICE", "Pallet", t, fx - 240, FL - 7 * 5, 7)
     gb = kp(img, "LIBROOMS4", "Gold bars, stacked", t, fx - 240, FL - 7 * 5 - 7 * 10, 7)
     prop(img, "Piggy bank, gold", t, fx - 240, FL - 7 * 15 - gb.height + 14, 6)
     kp(img, "LIBOFFICE", "Forklift with a driver", t, fx, FL, 7)
-    if u > 0.4:                                                           # Kit pushes the cash cart in behind it
+    if u > 0.4:
         kx = int(1260 - min(1.0, (u - 0.4) / 1.6) * 370)
         kp(img, "LIBROOMS4", "Cash cart", t, kx - 135, FL - 10, 6); rig(img, "kit", "walk" if u < 2.0 else "celebrate", t * 1.4, kx, FL - 10, 7, True, g, hop=False)
-    img = band(img)
+    return img
+
+def s_vault(t, u):
+    """The boss 11/7: Kit's own assets, everyone at floor height, nobody vanishes."""
+    img = vault_stage(room("ROOM-16", t, 0.62), t, u); img = band(img)
     mixed(img, [("INTO THE ", INK), ("VAULT.", LIME)], 170, 110)
     if u > 0.8: stamp(img, "Premium kept: $230", INK, 280, 60)
     return nfa(img)
@@ -174,7 +176,7 @@ def s_vault(t, u):
 def s_party(t, u):
     img = band(MV.lights(room("ROOM-01", t, 0.5), t, g))
     rig(img, "kit", "dance", t, 170, 1560, 8, False, g); rig(img, "ada", "celebrate", t, 400, 1560, 8, False, g)
-    rig(img, "boss", "celebrate", t, 650, 1560, 9, False, g); rig(img, "roz", "celebrate", t, 900, 1560, 8, True, g)
+    rig(img, "roz", "celebrate", t, 900, 1560, 8, True, g); rig(img, "boss", "celebrate", t, 650, 1560, 9, False, g)   # Roz behind the boss
     rig(img, "penny", "celebrate", t, 290, 1820, 8, False, g); rig(img, "theo", "celebrate", t, 790, 1820, 8, True, g)
     confetti(img, t, 0)
     mixed(img, [("WE ARE ", INK), ("NOT", LIME), (" LEAVING", INK)], 150, 100)
@@ -237,7 +239,7 @@ def s_end(t, u):
     stamp(img, "Rounding Error Capital", INK, 760 + sg.height + 80, 54); stamp(img, "An AI-run fund, learning in public.", INK, 760 + sg.height + 160, 40)
     return nfa(img)
 
-SHOTS = [(0.0, s_ping), (3.2, s_book), (6.4, s_vault), (9.0, s_party), (13.4, solo("kit", "dance", False)), (14.8, solo("penny", "celebrate", True)),
+SHOTS = [(0.0, s_ping), (3.2, s_vault), (5.8, s_book), (9.0, s_party), (13.4, solo("kit", "dance", False)), (14.8, solo("penny", "celebrate", True)),
          (16.2, s_hang), (20.6, s_honest), (23.2, s_profit), (26.4, s_more), (29.2, s_end)]
 
 def mix(out_mp3):
@@ -245,8 +247,8 @@ def mix(out_mp3):
     y, sr = librosa.load(MV.song_path(SONG), sr=sfx.SR, mono=False, offset=START, duration=END + 0.5); y = y.T if y.ndim == 2 else y
     bus = sfx.Bus(END + 1)
     bus.add(sfx.impact(), 1.4, 0.4); bus.add(sfx.thump(), 1.42, 0.35); bus.add(sfx.impact(), 1.6, 0.25)     # fist-pump booms
-    bus.add(sfx.coin(), 4.4, 0.2); bus.add(sfx.coin(1), 4.8, 0.2)
-    bus.add(sfx.thump(), 6.45, 0.35); bus.add(sfx.coin(), 7.5, 0.18); bus.add(sfx.coin(1), 8.2, 0.18)             # vault door, deposits
+    bus.add(sfx.thump(), 3.25, 0.35); bus.add(sfx.coin(), 4.4, 0.18); bus.add(sfx.coin(1), 5.0, 0.18)
+    bus.add(sfx.coin(), 6.6, 0.2); bus.add(sfx.coin(1), 7.0, 0.2)             # vault door, deposits
     bus.add(sfx.impact(), 9.0, 0.35); bus.add(sfx.thump(), 9.05, 0.3); bus.add(sfx.arp_up(), 10.2, 0.15)
     bus.add(sfx.impact(), 13.4, 0.2); bus.add(sfx.impact(), 14.8, 0.2)
     for k in range(3): bus.add(sfx.bonk(), 16.2 + 2.1 + k * 0.22, 0.12)
@@ -259,4 +261,4 @@ if __name__ == "__main__":
     if "--panels" in sys.argv: MV.panels(a[0], SHOTS, [], g, END, **KW)
     elif "--cover" in sys.argv: MV.frame_at(19.6, SHOTS, [], g, **KW).save(a[0], quality=92)
     else:
-        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v4.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
+        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v5.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
