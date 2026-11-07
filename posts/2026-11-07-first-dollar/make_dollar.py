@@ -31,8 +31,9 @@ def prop(img, label, t, cx, feet, k=8, once_u=None):
     im = up(im, k); img.paste(im, (int(cx - im.width // 2), int(feet - im.height)), im); return img
 
 def nfa(img):
-    d = ImageDraw.Draw(img); f = mono(24, True); w = d.textlength("NOT FINANCIAL ADVICE", font=f)
-    d.rectangle([60, 336, 60 + w + 24, 376], fill="#000000", outline="#3A3A3A", width=2); d.text((72, 356), "NOT FINANCIAL ADVICE", font=f, fill=INK, anchor="lm"); return img
+    """Small fixed footnote, same spot on every frame (the boss 11/7: the big box ruined the video)."""
+    d = ImageDraw.Draw(img); d.text((W // 2, H - 34), "Not financial advice.", font=mono(22, True), fill=(205, 205, 205), anchor="mm",
+                                   stroke_width=2, stroke_fill=(0, 0, 0)); return img
 
 def mixed(img, parts, y, size):
     d = ImageDraw.Draw(img); full = "".join(p for p, _ in parts); f = fit(full, W - 160, size, wdth=125, wght=900)
@@ -75,7 +76,7 @@ def framed(img, cx, cy, k, glow=0.0):
     return img
 
 def panel(img, title, rows, foot, u):
-    d = ImageDraw.Draw(img); x0, y0, x1 = 80, 470, W - 80; y1 = y0 + 120 + 110 * len(rows)
+    d = ImageDraw.Draw(img); x0, y0, x1 = 80, 410, W - 80; y1 = y0 + 120 + 110 * len(rows)
     d.rectangle([x0, y0, x1, y1], fill="#0B0B0B", outline="#3A3A3A", width=6)
     d.text((x0 + 36, y0 + 60), title, font=mono(30, True), fill=LIME, anchor="lm")
     for i, (txt, col) in enumerate(rows):
@@ -142,7 +143,9 @@ def s_ping(t, u):
     return nfa(img)
 
 def s_book(t, u):
-    img = band(vault_stage(room("ROOM-16", t, 0.45), t, 9.0))            # same room, everyone where they parked
+    img = vault_stage(room("ROOM-16", t, 0.45), t, 9.0)                  # same room, forklift parked at the door, Kit at the cart
+    rig(img, "theo", "point", t, 290, 2080, 11, False, g, hop=False)      # the focal point: big, bottom-left, cut at the waist
+    img = band(img)
     panel(img, "THEO'S BOOK · FRI 11/6", [("UBER $66 puts: expired", INK), ("Premium kept: $230", LIME), ("Our first one to expire.", INK)],
           "Kept in full. Rules: hold to expiry.", u)
     mixed(img, [("FIRST ONE ", INK), ("KEPT IN FULL.", LIME)], 190, 96)
@@ -153,17 +156,16 @@ def kp(img, board, name, t, cx, feet, k, flip=False):
     if flip: im = im.transpose(Image.FLIP_LEFT_RIGHT)
     im = up(im, k); img.paste(im, (int(cx - im.width / 2), int(feet - im.height)), im); return im
 
-def vault_stage(img, t, u):
-    """Forklift (gold bars + gold piggy bank on its pallet) and Kit with the cash cart, on ROOM-16's floor. u = seconds into the
-    arrival; u >= 2.2 = parked (same spot in every later shot of this room, the boss 11/7: no teleporting)."""
-    FL = 1880; q = min(1.0, u / 1.6); fx = int(1500 - q * 1060)
-    kp(img, "LIBOFFICE", "Pallet", t, fx - 240, FL - 7 * 5, 7)
-    gb = kp(img, "LIBROOMS4", "Gold bars, stacked", t, fx - 240, FL - 7 * 5 - 7 * 10, 7)
-    prop(img, "Piggy bank, gold", t, fx - 240, FL - 7 * 15 - gb.height + 14, 6)
-    kp(img, "LIBOFFICE", "Forklift with a driver", t, fx, FL, 7)
-    if u > 0.4:
-        kx = int(1260 - min(1.0, (u - 0.4) / 1.6) * 370)
-        kp(img, "LIBROOMS4", "Cash cart", t, kx - 135, FL - 10, 6); rig(img, "kit", "walk" if u < 2.0 else "celebrate", t * 1.4, kx, FL - 10, 7, True, g, hop=False)
+def vault_stage(img, t, u, kit=True):
+    """The boss 11/7: the forklift drives the gold all the way to the vault door (back of the room, at the door's base);
+    Kit plays with the cash cart bottom-right. u = seconds into the arrival; u >= 2.0 = parked (same spot in later shots)."""
+    FB = 1500; q = min(1.0, u / 2.0); fx = int(1400 - q * 740)              # back row: ends with the forks under the door
+    kp(img, "LIBOFFICE", "Pallet", t, fx - 170, FB - 5 * 5, 5)
+    gb = kp(img, "LIBROOMS4", "Gold bars, stacked", t, fx - 170, FB - 5 * 5 - 5 * 10, 5)
+    prop(img, "Piggy bank, gold", t, fx - 170, FB - 5 * 15 - gb.height + 10, 4)
+    kp(img, "LIBOFFICE", "Forklift with a driver", t, fx, FB, 5)
+    if kit:
+        kp(img, "LIBROOMS4", "Cash cart", t, 800, 1880, 7); rig(img, "kit", "dance", t, 960, 1890, 8, True, g)
     return img
 
 def s_vault(t, u):
@@ -261,4 +263,4 @@ if __name__ == "__main__":
     if "--panels" in sys.argv: MV.panels(a[0], SHOTS, [], g, END, **KW)
     elif "--cover" in sys.argv: MV.frame_at(19.6, SHOTS, [], g, **KW).save(a[0], quality=92)
     else:
-        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v5.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
+        mix(MV.song_path("_dollar_mix")); MV.build(a[0] if a else "/home/claude/out/first_dollar_v6.mp4", "_dollar_mix", SHOTS, [], g, END, **KW)
