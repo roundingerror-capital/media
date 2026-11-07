@@ -87,7 +87,6 @@ def panel(img, title, rows, foot, u):
 def s_ping(t, u):
     img = band(MV.room("ROOM-01", t, 0.45))
     rig(img, "penny", "point", t, 360, 1500, 9, False, g, hop=False); rig(img, "ada", "shrug", t, 760, 1500, 9, True, g, hop=False)
-    prop(img, "Phone", t, 560, 1180, 9)
     mixed(img, [("THE ", INK), ("P&L", LIME), (" LOADS…", INK)], 170, 110)
     if u > 1.4: stamp(img, "ONE GREEN LINE?!", LIME, 270, 84)
     return nfa(img)
@@ -102,12 +101,9 @@ def s_book(t, u):
 
 def s_party(t, u):
     img = band(MV.lights(MV.room("ROOM-01", t, 0.5), t, g))
-    for lab, x, f in (("Balloon, lime", 110, 900), ("Balloon, gold", 970, 860), ("Balloon, red", 240, 820), ("Streamer", 800, 640)):
-        prop(img, lab, t, x, f + int(10 * math.sin(t * 2 + x)), 8)
     rig(img, "kit", "dance", t, 170, 1560, 8, False, g); rig(img, "ada", "celebrate", t, 400, 1560, 8, False, g)
     rig(img, "boss", "celebrate", t, 650, 1560, 9, False, g); rig(img, "roz", "celebrate", t, 900, 1560, 8, True, g)
     rig(img, "penny", "celebrate", t, 290, 1820, 8, False, g); rig(img, "theo", "celebrate", t, 790, 1820, 8, True, g)
-    prop(img, "Champagne", t, 540, 1830, 9, once_u=u); prop(img, "Party popper", t, 1000, 1800, 7, once_u=max(0, u - 1))
     confetti(img, t, 0)
     mixed(img, [("WE ARE ", INK), ("NOT", LIME), (" LEAVING", INK)], 150, 100)
     if u > 1.0: mixed(img, [("THIS ", INK), ("OFFICE!", LIME)], 270, 110)
@@ -116,7 +112,7 @@ def s_party(t, u):
 def s_toast(t, u):
     img = band(MV.lights(MV.room("ROOM-01", t, 0.5), t, g))
     rig(img, "boss", "celebrate", t, 540, 1620, 11, False, g)
-    prop(img, "Glass of white", t, 300, 1500, 9); prop(img, "Glass of white", t, 780, 1500, 9); prop(img, "Cake", t, 540, 1830, 9)
+    rig(img, "kit", "celebrate", t, 190, 1640, 8, False, g); rig(img, "penny", "celebrate", t, 890, 1640, 8, True, g)
     confetti(img, t, -3, 0.6)
     stamp(img, "TO THE", INK, 150, 90); mixed(img, [("FIRST ", LIME), ("DOLLAR!", INK)], 270, 120)
     return nfa(img)
@@ -125,12 +121,13 @@ WALL = (250, 720)      # left of Theo's framed chart on OFF-THEO-01's back wall
 def s_hang(t, u):
     img = band(MV.room("OFF-THEO-01", t, 0.62))
     if u < 2.0:
-        x = int(1000 - (u / 2.0) * 560); rig(img, "theo", "walk", t * 1.4, x, 1620, 9, True, g, hop=False)
-        img = framed(img, x - 150, 1560, 5)
+        x = int(1000 - (u / 2.0) * 700); rig(img, "theo", "walk", t * 1.4, x, 1620, 9, True, g, hop=False)
+        img = framed(img, x, 1480, 5)                      # held in front of him, below the face
     else:
-        rig(img, "theo", "holdsign", t, 400, 1620, 9, True, g, hop=False)
-        if u < 2.8: img = framed(img, WALL[0], WALL[1] + int((2.8 - u) * 120), 7); prop(img, "Hammer", t, 470, 1080 - int(20 * abs(math.sin(u * 14))), 7)
-        else: img = framed(img, *WALL, 7, glow=min(1, (u - 2.8) * 2))
+        if u < 2.8:                                        # at the wall, still holding it; taps (sound) then it's up
+            rig(img, "theo", "idle", t, 300, 1620, 9, True, g, hop=False); img = framed(img, 300, 1480, 5)
+        else:
+            img = framed(img, *WALL, 7, glow=min(1, (u - 2.8) * 2)); rig(img, "theo", "celebrate", t, 300, 1620, 9, True, g)
     stamp(img, "THEO DOES", INK, 150, 90); mixed(img, [("THE ", INK), ("HONORS.", LIME)], 270, 110)
     return nfa(img)
 
@@ -162,7 +159,7 @@ def mix(out_mp3):
     bus = sfx.Bus(END + 1)
     bus.add(sfx.ding(), 1.6, 0.2); bus.add(sfx.coin(), 4.2, 0.2); bus.add(sfx.coin(1), 4.6, 0.2)
     bus.add(sfx.impact(), 7.4, 0.35); bus.add(sfx.thump(), 7.45, 0.3); bus.add(sfx.arp_up(), 8.6, 0.15)
-    for k in range(4): bus.add(sfx.bonk(), 14.6 + 2.0 + k * 0.2, 0.12)
+    for k in range(3): bus.add(sfx.bonk(), 14.6 + 2.1 + k * 0.22, 0.12)
     bus.add(sfx.sparkle(), 17.4, 0.3); bus.add(sfx.sparkle(), 22.8, 0.25)
     m = bus.mix_into(y[: int(END * sfx.SR)]); wav = out_mp3.replace(".mp3", ".wav"); sf.write(wav, m, sfx.SR)
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav, "-b:a", "256k", out_mp3], check=True)
