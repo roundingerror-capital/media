@@ -232,8 +232,8 @@ def s_raid_mon(t, u):
                 poses=[(0.0, "theo", "idle"), (1.8, "theo", "block"), (1.8, "penny", "block"), (2.9, "theo", "shout"), (4.3, "theo", "atk"), (4.3, "penny", "atk")],
                 hit=1.8 <= s < 2.6)
     if s < 0.8: dialog(img, "THE LIQUIDATOR appears!", s)
-    elif s < 1.8: dialog(img, "THE LIQUIDATOR used MARGIN CALL!", s - 0.8)
-    elif s < 2.9: dialog(img, "It's super effective!", s - 1.8)
+    elif s < 1.8: dialog(img, "THE LIQUIDATOR casts MARGIN CALL!", s - 0.8)
+    elif s < 2.9: dialog(img, "The party takes a big hit!", s - 1.8)
     elif s < 4.3: warcry(img, "WHAT DOES THE\nRULEBOOK SAY?", 420, 760, s - 2.9); dialog(img, "THEO checks the rulebook...", s - 2.9)
     else: stamp(img, "HOLD TO EXPIRY!", LIME, 760, 120); dialog(img, "The party holds the line!", s - 4.3)
     return nfa(img)
@@ -254,8 +254,8 @@ def s_raid_tue(t, u):
                 party=[("ada", 18), ("roz", 42)],
                 poses=[(0.0, "ada", "idle"), (0.7, "roz", "block"), (1.7, "ada", "shout"), (2.6, "ada", "atk"), (2.6, "roz", "shout")], hit=0.9 <= s < 1.5)
     if s < 0.7: dialog(img, "THE HEADLINE HYDRA appears!", s)
-    elif s < 1.7: dialog(img, "THE HEADLINE HYDRA used BREAKING NEWS!", s - 0.7)
-    elif s < 2.6: warcry(img, "NO PANIC!", 380, 760, s - 1.7); dialog(img, "It's not very effective...", s - 1.7)
+    elif s < 1.7: dialog(img, "THE HEADLINE HYDRA screams BREAKING NEWS!", s - 0.7)
+    elif s < 2.6: warcry(img, "NO PANIC!", 380, 760, s - 1.7); dialog(img, "Nobody even flinched.", s - 1.7)
     else: warcry(img, "PUTS ARE\nNEVER ROLLED!", 480, 760, s - 2.6); dialog(img, "ROZ reads the rules out loud!", s - 2.6)
     return nfa(img)
 
@@ -278,7 +278,7 @@ def s_raid_thu(t, u):
                 poses=[(0.0, "theo", "block"), (0.0, "roz", "block"), (1.4, "theo", "shout"), (1.4, "ada", "shout"), (1.4, "roz", "shout"), (1.4, "penny", "shout"), (1.9, "theo", "atk"), (1.9, "ada", "atk")],
                 hit=0.6 <= s < 1.3)
     if s < 1.4:
-        dialog(img, "THE VOLATILITY STORM used BOOM BOOM BOOM!", s)
+        dialog(img, "THE VOLATILITY STORM unleashes BOOM BOOM BOOM!", s)
         if 0.6 <= s < 1.3: stamp(img, ["BOOM!", "BOOM! BOOM!", "BOOM! BOOM! BOOM!"][min(2, int((s - 0.6) / 0.24))], RED, 760, 110)
     elif s < 2.2: warcry(img, "STICK TO\nTHE RULES!", 500, 760, s - 1.4); dialog(img, "The whole fund sticks to the rules!", s - 1.4)
     else: stamp(img, "HELD THE LINE.", LIME, 760, 130); dialog(img, "THE VOLATILITY STORM fled!", s - 2.2)
@@ -312,8 +312,16 @@ SHOTS = [(0.0, s_open), (T(2), s_mon), (T(6), s_wipe), (T(6.5), s_raid_mon), (T(
 
 def mix(out_mp3):
     import librosa
-    y, sr = librosa.load(MV.song_path("set_rulebook_stress"), sr=sfx.SR, mono=False, duration=END + 0.5)
-    y = y.T if y.ndim == 2 else y
+    import numpy as np
+    full, sr = librosa.load(MV.song_path("set_rulebook_stress"), sr=sfx.SR, mono=False)
+    full = full.T if full.ndim == 2 else full
+    # Roz 11/7 (B-20261107-083805-roz-wvi2): verse 1 sings "tap approve", which is false. Keep the intro + first hook (bars 0-15),
+    # then jump on the bar line to the last hook (bars 56-63). Verse 1 (bars ~16-27) is never in the cut.
+    b = lambda n: int(round((0.163 + n * BAR) * sfx.SR)); xf = int(0.03 * sfx.SR)
+    a_, c_ = full[: b(16) + xf].copy(), full[b(56): b(56) + int((END + 0.5) * sfx.SR) - b(16)].copy()
+    ramp = np.linspace(0, 1, xf); ramp = ramp[:, None] if a_.ndim == 2 else ramp
+    a_[-xf:] = a_[-xf:] * (1 - ramp) + c_[:xf] * ramp
+    y = np.concatenate([a_, c_[xf:]])
     bus = sfx.Bus(END + 1)
     bus.add(sfx.whoosh(0.6), T(6) - 0.2, 0.35, duck=6)
     for st, d in ((T(6.5), T(3.5)), (T(12), T(2.5)), (T(16.5), T(2))):
@@ -337,4 +345,4 @@ if __name__ == "__main__":
     elif "--cover" in sys.argv: MV.frame_at(T(2) + 4.9, SHOTS, [], g, **KW).save(a[0], quality=92)
     else:
         mix(MV.song_path("_week_mix"))
-        MV.build(a[0] if a else "/home/claude/out/my_week_v1.mp4", "_week_mix", SHOTS, [], g, END, **KW)
+        MV.build(a[0] if a else "/home/claude/out/my_week_v6.mp4", "_week_mix", SHOTS, [], g, END, **KW)
