@@ -280,13 +280,25 @@ def cold_open_frame(S, fr, cover, pts):
     if len(line) > 1: d.line(line, fill=col, width=14)
     sc = 1 + 0.6 * max(0, 1 - (u - 0.1) / 0.15)
     big = co["big"]; pm = big.startswith("\u00b1"); num = big[1:] if pm else big   # a leading \u00b1 is drawn smaller, with a gap: OCR read "\u00b113.3%" as "413.3%" (2026-11-01)
-    f = fit(num, int((W - 2 * M - (160 if pm else 0)) * min(1.0, sc / 1.6 + 0.4)), 400, wdth=125, wght=900)
-    sw = 10; sf = "#000000" if win else "#FFFFFF"
+    # SCANNER-READABLE TEASER (the boss 2026-11-07: the publisher's OCR kept splitting "-8.7%" into "7%" and "-2.3%" into
+    # "83 Ye"; every flag was a false alarm the boss had to Ignore by hand). The number is drawn at normal width (wdth 100,
+    # not 125), each character with a small gap, weight 700 and no outline (tested 2026-11-07: zero OCR misreads on -2.3%, -8.7%, +14.2%, $700, $230, ±13.3%, -5.68%); it still punches in.
+    TW = int(os.environ.get("TEASER_WDTH", "100")); WG = int(os.environ.get("TEASER_WGHT", "700")); GAP = int(os.environ.get("TEASER_GAP", "18")); sw = int(os.environ.get("TEASER_SW", "0")); sf = "#000000"
+    SG = int(os.environ.get("TEASER_SIGN_GAP", "44"))     # extra room after a leading sign: "-5" touching read as "9"
+    DG = int(os.environ.get("TEASER_DOT_GAP", "0"))      # a little room around the decimal point: "8." was dropped as "7%"
+    def _gaps(txt): return [GAP + (SG if i == 0 and c in "-\u2212+$" else 0) + (DG if "." in (c, txt[i + 1]) else 0) for i, c in enumerate(txt[:-1])]
+    def _spaced(txt, fnt): return sum(d.textlength(c, font=fnt) for c in txt) + sum(_gaps(txt))
+    maxw = int((W - 2 * M - (160 if pm else 0)) * min(1.0, sc / 1.6 + 0.4)); sz = 400
+    while sz > 60 and _spaced(num, archivo(sz, TW, WG)) > maxw: sz -= 8
+    f = archivo(sz, TW, WG)
+    def _draw(x, y, txt, fnt):
+        gs = _gaps(txt) + [0]
+        for c, gp in zip(txt, gs): d.text((x, y), c, font=fnt, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf); x += d.textlength(c, font=fnt) + gp
     if pm:
-        pf = archivo(int(f.size * .62), 125, 900); pw = d.textlength("\u00b1", font=pf); nw = d.textlength(num, font=f); x0 = W // 2 - (pw + 34 + nw) / 2
+        pf = archivo(int(f.size * .62), TW, 900); pw = d.textlength("\u00b1", font=pf); nw = _spaced(num, f); x0 = W // 2 - (pw + 34 + nw) / 2
         d.text((x0, 720 - int(f.size * .14)), "\u00b1", font=pf, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf)
-        d.text((x0 + pw + 34, 720), num, font=f, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf)
-    else: d.text((W // 2, 720), big, font=f, fill=col, anchor="ms", stroke_width=sw, stroke_fill=sf)
+        _draw(x0 + pw + 34, 720, num, f)
+    else: _draw(W // 2 - _spaced(big, f) / 2, 720, big, f)
     if co.get("line"): d.text((W // 2, 400), co["line"], font=fit(co["line"], W - 2 * M, 96, wdth=125, wght=900), fill=INK, anchor="ms")
     if u > 0.45:
         sh = co.get("shout", "WAIT, WHAT?!"); f2 = fit(sh, W - 2 * M, int(110 * (1 + max(0, .25 - (u - .45)))), wdth=125, wght=900)

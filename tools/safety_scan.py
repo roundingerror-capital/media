@@ -90,8 +90,16 @@ def check(chunks, allow):
             for m in re.finditer(b, low): hits.append((where, "BANNED", m.group(0)))
         for m in MONEY.finditer(txt):
             v = m.group(0).replace(" ", "").lower().rstrip(",")
-            if v not in norm_allow: hits.append((where, "NUMBER not on --allow", m.group(0)))
+            if v not in norm_allow and not (str(where).startswith("video") and _decimal_tail(v, norm_allow)):
+                hits.append((where, "NUMBER not on --allow", m.group(0)))
     return hits
+def _decimal_tail(v, norm_allow):
+    """OCR FRAGMENTS (the boss 2026-11-07: every teaser flag was the scanner reading only the digits after a decimal point,
+    "8.7%" -> "7%", "14.2%" -> "2%", "5.68%" -> "68%"). Video frames only, % only: the token passes when it is EXACTLY the
+    part after the decimal point of a % figure already on the allow list. Captions, $ amounts and every other number are
+    checked exactly as before."""
+    if not v.endswith("%") or "." in v: return False
+    return any(a.endswith("%") and "." in a and a.split(".")[-1] == v for a in norm_allow)
 if __name__ == "__main__":
     a = sys.argv[1:]; video = a[0]; texts, allow, mode, banned_file, hits_dir = [], [], None, os.environ.get("RE_BANNED_FILE"), None
     for x in a[1:]:
