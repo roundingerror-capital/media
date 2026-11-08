@@ -16,10 +16,7 @@ def fitf(d, t, maxw, mx, wt=900, wd=125):
     while s > 20 and d.textlength(t, font=arch(s, wt, wd)) > maxw: s -= 4
     return arch(s, wt, wd)
 def sprite(name, h):
-    if os.environ.get("NEW_WAVE", "1") != "0":   # new wave (2026-11-03): the rig's idle frame, trimmed
-        import newwave; im = newwave.sprite(name)
-    else:
-        fn = {"ada": "ada_teal_1x.png"}.get(name, name + "_sprite_1x.png"); im = Image.open(SP + fn).convert("RGBA")
+    import newwave; im = newwave.sprite(name)      # Kit's rig, idle frame, trimmed (the old October sprites are never used, 2026-11-07)
     s = max(1, round(h / im.height)); return im.resize((im.width * s, im.height * s), Image.NEAREST)
 def brand(d, col=WHITE):
     d.text((72, TOP + 50), "≈ Rounding Error", font=arch(44, 800, 100), fill=col)
@@ -68,7 +65,7 @@ def make(out, style, big, line="", kicker="", who=("theo",), tone="lime", sub=""
             a = rnd.uniform(0, 2 * math.pi); r0 = 300 + rnd.uniform(0, 140); w = rnd.uniform(3, 12)
             p1 = (cx + math.cos(a) * r0, cy + math.sin(a) * r0); p2 = (cx + math.cos(a) * 1600, cy + math.sin(a) * 1600)
             n = (-math.sin(a) * w, math.cos(a) * w); d.polygon([p1, (p2[0] + n[0], p2[1] + n[1]), (p2[0] - n[0], p2[1] - n[1])], fill=(20, 20, 20))
-        sp = sprite(who[0], 560).convert("LA").convert("RGBA"); a_ = Image.open(SP + {"ada": "ada_teal_1x.png"}.get(who[0], who[0] + "_sprite_1x.png")).convert("RGBA")
+        sp = sprite(who[0], 560).convert("LA").convert("RGBA")
         img.paste(sp, (cx - sp.width // 2, cy + 260 - sp.height), sprite(who[0], 560))
         d.rectangle([40, TOP + 30, W - 40, TOP + 300], fill=BLACK); f = fitf(d, big, W - 140, 220); d.text((W // 2, TOP + 250), big, font=f, fill=LIME, anchor="ms")
         if line: d.rectangle([W - 560, BOT - 190, W - 40, BOT - 90], fill=WHITE, outline=BLACK, width=6); d.text((W - 300, BOT - 125), line, font=fitf(d, line, 480, 56, 900, 100), fill=BLACK, anchor="ms")

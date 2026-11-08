@@ -9,7 +9,7 @@ new wave"). One switch for every builder that runs through tools/daily.py (daili
               out (ours stand in front), animated pieces (plants, monitors, pets) playing, a slow camera drift across the room.
   covers      tools/covers2.py sprite() -> the rig's idle frame.
 
-daily.py calls install(module) at import; NEW_WAVE=0 in the environment turns it off (old look, for diffing).
+daily.py calls install(module) at import, always (NEW_WAVE=0 removed 2026-11-07: new art only).
 Assets: RE_ASSETS_DIR (local copy of Assets Designs, Kit V3.01)."""
 import os, math
 from PIL import Image, ImageDraw, ImageEnhance

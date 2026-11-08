@@ -635,8 +635,9 @@ def build_loop(S, out, cover_jpg, variant="a", workdir="/tmp"):
         p.stdin.write(fr.tobytes())
     p.stdin.close(); p.wait(); os.remove(wav); return out
 
-# NEW WAVE (the boss 2026-11-03): Kit's rigs, V3.01 rooms and rig covers for every video this file builds. NEW_WAVE=0 = old look.
-if os.environ.get("NEW_WAVE", "1") != "0":
+# NEW WAVE (the boss 2026-11-03): Kit's rigs, V3.01 rooms and rig covers for every video this file builds. Always on: the old
+# October sprites never reach a video (the boss 2026-11-07: "every net new vid only uses the new assets"; NEW_WAVE=0 removed).
+if True:
     import newwave; newwave.install(sys.modules[__name__])
     _scene_frame_old = scene_frame
     def scene_frame(S, t, heads_override=None):
