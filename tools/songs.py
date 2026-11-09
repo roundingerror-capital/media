@@ -56,7 +56,11 @@ def install(key, mp4):
     m = meta(key); got = _sha(mp4)
     if got != m["audio"]["sha256"]: raise SystemExit(f"{key}: downloaded file sha256 {got[:12]} != {m['audio']['sha256'][:12]}; not installed")
     out = os.path.join(DIR, key + ".mp3")
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", mp4, "-map", "0:a", "-c:a", "copy", out], check=True)
+    codec = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", mp4],
+                           capture_output=True, text=True).stdout.strip()
+    # 2026-11-09: the assets were re-encoded to AAC on 2026-11-07 (iPhone playback), so a stream copy into .mp3 fails; transcode those.
+    enc = ["-c:a", "copy"] if codec == "mp3" else ["-c:a", "libmp3lame", "-q:a", "2"]
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", mp4, "-map", "0:a", *enc, out], check=True)
     # Checked 2026-11-02 on hold_to_expiry_long: the extracted stream decodes to the original's samples exactly, minus 529
     # samples (12 ms) of encoder delay at the start (the LAME gapless header does not survive the mp4 wrap). Inaudible in a video.
     print(key, "->", out)
