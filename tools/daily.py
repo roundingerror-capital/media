@@ -283,8 +283,10 @@ def cold_open_frame(S, fr, cover, pts):
     # SCANNER-READABLE TEASER (the boss 2026-11-07: the publisher's OCR kept splitting "-8.7%" into "7%" and "-2.3%" into
     # "83 Ye"; every flag was a false alarm the boss had to Ignore by hand). The number is drawn at normal width (wdth 100,
     # not 125), each character with a small gap, weight 700 and no outline (tested 2026-11-07: zero OCR misreads on -2.3%, -8.7%, +14.2%, $700, $230, ±13.3%, -5.68%); it still punches in.
-    TW = int(os.environ.get("TEASER_WDTH", "100")); WG = int(os.environ.get("TEASER_WGHT", "700")); GAP = int(os.environ.get("TEASER_GAP", "18")); sw = int(os.environ.get("TEASER_SW", "0")); sf = "#000000"
-    SG = int(os.environ.get("TEASER_SIGN_GAP", "44"))     # extra room after a leading sign: "-5" touching read as "9"
+    # 2026-11-13 (the boss: "too skinny"): heavier and wider, weight 800, width 112, 22 px gap, 56 px after a sign;
+    # OCR-tested on 16 real figures (-4.53%, -8.7%, -16.5%, $1,015, +$115, $19.73 ...): 0 misreads. Weight 900 broke the minus sign (read as a trademark sign).
+    TW = int(os.environ.get("TEASER_WDTH", "112")); WG = int(os.environ.get("TEASER_WGHT", "800")); GAP = int(os.environ.get("TEASER_GAP", "22")); sw = int(os.environ.get("TEASER_SW", "0")); sf = "#000000"
+    SG = int(os.environ.get("TEASER_SIGN_GAP", "56"))     # extra room after a leading sign: "-5" touching read as "9"
     DG = int(os.environ.get("TEASER_DOT_GAP", "0"))      # a little room around the decimal point: "8." was dropped as "7%"
     def _gaps(txt): return [GAP + (SG if i == 0 and c in "-\u2212+$" else 0) + (DG if "." in (c, txt[i + 1]) else 0) for i, c in enumerate(txt[:-1])]
     def _spaced(txt, fnt): return sum(d.textlength(c, font=fnt) for c in txt) + sum(_gaps(txt))
