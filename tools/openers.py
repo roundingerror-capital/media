@@ -13,31 +13,36 @@ from make_reel import W, H, archivo, mono, fit
 # Scene looks play one of Kit's looping pixel rooms (tools/scenes.py) at full colour behind a sign that fits the room, with a
 # rotating cast (all five mascots, not only Penny: the boss 2026-11-13 "use more than Penny ... office backgrounds, relevant places").
 # id: (scene, sign style, cast, tone it is kept for or None)
-SCENE_LOOKS = {
-    "floor":     ("SCN-01", "station",   ["theo", "penny"], None),
-    "boardroom": ("SCN-15", "screen",    ["theo", "ada", "penny", "roz", "kit"], None),
-    "subway":    ("SCN-09", "station",   ["kit", "penny"], None),
-    "rooftop":   ("SCN-03", "neon",      ["ada", "theo"], None),
-    "vault":     ("SCN-16", "plaque",    ["roz", "theo"], None),
-    "bodega":    ("SCN-11", "neon",      ["kit", "ada"], None),
-    "lobby":     ("SCN-08", "plaque",    ["roz", "penny"], None),
-    "arcade":    ("SCN-06", "neon",      ["kit", "theo"], None),
-    "rain":      ("SCN-10", "neon",      ["penny"], "loss"),
+SCENE_LOOKS = {   # Kit's V3.01 rooms only (Assets Designs, via newwave.room_frame). Never the boss's office.
+    "floor":       ("ROOM-01",      "station", ["theo", "penny"], None),
+    "boardroom":   ("ROOM-15",      "screen",  ["theo", "ada", "roz"], None),
+    "theo_office": ("OFF-THEO-01",  "plaque",  ["theo"], None),
+    "penny_office":("OFF-PENNY-01", "neon",    ["penny", "kit"], None),
+    "ada_office":  ("OFF-ADA-01",   "screen",  ["ada"], None),
+    "roz_office":  ("OFF-ROZ-01",   "plaque",  ["roz", "theo"], None),
+    "kit_office":  ("OFF-KIT-01",   "neon",    ["kit"], None),
+    "vault":       ("ROOM-16",      "plaque",  ["roz", "theo"], None),
+    "subway":      ("ROOM-09",      "station", ["kit", "penny"], None),
+    "servers":     ("ROOM-02",      "screen",  ["ada", "kit"], None),
+    "lobby":       ("ROOM-08",      "plaque",  ["roz", "penny"], None),
+    "bodega":      ("ROOM-11",      "neon",    ["kit", "ada"], None),
+    "rooftop":     ("ROOM-03",      "neon",    ["ada", "theo"], None),
+    "arcade":      ("ROOM-06",      "neon",    ["kit", "theo"], None),
+    "rain":        ("ROOM-10",      "neon",    ["penny"], "loss"),
 }
 FLAT_CAST = {"receipt": ["ada"], "breaking": ["theo"], "headline": ["roz"], "chalk": ["ada", "kit"]}
 # The order is the rotation: a place, then a flat graphic look, so neighbours never match.
-LOOKS = ["glow", "receipt", "breaking", "chalk"]
-# 2026-11-13 (the boss: "did you use OLD ASSETS?"): the room looks drew the October SCN loops, not Kit's current rooms, and the
-# front-page look was rejected. All pulled from the rotation until the rooms are rebuilt on Kit's V3.01 stages (newwave.room_frame).
-# Parked (still callable with spec["cold_open"]["look"], but out of the rotation): "rooftop" and "arcade" each gave a wrong
-# number in the scanner test (2026-11-13: "-16.5%" read as "18.5%"; a stray "3%"). Every look in LOOKS scored 0 wrong numbers
-# on 16 figures x 7 frames x both scanner passes.
+LOOKS = ["floor", "receipt", "theo_office", "boardroom", "glow", "subway", "penny_office", "breaking", "vault", "kit_office", "chalk",
+         "lobby", "servers", "bodega", "rooftop", "rain"]
+# Every look in LOOKS scored 0 wrong numbers in the scanner test (2026-11-13: 16 figures x 7 frames x both scanner passes).
+# Parked (callable by name, out of the rotation): "ada_office", "roz_office", "arcade" (each produced a wrong number in that test)
+# and "headline" (the boss rejected the front-page look). The room looks use Kit's V3.01 rooms and rigs only: the first
+# version drew the October SCN loops and the boss threw it out ("did you use OLD ASSETS?").
 def pick(day_ordinal, win):
-    """The look for a date; a look kept for the other tone is skipped to the next one."""
-    for k in range(len(LOOKS)):
-        lk = LOOKS[(day_ordinal + k) % len(LOOKS)]; tone = SCENE_LOOKS.get(lk, (0, 0, 0, None))[3]
-        if tone is None or (tone == "win") == win: return lk
-    return "glow"
+    """The look for a date. A look kept for the other tone hands over to the one half a cycle away, so neighbours still differ."""
+    i = day_ordinal % len(LOOKS); tone = SCENE_LOOKS.get(LOOKS[i], (0, 0, 0, None))[3]
+    if tone is not None and (tone == "win") != win: i = (i + len(LOOKS) // 2) % len(LOOKS)
+    return LOOKS[i]
 SERIF = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 SANS_B = "/usr/share/fonts/opentype/inter/InterDisplay-Black.otf"
 def serif(sz): return ImageFont.truetype(SERIF, sz)
@@ -176,30 +181,38 @@ def _sign(img, d, style, box, u, col):
         on = u > 0.2 or int(u * 20) % 2 == 0; c = col if on else (60, 40, 60)
         d.rectangle(box, fill=PANEL)
         for w, a in ((30, 0.25), (18, 0.5), (8, 1.0)): d.rounded_rectangle([x0 - 18, y0 - 18, x1 + 18, y1 + 18], 30, outline=tuple(int(v * a) for v in c), width=w)
+DIM = 0.7
+def _rigs(img, d, cast, u, win, base=1690):
+    """Kit's rigs at a whole-number scale, feet on the room's floor line, each acting out the result (never squashed or rotated)."""
+    import rigs, newwave
+    n = len(cast); k = 7 if n <= 2 else 6; xs = {1: [0.5], 2: [0.3, 0.7], 3: [0.2, 0.5, 0.8]}[n]
+    for i, (nm, xf) in enumerate(zip(cast, xs)):
+        want = ["celebrate"] if win else (["facepalm", "shakehead"] if i % 2 == 0 else ["shakehead", "shrug"])
+        an = next((a for a in want if a in rigs.anims(nm)), "idle")
+        flip = newwave.FLIP.get(nm, False) and xf > 0.5
+        sp = rigs.frame(nm, an, u + 0.13 * i, k=k, flip=flip, loop=True)
+        side = -1 if xf < 0.5 else 1; run = int(side * 700 * (1 - ease((u - 0.02 - 0.04 * i) / 0.22))) if n > 1 else 0
+        xc = int(W * xf) + run; bw, _ = rigs.body(nm, "idle", k)
+        d.ellipse([xc - bw * 0.33, base - 8, xc + bw * 0.33, base + 16], fill=(26, 26, 26))
+        img.paste(sp, (xc - sp.width // 2, base - sp.height), sp)
 def scene_look(look, S, u, pts, num, sprite, win):
-    import scenes
-    from PIL import ImageEnhance
-    sid, style, cast, _ = SCENE_LOOKS[look]; co = S["cold_open"]
-    # Scanner-tested 2026-11-13: the room at half brightness plus a full-width dark band behind the sign gave 0 wrong
-    # numbers; a brighter room or a sign with the room showing beside it made the OCR read "-8.7%" as "3.7%".
-    img = ImageEnhance.Brightness(scenes.frame(sid, u)).enhance(0.5); d = ImageDraw.Draw(img)
+    import newwave
+    room, style, cast, _ = SCENE_LOOKS[look]; co = S["cold_open"]
+    img = newwave.room_frame(room, u, DIM).copy(); d = ImageDraw.Draw(img)
     col = (200, 240, 60) if win else (245, 60, 60)
     drop = int(-900 * (1 - ease((u - 0.06) / 0.12)))                     # the sign drops in fast and is still by 0.2 s (the scanner looks at 0.25 s)
     box = (84, 500 + drop, W - 84, 850 + drop)
-    d.rectangle([0, box[1] - 60, W, box[3] + 60], fill=PANEL)
+    d.rectangle([0, box[1] - 60, W, box[3] + 60], fill=PANEL)            # full-width dark band: the scanner misread numbers with the room beside the sign
     for y in (box[1] - 60, box[3] + 54): d.rectangle([0, y, W, y + 6], fill=col)
     _sign(img, d, style, box, u, col)
     if u >= 0.3: num(d, W // 2, 790, col, W - 2 * 130)                    # the sign lands empty, then the number slams on and never moves
     if co.get("line"):
         f = _wfit(d, co["line"], W - 2 * 90, 84, lambda s: archivo(s, 125, 900)); tw = d.textlength(co["line"], font=f)
         d.rounded_rectangle([W // 2 - tw / 2 - 26, 356, W // 2 + tw / 2 + 26, 458], 12, fill=(8, 8, 12)); d.text((W // 2, 436), co["line"], font=f, fill=(242, 242, 238), anchor="ms")
-    if look == "arcade":
-        t = _pixel_text("LEVEL UP!" if win else "GAME OVER", 6, col)
-        if u > 0.5 or int(u * 8) % 2 == 0: img.paste(t, (470 - t.width // 2, 1120), t)
-    if u > 0.45:
-        sh = co.get("shout", "WAIT, WHAT?!"); f = _wfit(d, sh, 780, int(108 * (1 + max(0, .25 - (u - .45)))), lambda s: archivo(s, 125, 900))
+    if u >= 0.3:                                                         # the shout lands with the number (scanner test: a number alone on the band was misread)
+        sh = co.get("shout", "WAIT, WHAT?!"); f = _wfit(d, sh, 780, int(108 * (1 + max(0, .25 - (u - .3)))), lambda s: archivo(s, 125, 900))
         d.text((470, 1010), sh, font=f, fill=(242, 242, 238), anchor="ms", stroke_width=8, stroke_fill=(0, 0, 0))
-    _cast(img, sprite, cast, u)
+    _rigs(img, d, cast, u, win)
     if u < 0.2:                                                          # white flash on the cut
         img = Image.blend(img, Image.new("RGB", (W, H), (255, 255, 255)), 0.7 * (1 - u / 0.2))
     return img

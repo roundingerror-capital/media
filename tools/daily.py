@@ -273,7 +273,7 @@ def opener_look(S):
     so two days in a row never open the same way (the boss 2026-11-13: "all videos starting to look the same")."""
     import openers, datetime
     lk = S["cold_open"].get("look") or S.get("look")
-    if lk in openers.LOOKS: return lk
+    if lk == "glow" or lk in openers.FUNCS: return lk   # a parked look can still be asked for by name
     m = re.search(r"(\d{4})-(\d{2})-(\d{2})", S.get("_out", ""))
     day = datetime.date(*map(int, m.groups())) if m else datetime.date.today()
     return openers.pick(day.toordinal(), S["cold_open"].get("tone") == "win")
@@ -299,7 +299,10 @@ def cold_open_frame(S, fr, cover, pts):
     look = opener_look(S)
     if look != "glow":
         import openers
-        return openers.FUNCS[look](S, u, pts, lambda d, cx, y, col, maxw: teaser_number(d, co["big"], cx, y, col, maxw), sprite_state, win)
+        try: return openers.FUNCS[look](S, u, pts, lambda d, cx, y, col, maxw: teaser_number(d, co["big"], cx, y, col, maxw), sprite_state, win)
+        except Exception as e:   # a room file missing from the local copy of Assets Designs must never break a build: open on the glow
+            if not S.get("_look_warned"): print(f"opener look {look} failed ({e!r}); falling back to glow", file=sys.stderr); S["_look_warned"] = True
+            S["cold_open"]["look"] = "glow"
     col = LIME_T if win else RED; glow = (40, 70, 0) if win else (120, 8, 8)
     pulse = 0.5 + 0.5 * math.sin(u * 2 * math.pi * 4)
     img = Image.composite(Image.new("RGB", (W, H), glow), Image.new("RGB", (W, H), (0, 0, 0)), _vignette().point(lambda v: int(v * (0.45 + 0.55 * pulse))))
