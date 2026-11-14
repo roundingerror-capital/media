@@ -268,9 +268,38 @@ def _vignette():
         yy, xx = np.mgrid[0:H, 0:W]; r = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2)
         _VIG = Image.fromarray((np.clip((r - 0.35) / 0.9, 0, 1) * 255).astype("uint8"), "L")
     return _VIG
+def opener_look(S):
+    """Which opening look (tools/openers.py). spec["cold_open"]["look"] wins; otherwise it rotates by the post's date,
+    so two days in a row never open the same way (the boss 2026-11-13: "all videos starting to look the same")."""
+    import openers, datetime
+    lk = S["cold_open"].get("look") or S.get("look")
+    if lk in openers.LOOKS: return lk
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", S.get("_out", ""))
+    day = datetime.date(*map(int, m.groups())) if m else datetime.date.today()
+    return openers.pick(day.toordinal(), S["cold_open"].get("tone") == "win")
+def teaser_number(d, big, cx, y, col, maxw):
+    """The big number, drawn the scanner-tested way (Inter Display Black, true minus, spaced, a leading \u00b1 smaller). Baseline y, centred on cx."""
+    # Gaps scale with the size (8% of the size between characters, +25% after a leading sign): fixed pixel gaps read
+    # "-8.7%" as "38.7%" at some sizes. Size sweep 140-296 px x 16 figures (2026-11-13): no wrong number at any size.
+    pm = big.startswith("\u00b1"); num = (big[1:] if pm else big).replace("-", "\u2212")
+    FP = os.path.join(HERE, "fonts", "InterDisplay-Black.otf")
+    gaps = lambda t, z: [int(.08 * z) + (int(.25 * z) if i == 0 and c in "\u2212+$" else 0) for i, c in enumerate(t[:-1])]
+    sp = lambda t, f: sum(d.textlength(c, font=f) for c in t) + sum(gaps(t, f.size))
+    sz = 400; avail = maxw - (160 if pm else 0)
+    while sz > 60 and sp(num, ImageFont.truetype(FP, sz)) > avail: sz -= 8
+    f = ImageFont.truetype(FP, sz); nw = sp(num, f); x = cx - nw / 2
+    if pm:
+        pf = archivo(int(sz * .62), 112, 900); pw = d.textlength("\u00b1", font=pf); x = cx - (pw + 34 + nw) / 2
+        d.text((x, y - int(sz * .14)), "\u00b1", font=pf, fill=col, anchor="ls"); x += pw + 34
+    for c, g in zip(num, gaps(num, sz) + [0]): d.text((x, y), c, font=f, fill=col, anchor="ls"); x += d.textlength(c, font=f) + g
+    return sz
 def cold_open_frame(S, fr, cover, pts):
     if fr < 3: return cover
     co = S["cold_open"]; u = fr / FPS; win = co.get("tone") == "win"
+    look = opener_look(S)
+    if look != "glow":
+        import openers
+        return openers.FUNCS[look](S, u, pts, lambda d, cx, y, col, maxw: teaser_number(d, co["big"], cx, y, col, maxw), sprite_state, win)
     col = LIME_T if win else RED; glow = (40, 70, 0) if win else (120, 8, 8)
     pulse = 0.5 + 0.5 * math.sin(u * 2 * math.pi * 4)
     img = Image.composite(Image.new("RGB", (W, H), glow), Image.new("RGB", (W, H), (0, 0, 0)), _vignette().point(lambda v: int(v * (0.45 + 0.55 * pulse))))
@@ -285,26 +314,7 @@ def cold_open_frame(S, fr, cover, pts):
     # not 125), each character with a small gap, weight 700 and no outline (tested 2026-11-07: zero OCR misreads on -2.3%, -8.7%, +14.2%, $700, $230, ±13.3%, -5.68%); it still punches in.
     # 2026-11-13 (the boss: "too skinny"): heavier and wider, weight 800, width 112, 22 px gap, 56 px after a sign;
     # OCR-tested on 16 real figures (-4.53%, -8.7%, -16.5%, $1,015, +$115, $19.73 ...): 0 misreads. Weight 900 broke the minus sign (read as a trademark sign).
-    TW = int(os.environ.get("TEASER_WDTH", "112")); WG = int(os.environ.get("TEASER_WGHT", "800")); GAP = int(os.environ.get("TEASER_GAP", "22")); sw = int(os.environ.get("TEASER_SW", "0")); sf = "#000000"
-    SG = int(os.environ.get("TEASER_SIGN_GAP", "56"))     # extra room after a leading sign: "-5" touching read as "9"
-    DG = int(os.environ.get("TEASER_DOT_GAP", "0"))      # a little room around the decimal point: "8." was dropped as "7%"
-    def _gaps(txt): return [GAP + (SG if i == 0 and c in "-\u2212+$" else 0) + (DG if "." in (c, txt[i + 1]) else 0) for i, c in enumerate(txt[:-1])]
-    def _spaced(txt, fnt): return sum(d.textlength(c, font=fnt) for c in txt) + sum(_gaps(txt))
-    maxw = int((W - 2 * M - (160 if pm else 0)) * min(1.0, sc / 1.6 + 0.4)); sz = 400
-    # 2026-11-13 (the boss: "I hate that 4"): digits now Inter Display Black (closed 4); OCR-tested 15/16 clean, the 16th blank (never a wrong number).
-    # TEASER_FONT=archivo brings back the old look.
-    _nf = (lambda z: archivo(z, TW, WG)) if os.environ.get("TEASER_FONT") == "archivo" else (lambda z: ImageFont.truetype(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "InterDisplay-Black.otf"), z))
-    if os.environ.get("TEASER_FONT") != "archivo": num = num.replace("-", "\u2212"); big = ("\u00b1" + num) if pm else num
-    while sz > 60 and _spaced(num, _nf(sz)) > maxw: sz -= 8
-    f = _nf(sz)
-    def _draw(x, y, txt, fnt):
-        gs = _gaps(txt) + [0]
-        for c, gp in zip(txt, gs): d.text((x, y), c, font=fnt, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf); x += d.textlength(c, font=fnt) + gp
-    if pm:
-        pf = archivo(int(f.size * .62), TW, 900); pw = d.textlength("\u00b1", font=pf); nw = _spaced(num, f); x0 = W // 2 - (pw + 34 + nw) / 2
-        d.text((x0, 720 - int(f.size * .14)), "\u00b1", font=pf, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf)
-        _draw(x0 + pw + 34, 720, num, f)
-    else: _draw(W // 2 - _spaced(big, f) / 2, 720, big, f)
+    teaser_number(d, big, W // 2, 720, col, int((W - 2 * M) * min(1.0, sc / 1.6 + 0.4)))   # one tested drawer for every look
     if co.get("line"): d.text((W // 2, 400), co["line"], font=fit(co["line"], W - 2 * M, 96, wdth=125, wght=900), fill=INK, anchor="ms")
     if u > 0.45:
         sh = co.get("shout", "WAIT, WHAT?!"); f2 = fit(sh, W - 2 * M, int(110 * (1 + max(0, .25 - (u - .45)))), wdth=125, wght=900)
@@ -599,6 +609,7 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
     BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], groove=not S.get("music"), cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0, sfx=meme_sfx(S, ((COLD_F if S.get("cold_open") else COVER_F) + IF) / FPS))
     if S.get("music"): wav = mix_music(S, wav, total + 0.3, workdir)
+    S["_out"] = out   # opener_look rotates by the post's date in the path
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
     hov = S.get("b", {}).get("hook") if variant == "b" else None
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",

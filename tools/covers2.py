@@ -27,9 +27,9 @@ def bigtext(d, xy, txt, maxw, mx, fill, anchor="ms", wt=900, wd=125, **kw):
     txt = txt.replace("-", "\u2212")   # Inter's hyphen is short and low; OCR read it as a trademark sign
     GAP, SG = 22, 56   # 2026-11-13: digits in Inter Display Black (the boss: 'I hate that 4'); OCR-tested 15/16 clean
     mx = min(mx, fitf(d, txt, maxw, mx, wt, wd).size)          # never taller than the old look: layouts stay the same
-    gaps = [GAP + (SG if i == 0 and c in "-\u2212+$\u00b1" else 0) for i, c in enumerate(txt[:-1])] + [0]
     s = mx
-    while s > 20:
+    while s > 20:   # gaps scale with size (8% / +25% after a sign), same as daily.teaser_number
+        gaps = [int(.08 * s) + (int(.25 * s) if i == 0 and c in "-\u2212+$\u00b1" else 0) for i, c in enumerate(txt[:-1])] + [0]
         f = ImageFont.truetype(F + "InterDisplay-Black.otf", s); w = sum(d.textlength(c, font=f) for c in txt) + sum(gaps)
         if w <= maxw: break
         s -= 4
