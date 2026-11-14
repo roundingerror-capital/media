@@ -26,7 +26,9 @@ SCENE_LOOKS = {
 }
 FLAT_CAST = {"receipt": ["ada"], "breaking": ["theo"], "headline": ["roz"], "chalk": ["ada", "kit"]}
 # The order is the rotation: a place, then a flat graphic look, so neighbours never match.
-LOOKS = ["floor", "receipt", "subway", "glow", "boardroom", "headline", "vault", "breaking", "bodega", "chalk", "lobby", "rain"]
+LOOKS = ["glow", "receipt", "breaking", "chalk"]
+# 2026-11-13 (the boss: "did you use OLD ASSETS?"): the room looks drew the October SCN loops, not Kit's current rooms, and the
+# front-page look was rejected. All pulled from the rotation until the rooms are rebuilt on Kit's V3.01 stages (newwave.room_frame).
 # Parked (still callable with spec["cold_open"]["look"], but out of the rotation): "rooftop" and "arcade" each gave a wrong
 # number in the scanner test (2026-11-13: "-16.5%" read as "18.5%"; a stray "3%"). Every look in LOOKS scored 0 wrong numbers
 # on 16 figures x 7 frames x both scanner passes.
