@@ -97,7 +97,7 @@ def breaking(S, u, pts, num, sprite, win):
     if u > 0.45:
         sh = co.get("shout", "WAIT, WHAT?!"); f = _wfit(d, sh, 760, 100, lambda s: archivo(s, 125, 900))
         d.text((W // 2 - 50, 1010), sh, font=f, fill="white", anchor="ms", stroke_width=6, stroke_fill="black")
-    crawl = "ROUNDING ERROR  ●  NOT ADVICE  ●  " * 4; f = mono(34, True)     # words only on the crawl
+    crawl = "ROUNDING ERROR  ///  NOT ADVICE  ///  " * 4; f = mono(34, True)     # words only on the crawl
     d.rectangle([0, 1290, 880, 1350], fill=(255, 205, 40)); d.text((60 - int(u * 900) % 700, 1334), crawl, font=f, fill=(15, 15, 25), anchor="ls")
     d.rectangle([880, 1290, W, 1350], fill=(10, 18, 40))
     _penny(img, sprite, u, y=1780, look="breaking")
