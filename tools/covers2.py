@@ -24,12 +24,13 @@ def bigtext(d, xy, txt, maxw, mx, fill, anchor="ms", wt=900, wd=125, **kw):
     an 18 px gap between characters, extra room after a leading sign, no outline. Words keep the old look."""
     if not any(c.isdigit() for c in txt):
         f = fitf(d, txt, maxw, mx, wt, wd); d.text(xy, txt, font=f, fill=fill, anchor=anchor, **kw); return
-    GAP, SG = 22, 56   # 2026-11-13: heavier (800/112, the boss: 'too skinny'), OCR-tested 0 misreads
+    txt = txt.replace("-", "\u2212")   # Inter's hyphen is short and low; OCR read it as a trademark sign
+    GAP, SG = 22, 56   # 2026-11-13: digits in Inter Display Black (the boss: 'I hate that 4'); OCR-tested 15/16 clean
     mx = min(mx, fitf(d, txt, maxw, mx, wt, wd).size)          # never taller than the old look: layouts stay the same
     gaps = [GAP + (SG if i == 0 and c in "-\u2212+$\u00b1" else 0) for i, c in enumerate(txt[:-1])] + [0]
     s = mx
     while s > 20:
-        f = arch(s, 800, 112); w = sum(d.textlength(c, font=f) for c in txt) + sum(gaps)
+        f = ImageFont.truetype(F + "InterDisplay-Black.otf", s); w = sum(d.textlength(c, font=f) for c in txt) + sum(gaps)
         if w <= maxw: break
         s -= 4
     x = xy[0] - (w / 2 if anchor[0] == "m" else w if anchor[0] == "r" else 0)

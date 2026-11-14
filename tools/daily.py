@@ -6,7 +6,7 @@ A spec may define "b" overrides: {"hook": [...heads...]} replaces scene 1's head
 No numbers here: every figure lives in the spec and must be on a Theo fact sheet."""
 import re, os, sys, math, random, subprocess, colorsys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from make_reel import W, H, FPS, archivo, mono, fit, fade, blend
 import beat as BEAT
 import explain as EXPLAIN
@@ -291,8 +291,12 @@ def cold_open_frame(S, fr, cover, pts):
     def _gaps(txt): return [GAP + (SG if i == 0 and c in "-\u2212+$" else 0) + (DG if "." in (c, txt[i + 1]) else 0) for i, c in enumerate(txt[:-1])]
     def _spaced(txt, fnt): return sum(d.textlength(c, font=fnt) for c in txt) + sum(_gaps(txt))
     maxw = int((W - 2 * M - (160 if pm else 0)) * min(1.0, sc / 1.6 + 0.4)); sz = 400
-    while sz > 60 and _spaced(num, archivo(sz, TW, WG)) > maxw: sz -= 8
-    f = archivo(sz, TW, WG)
+    # 2026-11-13 (the boss: "I hate that 4"): digits now Inter Display Black (closed 4); OCR-tested 15/16 clean, the 16th blank (never a wrong number).
+    # TEASER_FONT=archivo brings back the old look.
+    _nf = (lambda z: archivo(z, TW, WG)) if os.environ.get("TEASER_FONT") == "archivo" else (lambda z: ImageFont.truetype(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "InterDisplay-Black.otf"), z))
+    if os.environ.get("TEASER_FONT") != "archivo": num = num.replace("-", "\u2212"); big = ("\u00b1" + num) if pm else num
+    while sz > 60 and _spaced(num, _nf(sz)) > maxw: sz -= 8
+    f = _nf(sz)
     def _draw(x, y, txt, fnt):
         gs = _gaps(txt) + [0]
         for c, gp in zip(txt, gs): d.text((x, y), c, font=fnt, fill=col, anchor="ls", stroke_width=sw, stroke_fill=sf); x += d.textlength(c, font=fnt) + gp
