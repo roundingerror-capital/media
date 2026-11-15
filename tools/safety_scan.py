@@ -10,6 +10,9 @@ T-111 (2026-11-13): a NUMBER read in a VIDEO frame blocks only when the same tok
   and it is not a near-match of an allowed figure (near_allowed) or a garbled echo of one read correctly in the same frame (echo_of). Fading, shaking or sliding text reads differently every
   frame and drops out. Unchanged: private-list hits on every frame and text, and exact matching for caption/title/description
   text. --strict = the old rule (every frame, exact match), for comparing.
+T-112 (2026-11-15, Roz's sign-off condition): every video number the T-111 rules let through is printed as a SKIP line
+  (time span, token, reason: unstable / near-match of <figure> / echo of <figure>) and saved to DIR/skipped.json with
+  --hits-dir. A one-frame read at an odd quarter second (x.25 s, x.75 s) is marked "NOT in Roz's 0.5 s frames".
 --hits-dir DIR (T-103, the boss 2026-11-05: "put the frame with the issue ... a red box ... so I can click ignore"):
   also writes DIR/hits.json and, for each NUMBER hit in the video, DIR/<id>.jpg = that frame (360 px wide) with a red box
   around what was read. Hits of the same figure less than 0.6 s apart are grouped into one. Private-list (BANNED) hits get
@@ -106,11 +109,11 @@ def near_allowed(v, norm_allow):
         if ("$" if a.startswith("$") else "%") != kind: continue
         da = _digits(a)
         if not da: continue
-        if dv == da: return True
+        if dv == da: return a
         sh, lg = (dv, da) if len(dv) <= len(da) else (da, dv)
-        if len(sh) >= 2 and sh in lg and len(lg) - len(sh) <= 2: return True
-        if min(len(dv), len(da)) >= 3 and _lev(v, a) <= (2 if min(len(dv), len(da)) >= 5 else 1): return True
-    return False
+        if len(sh) >= 2 and sh in lg and len(lg) - len(sh) <= 2: return a
+        if min(len(dv), len(da)) >= 3 and _lev(v, a) <= (2 if min(len(dv), len(da)) >= 5 else 1): return a
+    return None
 _CONF = {frozenset("68"), frozenset("38"), frozenset("08"), frozenset("17"), frozenset("56")}  # digit pairs OCR swaps
 def echo_of(v, present):
     """T-111 (b2): the scan reads every frame twice (normal and high contrast). When one pass reads an allowed figure
@@ -122,13 +125,28 @@ def echo_of(v, present):
     for a in present:
         if ("$" if a.startswith("$") else "%") != kind: continue
         da = _digits(a)
-        if len(dv) < len(da) and da.startswith(dv): return True
+        if len(dv) < len(da) and da.startswith(dv): return a
         lead = _digits(re.split(r"[.,]", a.lstrip("$"))[0])
         if len(lead) >= 2 and len(dv) == len(lead) and len(da) > len(lead):
             diff = [(x, y) for x, y in zip(dv, lead) if x != y]
-            if len(diff) == 1 and frozenset(diff[0]) in _CONF: return True
-    return False
+            if len(diff) == 1 and frozenset(diff[0]) in _CONF: return a
+    return None
 STATS = {"unstable": 0, "near": 0, "echo": 0}
+SKIPPED = []  # T-112: every video number token NOT blocked by the T-111 rules, so Roz can eye-check each spot
+def _skip(t, raw, reason, figure, run):
+    """Group by token + reason + figure while the frames are consecutive (0.25 s apart)."""
+    g = SKIPPED[-1] if SKIPPED else None
+    for x in reversed(SKIPPED[-12:]):
+        if x["token"] == raw.strip() and x["reason"] == reason and x["figure"] == figure and t - x["t_end"] <= 0.26: g = x; break
+    else: g = None
+    if g: g["t_end"] = t; g["frames"] += 1; return
+    SKIPPED.append({"t": t, "t_end": t, "frames": 1, "token": raw.strip(), "reason": reason, "figure": figure, "run": run})
+def _run(sets, k, v):
+    lo = k
+    while lo > 0 and v in sets[lo - 1]: lo -= 1
+    hi = k
+    while hi + 1 < len(sets) and v in sets[hi + 1]: hi += 1
+    return hi - lo + 1
 def check(chunks, allow, strict=False):
     """chunks = [(where, text)], video frames first in time order (where like ' 0.75s'), then text files.
     Private-list (BANNED) hits: every frame and every text, always. Number hits in text files: exact allow list, always.
@@ -137,17 +155,13 @@ def check(chunks, allow, strict=False):
     strict=True is the old behaviour (every frame, exact match)."""
     hits = []
     norm_allow = {_norm(a) for a in allow}
-    STATS["unstable"] = STATS["near"] = STATS["echo"] = 0
+    STATS["unstable"] = STATS["near"] = STATS["echo"] = 0; SKIPPED.clear()
     is_frame = lambda w: w.endswith("s") and w.strip()[:-1].replace(".", "").isdigit()
     frames = [i for i, (w, _) in enumerate(chunks) if is_frame(w)]
     toks = {i: [(m.group(0), _norm(m.group(0))) for m in MONEY.finditer(chunks[i][1])] for i in frames}
     sets = [set(v for _, v in toks[i]) for i in frames]
     def stable(k, v):  # frame number k (position in `frames`): is v part of a run of STABLE_FRAMES frames?
-        lo = k
-        while lo > 0 and v in sets[lo - 1]: lo -= 1
-        hi = k
-        while hi + 1 < len(sets) and v in sets[hi + 1]: hi += 1
-        return hi - lo + 1 >= STABLE_FRAMES
+        return _run(sets, k, v) >= STABLE_FRAMES
     pos = {i: k for k, i in enumerate(frames)}
     for i, (where, txt) in enumerate(chunks):
         low = txt.lower()
@@ -157,9 +171,12 @@ def check(chunks, allow, strict=False):
             for raw, v in toks[i]:
                 if v in norm_allow: continue
                 if not strict:
-                    if not stable(pos[i], v): STATS["unstable"] += 1; continue
-                    if near_allowed(v, norm_allow): STATS["near"] += 1; continue
-                    if echo_of(v, sets[pos[i]] & norm_allow): STATS["echo"] += 1; continue
+                    t = float(where.strip()[:-1]); run = _run(sets, pos[i], v)
+                    if run < STABLE_FRAMES: STATS["unstable"] += 1; _skip(t, raw, "unstable", None, run); continue
+                    f = near_allowed(v, norm_allow)
+                    if f: STATS["near"] += 1; _skip(t, raw, "near", f, run); continue
+                    f = echo_of(v, sets[pos[i]] & norm_allow)
+                    if f: STATS["echo"] += 1; _skip(t, raw, "echo", f, run); continue
                 hits.append((where, "NUMBER not on --allow", raw))
         else:
             for m in MONEY.finditer(txt):
@@ -178,6 +195,14 @@ if __name__ == "__main__":
     chunks += [(os.path.basename(f), open(f).read()) for f in texts]
     hits = check(chunks, allow, strict)
     if not strict and (STATS["unstable"] or STATS["near"] or STATS["echo"]): print(f"skipped as OCR noise: {STATS['unstable']} unstable (under {STABLE_FRAMES} frames in a row), {STATS['near']} near-match of an allowed figure, {STATS['echo']} echo of an allowed figure read in the same frame")
+    for g in SKIPPED:
+        # T-112 (2): a one-frame read at an odd quarter second sits between Roz's 0.5 s frames, so her look can miss it too
+        g["not_in_roz_frames"] = g["frames"] == 1 and round(g["t"] * 4) % 2 == 1
+        span = f"{g['t']:.2f}s" + (f"-{g['t_end']:.2f}s" if g["t_end"] > g["t"] else "")
+        what = {"unstable": f"unstable, read in {g['run']} frame(s) in a row", "near": f"near-match of {g['figure']}", "echo": f"echo of {g['figure']} read in the same frame"}[g["reason"]]
+        print("SKIP", span, g["token"], "·", what + (" · NOT in Roz's 0.5 s frames, check this frame" if g["not_in_roz_frames"] else ""))
     for h in hits: print("BLOCK", *h)
-    if hits_dir: write_hits(hits, hits_dir)
+    if hits_dir:
+        write_hits(hits, hits_dir)
+        import json; json.dump(SKIPPED, open(os.path.join(hits_dir, "skipped.json"), "w"), indent=1)
     print("CLEAN" if not hits else f"BLOCKED: {len(hits)} hit(s)"); sys.exit(1 if hits else 0)
