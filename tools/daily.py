@@ -16,7 +16,9 @@ HANDLE = "@roundingerror.capital"  # same handle on Instagram, TikTok and YouTub
 NETS = ("INSTAGRAM", "TIKTOK", "YOUTUBE")
 # SAFE LAYOUT (the boss 2026-10-31, measured from his Instagram / TikTok / YouTube phone screenshots): every word on screen sits
 # inside this box, so no app header, caption, username or button column ever covers it. Characters and the office may run outside.
-SAFE_T, SAFE_B = 270, 1470        # app header above, name + caption below
+SAFE_T, SAFE_B = 270, 1220        # app header above; name + caption below. 2026-11-16 (the boss: "text too low, the profile name
+                                  # blocks it"): no text below y 1220 (bottom 36%, where TikTok/Reels put the name, caption and music). Was 1470.
+TEXT_FLOOR = SAFE_B
 SAFE_L, SAFE_R = 60, 880          # right of 880 is the button column (from y 850 down); above 850 text may run to W - M
 SAFE_Y = 850
 CX = (M + SAFE_R) // 2            # centre line for text below SAFE_Y
@@ -105,8 +107,9 @@ def hook_text(S):
 def intro_hook_frame(S, fr, pts):
     im = intro_frame(int(fr * INTRO_SRC / INTRO_F), pts, (S.get("intro_cfg") or {}).get("tagline")); d = ImageDraw.Draw(im); txt = hook_text(S)
     f = fit(txt, W - 2 * M, 96, wdth=110, wght=900); bb = d.textbbox((0, 0), txt, font=f)
-    f = fit(txt, SAFE_R - M, 96, wdth=110, wght=900); bb = d.textbbox((0, 0), txt, font=f)
-    y = SAFE_B - 20 - (bb[3] - bb[1]); d.rectangle([0, y - 40, W, SAFE_B], fill="#000000")
+    f = fit(txt, SAFE_R - M, 80, wdth=110, wght=900); bb = d.textbbox((0, 0), txt, font=f)
+    y = SAFE_T + 64   # the hook sits at the top now, under the NFA badge (it used to sit at y ~1450, right under the app's name)
+    d.rectangle([0, y - 14, W, y + (bb[3] - bb[1]) + 18], fill="#000000")
     d.text((M - bb[0], y - bb[1]), txt, font=f, fill=LIME)
     return im
 
@@ -119,19 +122,20 @@ def intro_frame(fr, pts, tagline=None):
         x, y = pts[n - 1]; d.ellipse([x - 18, y - 18, x + 18, y + 18], fill=LIME)
     if fr >= 18:
         k = fr - 18; sc = 1.0 + max(0, 0.35 * (1 - k / 6)); sh = (rnd.randint(-10, 10), rnd.randint(-10, 10)) if k < 7 else (0, 0)
-        d.text((M, 330), "I'M AN", font=fit("I'M AN", W - 2 * M, 96, wdth=100, wght=900), fill=INK)
-        y = 450
-        for t, c, cap in (("AI", LIME, 260), ("TRADING", LIME, 170), ("BOT", INK, 210)):
+        d.text((M, 440), "I'M AN", font=fit("I'M AN", W - 2 * M, 84, wdth=100, wght=900), fill=INK)
+        y = 540   # 2026-11-16: block raised and a touch smaller so the tagline ends above TEXT_FLOOR (was 330 / 450, caps 260/170/210)
+        for t, c, cap in (("AI", LIME, 230), ("TRADING", LIME, 145), ("BOT", INK, 175)):
             f = archivo(int(cap * 1.4 * sc), 125, 900); bb = d.textbbox((0, 0), t, font=f)
             if bb[2] - bb[0] > (SAFE_R - M) * sc:
                 f = archivo(int(f.size * (SAFE_R - M) * sc / (bb[2] - bb[0])), 125, 900); bb = d.textbbox((0, 0), t, font=f)
             if bb[3] - bb[1] > cap * sc:
                 f = archivo(int(f.size * cap * sc / (bb[3] - bb[1])), 125, 900); bb = d.textbbox((0, 0), t, font=f)
             w, h = bb[2] - bb[0], bb[3] - bb[1]
-            d.text((CX - w // 2 - bb[0] + sh[0], y - bb[1] + sh[1]), t, font=f, fill=c); y += int(h / sc) + 34
+            d.text((CX - w // 2 - bb[0] + sh[0], y - bb[1] + sh[1]), t, font=f, fill=c); y += int(h / sc) + 28
         if fr >= 42:
             a = fade(fr / FPS, 42 / FPS, 48 / FPS); txt = tagline or "And this is what's going on ↓"
-            d.text((M, y + 30), txt, font=fit(txt, SAFE_R - M, 72, wdth=100, wght=900), fill=blend(INK, a))
+            tf = fit(txt, SAFE_R - M, 72, wdth=100, wght=900); tb = d.textbbox((0, 0), txt, font=tf)
+            d.text((M, min(y + 10, TEXT_FLOOR - tb[3])), txt, font=tf, fill=blend(INK, a))
     return im
 
 def bubble(d, xc, y, txt):
@@ -178,7 +182,7 @@ def char_layer(img, d, S, t, cast, lines, text_bottom):
     for ts, te, w, ln, _ in lines:
         if ts <= t < te and w in cast:
             xc = int(W * xs[cast.index(w)])
-            y = max(text_bottom + 24, BASE - hpx - 150)
+            y = min(max(text_bottom + 24, BASE - hpx - 150), TEXT_FLOOR - 100)   # bubble 76 + tail 20 ends above the floor
             bubble(d, xc, y, ln)
 
 CTA_S = 3.5  # small CTA at the start of the story (the boss 2026-10-25: "cta at the beginning small and end big")
@@ -354,7 +358,7 @@ def meme_layer(img, S, t):
     for m in S.get("memes", []):
         u = t - m["t"]
         if u < 0 or u > m.get("dur", 1.5): continue
-        k = m["kind"]; my = m.get("y", 0)   # per-meme vertical offset (earnings chart slides move the band under the chart, 2026-11-02)
+        k = m["kind"]; my = min(m.get("y", 0), TEXT_FLOOR - 1120)   # lowest band (twopanel) ends at 1120 + my   # per-meme vertical offset (earnings chart slides move the band under the chart, 2026-11-02)
         if k == "pov":
             f = fit(m["text"], SAFE_R - M - 20, 64, wdth=100, wght=900); a = min(1, u / 0.12)
             d.rectangle([0, 900 + my, W, 1020 + my], fill=(255, 255, 255))
@@ -522,7 +526,7 @@ def scene_frame(S, t, heads_override=None):
     # outro-off videos have no end card: a bigger CTA holds through the last 2.5 s. Loops never get it (T-069: an end pill says "this is the end";
     # a loop's CTA lives in the caption and the small start pill).
     if S.get("outro") is False and not S.get("loop") and S.get("end") and t > S["end"] - 2.5:
-        img = cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.0, hold=True, y=1360, xr=SAFE_R)
+        img = cta_pill(img, t - (S["end"] - 2.5), "LIKE + FOLLOW FOR MORE", 1.0, hold=True, y=1110, xr=SAFE_R)   # was 1360, under the app's name
     return img
 
 LOOP_F = 12  # 0.4 s crossfade to the cover in the loop variant
@@ -538,12 +542,12 @@ def outro_frame(S, t):
     """End card. Positions come ONLY from the spec's "positions" list, copied from a Theo fact sheet's
     open_legs: [(ticker, "$100 put", "exp 10/30", "out of the money"), ...]. Never account value, cash,
     account numbers or a broker screenshot (Rules: no fund size or personal data in public).
-    1-5 positions: big rows. 6-10: compact rows (ITM / OTM). More than 10: the first 9 plus "+N MORE", so a leg never silently vanishes (T-067)."""
+    1-4 positions: big rows. 5-10: compact rows (ITM / OTM). More than 10: the first 9 plus "+N MORE", so a leg never silently vanishes (T-067)."""
     img = Image.new("RGB", (W, H), "#000000"); d = ImageDraw.Draw(img)
     ec = S.get("endcard") or {}  # Posts settings/endcard (the boss 2026-10-29: edit the end card in one place)
     pos = list((S.get("positions") or []) if ec.get("show_positions", True) else []); y = 352
     if len(pos) > 10: pos = pos[:9] + [("+%d MORE" % (len(pos) - 9), "", "", "")]
-    big = len(pos) <= 5; rh = 110 if big else 72
+    big = len(pos) <= 4; rh = 110 if big else 60   # 2026-11-16: 5 big rows or 10 at 72 px pushed the handle under the app's name (TEXT_FLOOR)
     if pos:
         d.text((M, y), "OUR OPEN POSITIONS" + (" \u00b7 " + S["positions_asof"] if S.get("positions_asof") else ""), font=mono(30, True), fill=LIME, anchor="ls"); y += 30
         for i, row in enumerate(pos):
@@ -569,7 +573,7 @@ def outro_frame(S, t):
             f = fit(txt, int((SAFE_R - M) * min(sc, 1.15)), (160 if not pos else 120 if big else 80), wdth=125, wght=900)
             bb = d.textbbox((0, 0), txt, font=f)
             d.text((CX - (bb[2] - bb[0]) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + (26 if big else 14)
-        follow_block(img, y + (60 if big else 44)); d = ImageDraw.Draw(img)
+        follow_block(img, min(y + (60 if big else 44), TEXT_FLOOR)); d = ImageDraw.Draw(img)
     who = end_char(S)
     S["_hpx"] = None if len(pos) < 4 else (300 if big else 240)
     char_layer(img, d, S, 30 + t, [who], [(30.0, 40.0, who, "", END_CAST[who])] if t > 0.3 else [], 10**6)

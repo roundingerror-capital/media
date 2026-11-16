@@ -70,7 +70,7 @@ def receipt(S, u, pts, num, sprite, win):
     co = S["cold_open"]; img = Image.new("RGB", (W, H), (20, 20, 22)); d = ImageDraw.Draw(img)
     ink = (28, 28, 30); col = (20, 130, 60) if win else (200, 30, 30)
     x0, x1 = 150, 930; c = (x0 + x1) // 2; o = int(-820 * (1 - ease((u - 0.05) / 0.3)))   # the slip prints down out of the slot
-    bot = 1120 + o
+    bot = 1060 + o   # shorter slip so the stamp below it clears TEXT_FLOOR (2026-11-16)
     zig = [(x, bot + (16 if (x // 26) % 2 else 0)) for x in range(x0, x1 + 1, 26)]
     d.polygon([(x0, 330), (x1, 330)] + zig[::-1], fill=(244, 241, 232))
     def t(y, txt, f, fill=ink, anchor="ms", x=c):
@@ -78,14 +78,13 @@ def receipt(S, u, pts, num, sprite, win):
     t(430, "ROUNDING ERROR", mono(46, True)); t(480, "* TRADE SLIP *", mono(30, True))
     t(540, "-" * 30, mono(32), (150, 150, 150))
     if co.get("line"): t(630, co["line"], _wfit(d, co["line"], x1 - x0 - 80, 60, lambda s: mono(s, True)))
-    t(720, "TOTAL", mono(36, True), anchor="ls", x=x0 + 40)
     if o > -4: num(d, c, 880, col, x1 - x0 - 90)                                        # lands once the slip has stopped
-    t(950, "-" * 30, mono(32), (150, 150, 150)); t(1040, "THANK YOU. NOT ADVICE.", mono(30, True))
+    t(940, "-" * 30, mono(32), (150, 150, 150)); t(1010, "THANK YOU. NOT ADVICE.", mono(30, True))
     d.rectangle([110, 300, 970, 334], fill=(60, 60, 64))                                 # printer slot, over the paper
     if u > 0.45:
-        sh = co.get("shout", "WAIT, WHAT?!"); f = _wfit(d, sh, 700, 96, lambda s: archivo(s, 125, 900))
-        tw = d.textlength(sh, font=f); d.rectangle([W // 2 - tw / 2 - 24, 1190, W // 2 + tw / 2 + 24, 1310], outline=col, width=8)
-        d.text((W // 2, 1285), sh, font=f, fill=col, anchor="ms")
+        sh = co.get("shout", "WAIT, WHAT?!"); f = _wfit(d, sh, 700, 80, lambda s: archivo(s, 125, 900))   # stamp ends above TEXT_FLOOR (2026-11-16)
+        tw = d.textlength(sh, font=f); d.rectangle([W // 2 - tw / 2 - 24, 1100, W // 2 + tw / 2 + 24, 1204], outline=col, width=8)
+        d.text((W // 2, 1180), sh, font=f, fill=col, anchor="ms")
     _penny(img, sprite, u, y=1760, look="receipt")
     return img
 
@@ -105,8 +104,8 @@ def breaking(S, u, pts, num, sprite, win):
         sh = co.get("shout", "WAIT, WHAT?!"); f = _wfit(d, sh, 760, 100, lambda s: archivo(s, 125, 900))
         d.text((W // 2 - 50, 1010), sh, font=f, fill="white", anchor="ms", stroke_width=6, stroke_fill="black")
     crawl = "ROUNDING ERROR  ///  NOT ADVICE  ///  " * 4; f = mono(34, True)     # words only on the crawl
-    d.rectangle([0, 1290, 880, 1350], fill=(255, 205, 40)); d.text((60 - int(u * 900) % 700, 1334), crawl, font=f, fill=(15, 15, 25), anchor="ls")
-    d.rectangle([880, 1290, W, 1350], fill=(10, 18, 40))
+    d.rectangle([0, 1130, 880, 1190], fill=(255, 205, 40)); d.text((60 - int(u * 900) % 700, 1174), crawl, font=f, fill=(15, 15, 25), anchor="ls")   # crawl above TEXT_FLOOR (2026-11-16)
+    d.rectangle([880, 1130, W, 1190], fill=(10, 18, 40))
     _penny(img, sprite, u, y=1780, look="breaking")
     return img
 
