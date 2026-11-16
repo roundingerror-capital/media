@@ -269,14 +269,16 @@ def _vignette():
         _VIG = Image.fromarray((np.clip((r - 0.35) / 0.9, 0, 1) * 255).astype("uint8"), "L")
     return _VIG
 def opener_look(S):
-    """Which opening look (tools/openers.py). spec["cold_open"]["look"] wins; otherwise it rotates by the post's date,
-    so two days in a row never open the same way (the boss 2026-11-13: "all videos starting to look the same")."""
-    import openers, datetime
-    lk = S["cold_open"].get("look") or S.get("look")
+    """Which opening look (tools/openers.py). spec["cold_open"]["look"] wins (the builder picks one that the cards around its
+    slot don't use and records it as card.opener_look). Otherwise the card itself picks: a stable hash of what makes the card
+    the card (seed, series label, chart, rooms), so the 3+ cards built on one day get different looks (cards built together
+    post on different days), while its B video and any rebuild keep the same look (one variable at a time).
+    2026-11-15: replaces the rotation by build date, which gave every card built on the same day the same look."""
+    import openers, zlib
+    co = S["cold_open"]; lk = co.get("look") or S.get("look")
     if lk == "glow" or lk in openers.FUNCS: return lk   # a parked look can still be asked for by name
-    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", S.get("_out", ""))
-    day = datetime.date(*map(int, m.groups())) if m else datetime.date.today()
-    return openers.pick(day.toordinal(), S["cold_open"].get("tone") == "win")
+    key = "|".join(str(S.get(k, "")) for k in ("seed", "label", "chart")) + "|" + repr(sorted((S.get("bgs") or {}).items(), key=str))
+    return openers.pick(zlib.crc32(key.encode()), co.get("tone") == "win")
 def teaser_number(d, big, cx, y, col, maxw):
     """The big number, drawn the scanner-tested way (Inter Display Black, true minus, spaced, a leading \u00b1 smaller). Baseline y, centred on cx."""
     # Gaps scale with the size (8% of the size between characters, +25% after a leading sign): fixed pixel gaps read
@@ -612,7 +614,6 @@ def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
     BEAT.make(wav, total + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], groove=not S.get("music"), cold=(COLD_F - COVER_F) / FPS if S.get("cold_open") else 0.0, sfx=meme_sfx(S, ((COLD_F if S.get("cold_open") else COVER_F) + IF) / FPS))
     if S.get("music"): wav = mix_music(S, wav, total + 0.3, workdir)
-    S["_out"] = out   # opener_look rotates by the post's date in the path
     pts = chart_pts(S["chart"], S["seed"]); cover = Image.open(cover_jpg).convert("RGB").resize((W, H))
     hov = S.get("b", {}).get("hook") if variant == "b" else None
     p = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
