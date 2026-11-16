@@ -53,9 +53,11 @@ def impact():                  # boom under the slam: sine-ish drop + noise tail
     d = 0.6; n = int(d * SR); f = np.geomspace(140, 38, n)
     x = tri(f, d) * env(n, d=0.25) * 1.0 + noise(d, rate=3000, lp=1200) * env(n, d=0.12) * 0.5
     return x
-def ding(base=83):             # pickup: two quick notes up a fourth (B5 -> E6 by default)
-    a = pulse(note(base), 0.07, 0.25) * env(int(0.07 * SR), d=0.2); b = pulse(note(base + 5), 0.22, 0.25) * env(int(0.22 * SR), d=0.09)
-    return echo(np.concatenate([a, b]) * 0.7, 0.08, 0.3, 0.25)
+def ding(base=84):             # pickup: three quick notes rising a major triad (C6-E6-G6 by default), equal length, echo
+    # 2026-11-15: was a short B5 then a held E6, a famous game's coin sound note for note (Roz, board 20261115-215705-roz-ktsf).
+    # Never bring back a short note jumping up a fourth to a held one.
+    each = 0.055; n = int(each * SR)
+    return echo(np.concatenate([pulse(note(base + s), each, 0.25) * env(n, d=0.09) for s in (0, 4, 7)]) * 0.7, 0.08, 0.3, 0.25)
 def arp_up(root=72, steps=(0, 4, 7, 12, 16, 19, 24), each=0.045, duty=0.5):
     return echo(np.concatenate([pulse(note(root + s), each, duty) * env(int(each * SR), d=0.05) for s in steps]) * 0.6, 0.1, 0.35, 0.3)
 def arp_down(root=84, steps=(0, -3, -7, -12, -15, -19, -24), each=0.06): return arp_up(root, steps, each, 0.25)
@@ -71,8 +73,10 @@ def roar():                    # boss lunge: dark noise swell + low pulse growl
     return (noise(d, rate=1500, lp=900) * 0.8 + pulse(np.linspace(70, 55, n) * (1 + 0.08 * np.sin(np.arange(n) / SR * 2 * np.pi * 18)), d, 0.5) * 0.4) * e
 def wipe():                    # party wiped: the classic falling glissando
     d = 0.9; n = int(d * SR); f = np.geomspace(880, 80, n); return echo(pulse(f, d, 0.5) * env(n, d=0.5, r=0.08) * 0.5, 0.11, 0.35, 0.3)
-def coin(var=0):               # one coin: two-note blip, a semitone apart per variant
-    return ding(88 + var)[: int(0.25 * SR)] * 0.6
+def coin(var=0):               # one coin: a single bright ping (C7 by default) with a tiny upward chirp on the attack; var shifts it a semitone
+    d = 0.14; n = int(d * SR); k = int(0.012 * SR); f0 = note(96 + var)
+    f = np.concatenate([np.linspace(f0 * 0.94, f0, k), np.full(n - k, f0)])
+    return echo(pulse(f, d, 0.25) * env(n, d=0.045) * 0.6, 0.06, 0.25, 0.2)[: int(0.25 * SR)]
 def whoosh(d=0.6, up=True):    # filtered noise swell (push-ins, cuts)
     n = int(d * SR); x = noise(d); k = np.linspace(40, 4, n) if up else np.linspace(4, 40, n); y = np.zeros(n, np.float32); acc = 0.0
     for i in range(0, n, 64):
