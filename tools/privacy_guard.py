@@ -23,19 +23,27 @@ def main(a):
                           ("pre-push", f'git log --format="%H %s%n%b" @{{u}}..HEAD 2>/dev/null | python3 "{me}" --identity --banned-file "{dst}" --stdin "commits to push"')):
             p = os.path.join(gd, "hooks", hook); open(p, "w").write("#!/bin/sh\n" + cmd + "\n"); os.chmod(p, 0o755)
         print("installed: pre-commit, commit-msg, pre-push (list copied inside .git, never committed)"); return 0
-    pats, found, i = None, [], 0
+    # T-086 (2026-11-15): read every flag first, in any order. Before, --files swallowed everything after it, so
+    # "--files x --identity" tried to open a file named "--identity" and crashed (exit 1, read as a finding).
+    banned, texts, stdin_label, files, i = None, [], None, [], 0
     while i < len(a):
-        if a[i] == "--banned-file": pats = load(a[i + 1]); i += 2
-        elif a[i] == "--text": found += hits(pats, a[i + 1], "text"); i += 2
-        elif a[i] == "--stdin": found += hits(pats, sys.stdin.read(), a[i + 1]); i += 2
+        if a[i] == "--banned-file" and i + 1 < len(a): banned = a[i + 1]; i += 2
+        elif a[i] == "--text" and i + 1 < len(a): texts.append(a[i + 1]); i += 2
+        elif a[i] == "--stdin" and i + 1 < len(a): stdin_label = a[i + 1]; i += 2
         elif a[i] == "--files":
-            for f in a[i + 1:]:
-                try: found += hits(pats, open(f, errors="ignore").read(), f)
-                except IsADirectoryError: pass
-            break
-        elif a[i] == "--identity": i += 1
-        else: i += 1
-    if pats is None: print("BLOCKED: no --banned-file"); return 2
+            i += 1
+            while i < len(a) and not a[i].startswith("--"): files.append(a[i]); i += 1
+        else: i += 1  # --identity (read above) or anything unknown
+    if banned is None: print("BLOCKED: no --banned-file"); return 2
+    try: pats = load(banned)
+    except (OSError, ValueError) as e: print(f"BLOCKED: banned list unreadable ({type(e).__name__})"); return 2
+    found = []
+    for t in texts: found += hits(pats, t, "text")
+    if stdin_label is not None: found += hits(pats, sys.stdin.read(), stdin_label)
+    for f in files:
+        if os.path.isdir(f): continue
+        if not os.path.exists(f): print(f"BLOCKED: file not found: {f}"); return 2
+        found += hits(pats, open(f, errors="ignore").read(), f)
     for h in found: print("BLOCKED", h)
     print("CLEAN" if not found else f"BLOCKED: {len(found)} hit(s)"); return 1 if found else 0
 if __name__ == "__main__": sys.exit(main(sys.argv[1:]))
