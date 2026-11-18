@@ -536,7 +536,7 @@ def end_char(S):
     """Who hosts the end card: spec["end_char"] if set, else one pick from END_CAST that stays the same for a day (seeded by positions_asof)."""
     import random
     c = S.get("end_char")
-    return c if c in END_CAST else random.Random(S.get("positions_asof") or S.get("seed") or "").choice(sorted(END_CAST))
+    return c if (c in END_CAST or c in SP) else random.Random(S.get("positions_asof") or S.get("seed") or "").choice(sorted(END_CAST))
 
 def outro_frame(S, t):
     """End card. Positions come ONLY from the spec's "positions" list, copied from a Theo fact sheet's
@@ -575,8 +575,10 @@ def outro_frame(S, t):
             d.text((CX - (bb[2] - bb[0]) // 2 - bb[0], y - bb[1]), txt, font=f, fill=c); y += bb[3] - bb[1] + (26 if big else 14)
         follow_block(img, min(y + (60 if big else 44), TEXT_FLOOR)); d = ImageDraw.Draw(img)
     who = end_char(S)
-    S["_hpx"] = None if len(pos) < 4 else (300 if big else 240)
-    char_layer(img, d, S, 30 + t, [who], [(30.0, 40.0, who, "", END_CAST[who])] if t > 0.3 else [], 10**6)
+    # spec["end_hpx"] (the boss 2026-11-18: "the animals can be bigger" on the end card): the host's height in px; it stands in the
+    # empty band under the follow block, so a compact 5-row list no longer shrinks it to 240.
+    S["_hpx"] = S.get("end_hpx") or (None if len(pos) < 4 else (300 if big else 240))
+    char_layer(img, d, S, 30 + t, [who], [(30.0, 40.0, who, "", END_CAST.get(who, "wave"))] if t > 0.3 else [], 10**6)
     S["_hpx"] = None
     return img
 
