@@ -9,7 +9,8 @@
    "penny,roz|penny,kit|roz,penny|roz,ada|roz,kit,theo",
    "roz,theo|roz,kit|penny,kit|kit,ada,theo",
    "roz,ada|penny,kit|kit,roz|kit,theo,ada",
-   "kit,theo|roz,kit|theo,penny|penny,ada,roz"
+   "kit,theo|roz,kit|theo,penny|penny,ada,roz",
+   "ada,penny|roz,ada|theo,penny|theo,penny,ada"
   ],
   "lines": [
    "Look at those bars!",
@@ -61,7 +62,12 @@
    "Interesting. Moving on.",
    "Hard mode unlocked.",
    "No adjectives, please.",
-   "Read the fine print."
+   "Read the fine print.",
+   "So clean!",
+   "This one's spicy!",
+   "Not advice. Promise.",
+   "Read the chart.",
+   "Data says: humble."
   ],
   "hooks": [
    "ada,kit",
@@ -72,7 +78,8 @@
    "penny,roz",
    "roz,theo",
    "ada,roz",
-   "kit,theo"
+   "kit,theo",
+   "ada,penny"
   ],
   "by_ticker": {
    "PLTR": {
@@ -749,6 +756,81 @@
       0.74
      ]
     ]
+   },
+   "INTU": {
+    "casts": [
+     [
+      "ada",
+      "penny"
+     ],
+     [
+      "roz",
+      "ada"
+     ],
+     [
+      "theo",
+      "penny"
+     ],
+     [
+      "theo",
+      "penny",
+      "ada"
+     ]
+    ],
+    "lines": [
+     [
+      [
+       "ada",
+       "So clean!",
+       "spin"
+      ],
+      [
+       "penny",
+       "This one's spicy!",
+       "point"
+      ]
+     ],
+     [
+      [
+       "roz",
+       "Not advice. Promise.",
+       "nod"
+      ]
+     ],
+     [
+      [
+       "theo",
+       "Read the chart.",
+       "nod"
+      ]
+     ],
+     [
+      [
+       "ada",
+       "Data says: humble.",
+       "thumbs"
+      ]
+     ]
+    ],
+    "xs": [
+     [
+      0.3,
+      0.7
+     ],
+     [
+      0.26,
+      0.74
+     ],
+     [
+      0.22,
+      0.62
+     ],
+     [
+      0.18,
+      0.45,
+      0.74
+     ]
+    ]
    }
   },
   "covers": {
@@ -787,6 +869,77 @@
    "ABNB": {
     "layout": "bignum",
     "bg": "office"
+   }
+  }
+ },
+ "recipes": {
+  "bee793c795a4": {
+   "video": "INTU|2026-11-19",
+   "recipe": {
+    "room": "ROOM-19",
+    "bookend": "OFF-ADA-01",
+    "tod": "dusk",
+    "chart": "coaster",
+    "swaps": {
+     "theo": null,
+     "penny": null,
+     "ada": null,
+     "kit": null,
+     "roz": null
+    },
+    "shout": "HOW BIG A MOVE?!",
+    "pov1": "POV: {T} reports {day}",
+    "pov2": "POV: you held through earnings",
+    "zoom": "HOLD ON",
+    "h_open": [
+     [
+      "{T} reports",
+      "w"
+     ],
+     [
+      "{day}, {tm}.",
+      "l"
+     ]
+    ],
+    "h_method": [
+     [
+      "Our rule:",
+      "w"
+     ],
+     [
+      "hold to expiry.",
+      "l"
+     ]
+    ],
+    "h_turn": [
+     [
+      "Holding through",
+      "w"
+     ],
+     [
+      "earnings?",
+      "l"
+     ]
+    ],
+    "align": "left",
+    "props": {
+     "open": [
+      "Hourglass"
+     ],
+     "history": [
+      "Abacus",
+      "Stack of paper"
+     ],
+     "method": [
+      "Rubber stamp"
+     ],
+     "turn": [
+      "Coffee mug",
+      "Sticky note"
+     ]
+    },
+    "key": "bee793c795a4",
+    "attempt": 0
    }
   }
  }
