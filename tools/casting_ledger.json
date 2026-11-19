@@ -10,7 +10,8 @@
    "roz,theo|roz,kit|penny,kit|kit,ada,theo",
    "roz,ada|penny,kit|kit,roz|kit,theo,ada",
    "kit,theo|roz,kit|theo,penny|penny,ada,roz",
-   "ada,penny|roz,ada|theo,penny|theo,penny,ada"
+   "ada,penny|roz,ada|theo,penny|theo,penny,ada",
+   "roz,ada|kit,ada|penny,theo|kit,ada,theo"
   ],
   "lines": [
    "Look at those bars!",
@@ -67,7 +68,12 @@
    "This one's spicy!",
    "Not advice. Promise.",
    "Read the chart.",
-   "Data says: humble."
+   "Data says: humble.",
+   "Careful is cool.",
+   "Data's fresh!",
+   "Checked twice!",
+   "Link in bio, besties.",
+   "Save point reached."
   ],
   "hooks": [
    "ada,kit",
@@ -79,7 +85,8 @@
    "roz,theo",
    "ada,roz",
    "kit,theo",
-   "ada,penny"
+   "ada,penny",
+   "ada,roz"
   ],
   "by_ticker": {
    "PLTR": {
@@ -831,6 +838,81 @@
       0.74
      ]
     ]
+   },
+   "WDAY": {
+    "casts": [
+     [
+      "roz",
+      "ada"
+     ],
+     [
+      "kit",
+      "ada"
+     ],
+     [
+      "penny",
+      "theo"
+     ],
+     [
+      "kit",
+      "ada",
+      "theo"
+     ]
+    ],
+    "lines": [
+     [
+      [
+       "roz",
+       "Careful is cool.",
+       "nod"
+      ],
+      [
+       "ada",
+       "Data's fresh!",
+       "spin"
+      ]
+     ],
+     [
+      [
+       "ada",
+       "Checked twice!",
+       "spin"
+      ]
+     ],
+     [
+      [
+       "penny",
+       "Link in bio, besties.",
+       "point"
+      ]
+     ],
+     [
+      [
+       "kit",
+       "Save point reached.",
+       "wave"
+      ]
+     ]
+    ],
+    "xs": [
+     [
+      0.26,
+      0.74
+     ],
+     [
+      0.38,
+      0.78
+     ],
+     [
+      0.26,
+      0.74
+     ],
+     [
+      0.2,
+      0.5,
+      0.8
+     ]
+    ]
    }
   },
   "covers": {
@@ -869,6 +951,10 @@
    "ABNB": {
     "layout": "bignum",
     "bg": "office"
+   },
+   "WDAY": {
+    "layout": "coaster",
+    "bg": "lime"
    }
   }
  },
@@ -939,6 +1025,76 @@
      ]
     },
     "key": "bee793c795a4",
+    "attempt": 0
+   }
+  },
+  "0872cad9181d": {
+   "video": "WDAY|2026-11-24",
+   "recipe": {
+    "room": "ROOM-14",
+    "bookend": "OFF-KIT-01",
+    "tod": "dusk",
+    "chart": "coaster",
+    "swaps": {
+     "theo": null,
+     "penny": null,
+     "ada": "Ember",
+     "kit": null,
+     "roz": "Sea turtle"
+    },
+    "shout": "HOW BIG A MOVE?!",
+    "pov1": "POV: {T} reports {day}",
+    "pov2": "POV: you held through earnings",
+    "zoom": "HOLD ON",
+    "h_open": [
+     [
+      "{T} reports",
+      "w"
+     ],
+     [
+      "{day}, {tm}.",
+      "l"
+     ]
+    ],
+    "h_method": [
+     [
+      "Our rule:",
+      "w"
+     ],
+     [
+      "hold to expiry.",
+      "l"
+     ]
+    ],
+    "h_turn": [
+     [
+      "Holding through",
+      "w"
+     ],
+     [
+      "earnings?",
+      "l"
+     ]
+    ],
+    "align": "left",
+    "props": {
+     "open": [
+      "Desk bell",
+      "Binoculars"
+     ],
+     "history": [
+      "Newspaper",
+      "Stack of paper"
+     ],
+     "method": [
+      "Clipboard"
+     ],
+     "turn": [
+      "Paper plane",
+      "Desk coffee"
+     ]
+    },
+    "key": "0872cad9181d",
     "attempt": 0
    }
   }
