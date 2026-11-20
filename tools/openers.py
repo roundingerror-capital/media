@@ -104,8 +104,15 @@ def breaking(S, u, pts, num, sprite, win):
         sh = co.get("shout", "WAIT, WHAT?!"); f = _wfit(d, sh, 760, 100, lambda s: archivo(s, 125, 900))
         d.text((W // 2 - 50, 1010), sh, font=f, fill="white", anchor="ms", stroke_width=6, stroke_fill="black")
     crawl = "ROUNDING ERROR  ///  NOT ADVICE  ///  " * 4; f = mono(34, True)     # words only on the crawl
-    d.rectangle([0, 1130, 880, 1190], fill=(255, 205, 40)); d.text((60 - int(u * 900) % 700, 1174), crawl, font=f, fill=(15, 15, 25), anchor="ls")   # crawl above TEXT_FLOOR (2026-11-16)
-    d.rectangle([880, 1130, W, 1190], fill=(10, 18, 40))
+    # The yellow band runs corner to corner (the boss 2026-11-19: "why the scrolling banner doesn't go corner to corner").
+    # The crawl WORDS still stop at SAFE_R (880, the TikTok/Reels button column below y 850) and fade into the band there,
+    # so no text sits under the app's buttons; the band itself is only colour, so it may reach the right edge.
+    Y = (255, 205, 40); d.rectangle([0, 1130, W, 1190], fill=Y)
+    band = Image.new("RGB", (880, 60), Y); bd = ImageDraw.Draw(band)
+    bd.text((60 - int(u * 900) % 700, 44), crawl, font=f, fill=(15, 15, 25), anchor="ls")   # crawl above TEXT_FLOOR (2026-11-16)
+    fade = Image.linear_gradient("L").rotate(-90).resize((120, 60))                          # opaque at x 760, gone by 880
+    m = Image.new("L", (880, 60), 255); m.paste(fade, (760, 0))
+    img.paste(Image.composite(band, Image.new("RGB", (880, 60), Y), m), (0, 1130))
     _penny(img, sprite, u, y=1780, look="breaking")
     return img
 
