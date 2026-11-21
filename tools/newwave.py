@@ -131,7 +131,9 @@ def install(D):
     def char_layer(img, d, S, t, cast, lines, text_bottom):
         hpx = S.get("_hpx") or (430 if len(cast) < 3 else 380); k = max(3, round(hpx / 60))
         base = S.get("char_base", BASE)   # 2026-11-21 (the boss: "they could be so much bigger"): a base below the frame = big foreground cast, cut off at the bottom
-        xs = S.get("_xs") or D.XS[len(cast)]
+        if isinstance(base, dict): base = base.get(len([1 for sc_ in S["scenes"] if t >= sc_[0]]) - 1, base.get("default", BASE))   # per-scene base {scene index: y}
+        if text_bottom >= 10**6: base = S.get("end_base", BASE)               # end card host stands on the default floor (or end_base)
+        xs = S.get("_xs") or D.XS[len(cast)]; tops = {}
         pk = [i for i, sc_ in enumerate(S["scenes"]) if t >= sc_[0]]; slide = pk[-1] if pk else 0
         if (S.get("props") or {}).get(slide):                                    # recipe props (earnings, 2026-11-05): floor lane, never on a face
             import earn_recipe; earn_recipe.draw_props(img, S["props"][slide], t, [int(W * x) for x in xs], base, W, k)
@@ -153,9 +155,13 @@ def install(D):
             bw, _ = rigs.body(n, "idle", k)
             if base < H - 24: d.ellipse([xc - bw * 0.33, base - 8, xc + bw * 0.33, base + 16], fill="#1a1a1a")
             img.paste(sp, (xc - sp.width // 2, base - sp.height - hop), sp)
+            bb = sp.getbbox(); tops[n] = base - sp.height - hop + (bb[1] if bb else 0)
         for ts, te, w, ln, _ in lines:
-            if ts <= t < te and w in cast:
+            if ts <= t < te and w in cast and ln:                               # 2026-11-21 (the boss: "what's that stuff in the middle?"): no empty bubble
                 xc = int(W * xs[cast.index(w)]); y = min(max(text_bottom + 24, base - hpx - 150), D.TEXT_FLOOR - 100); D.bubble(d, xc, y, ln)
+                if S.get("bubble_tail") and tops.get(w, 0) - 14 > y + 96:     # the boss 2026-11-21 ("why are the speech bubbles so far?"): the tail runs down to the speaker's head, text stays above the app's caption line
+                    hy = tops[w] - 14; d.polygon([(xc - 13, y + 74), (xc + 13, y + 74), (xc + 3, hy), (xc - 3, hy)], fill="#1A1A1A")
+                    d.polygon([(xc - 9, y + 70), (xc + 9, y + 70), (xc, hy - 6)], fill=D.INK)
 
     D.office_bg = office_bg; D.sprite_state = sprite_state; D.char_layer = char_layer
     D.END_CAST.update({"roz": "nod", "kit": "jump"})
