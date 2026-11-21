@@ -1226,3 +1226,41 @@ TICK1 = [(8, 8), (9, 9)]
 TICK2 = TICK1 + [(10, 8), (11, 7), (12, 6)]
 sprite("DESK-CLIPBOARD", "Clipboard", "Paper", {**SHELL["brown"], **PAPERS, **METAL, **INK}, ink(CLIPBOARD, TICK2, "z"),
        frames=[ink(CLIPBOARD, TICK2, "z"), CLIPBOARD, ink(CLIPBOARD, TICK1, "z")], ticks=[16, 8, 1], old=["PROP-049"])
+
+
+# ---- Stamp FX (2026-11-21, board B-20261121-073808-penny-e7lu): a red rubber-stamp mark slamming onto the frame.
+# Shape only: a double ring with a solid star, no word, no letters, no digits. Frames, each its own drawing:
+# the settled mark (frame 0, the still), then the stamp's shadow closing in, the hit (oversize mark + ink burst), a squash back, then the settled mark with
+# worn ink gaps. Overlay it on any plate; transparent around the mark.
+STAMP_INK = {"K": "#5e1426", "k": "#a8243a", "c": "#de4048", "C": "#ff7a68"}
+
+def _stamp_mark(r_out, burst=False, worn=False, ghost=False):
+    W = H = 24; cx = cy = 11.5
+    g = [["."] * W for _ in range(H)]
+    STAR = ["...c...", "...c...", ".ccccc.", "..ccc..", ".cc.cc.", ".c...c."]
+    for y in range(H):
+        for x in range(W):
+            d = ((x - cx) ** 2 + (y - cy) ** 2) ** .5
+            if ghost:
+                if d <= r_out: g[y][x] = "K"
+                continue
+            if r_out - 2 <= d <= r_out: g[y][x] = "k" if (x + y) > 24 else "c"           # outer ring, shade bottom-right
+            elif r_out - 4.5 <= d <= r_out - 3.5: g[y][x] = "k" if (x + y) > 24 else "c"  # inner ring
+    if not ghost:
+        s = 1 if r_out >= 11 else 0
+        for dy, row in enumerate(STAR):
+            for dx, ch in enumerate(row):
+                if ch != ".": g[9 + dy - s][9 + dx] = "c"
+        g[9 - s][12] = "C"; g[11 - s][10] = "C"                                           # ink sheen, top-left
+    if burst:                                                                             # ink burst: short dashes outside the ring
+        for (x, y) in [(11, 0), (12, 0), (0, 11), (0, 12), (23, 11), (23, 12), (11, 23), (12, 23),
+                       (3, 3), (4, 4), (20, 3), (19, 4), (3, 20), (4, 19), (20, 20), (19, 19)]:
+            g[y][x] = "C" if y < 12 else "c"
+    if worn:                                                                              # dry-ink gaps, 2 px clusters, never noise
+        for (x, y) in [(5, 6), (6, 6), (17, 17), (17, 16), (19, 9), (19, 10), (8, 18), (9, 18)]:
+            if g[y][x] != ".": g[y][x] = "."
+    return ["".join(r) for r in g]
+
+sprite("DESK-STAMP-FX", "Stamp mark FX (red, blank)", "Paper", STAMP_INK, _stamp_mark(10, worn=True),
+       frames=[_stamp_mark(10, worn=True), _stamp_mark(6, ghost=True), _stamp_mark(11.5, burst=True), _stamp_mark(9.5)],
+       ticks=[20, 1, 1, 1])   # frame 0 = the settled mark (the still); for a one-shot hit play frames 1, 2, 3, then hold 0

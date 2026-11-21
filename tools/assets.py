@@ -559,6 +559,68 @@ def prewar_v3(n=0, t=0.0):
     MINI_SCALE = old
     return outline(im.crop((0, 0, Wd, Hd)), 0) if False else im
 
+# ---------------------------------------------------------------- BLD-08, V2.04 (2026-11-21, board B-20261121-073808-penny-e7lu)
+def gov_hall(t=0.0):
+    """BLD-08 · Government building exterior, generic: domed hall on a podium, six-column portico with a blank pediment,
+    two wings of tall plain windows (glass only, nobody inside), wide stairs. No flag, seal, inscription, words or digits;
+    not any real building. Pale limestone, light from the top-left; the lantern on the dome glows and flickers."""
+    Wd, Hd = 320, 300; im = Image.new("RGBA", (Wd, Hd)); d = ImageDraw.Draw(im)
+    ST = ramp((206, 198, 180)); SH = ST[1] + (255,); DK = ST[0] + (255,); BS = ST[2] + (255,); LT = ST[3] + (255,); HI = ST[4] + (255,)
+    GL = [(28, 40, 66, 255), (44, 66, 100, 255), (92, 128, 168, 255), (226, 240, 255, 255)]     # window glass ramp + glint
+    WARM = (255, 214, 140, 255)
+    # dome: drum, colonnade slits, shell, lantern
+    d.rectangle([118, 70, 202, 120], fill=BS); d.rectangle([118, 70, 121, 120], fill=LT); d.rectangle([198, 70, 202, 120], fill=SH)
+    for x in range(126, 198, 9): d.rectangle([x, 80, x + 4, 112], fill=GL[0]); d.line([(x, 80), (x, 112)], fill=GL[1])
+    d.rectangle([114, 66, 206, 70], fill=LT); d.rectangle([114, 70, 206, 71], fill=SH); d.rectangle([114, 120, 206, 124], fill=SH)
+    sphere(im, (116, 18, 204, 112), ST, rim=False, poly=[(116, 66), (116, 60), (130, 36), (160, 22), (190, 36), (204, 60), (204, 66)])
+    d = ImageDraw.Draw(im)
+    for x in (138, 160, 182): d.line([(x, 26 + abs(x - 160) // 3), (x, 64)], fill=SH)          # ribs
+    d.rectangle([154, 6, 166, 24], fill=BS); d.rectangle([154, 6, 156, 24], fill=LT); d.rectangle([164, 6, 166, 24], fill=SH)
+    glow = WARM if int(t * 10) % 7 else (255, 236, 190, 255)
+    d.rectangle([157, 10, 163, 20], fill=glow); d.polygon([(152, 6), (168, 6), (160, 0)], fill=SH); d.line([(152, 6), (160, 0)], fill=LT)
+    # wings
+    for x0, x1 in ((8, 112), (208, 312)):
+        d.rectangle([x0, 132, x1, 250], fill=BS)
+        for y in range(140, 250, 8): d.line([(x0, y), (x1, y)], fill=ST[2][:3] and SH if (y // 8) % 2 else BS)
+        d.rectangle([x0, 124, x1, 132], fill=LT); d.rectangle([x0, 130, x1, 132], fill=SH); d.rectangle([x0 - 2, 120, x1 + 2, 124], fill=HI)
+        d.rectangle([x0, 132, x0 + 2, 250], fill=LT); d.rectangle([x1 - 2, 132, x1, 250], fill=SH)
+        lit = {(0, 1), (1, 2)} if x0 < 100 else {(1, 0), (0, 2)}
+        for row, y in enumerate((146, 196)):
+            for col, x in enumerate(range(x0 + 12, x1 - 24, 24) if x0 < 100 else range(x0 + 30, x1 - 12, 24)):
+                w, h = 12, 34
+                d.rectangle([x - 2, y - 4, x + w + 1, y - 2], fill=LT)                                 # lintel
+                d.rectangle([x, y, x + w - 1, y + h], fill=GL[0])
+                if (row, col) in lit: d.rectangle([x + 1, y + 1, x + w - 2, y + h - 1], fill=(120, 96, 64, 255)); d.rectangle([x + 1, y + 1, x + w - 2, y + 12], fill=WARM)
+                else: d.rectangle([x + 1, y + 1, x + w - 2, y + h - 1], fill=GL[1]); d.line([(x + 2, y + 10), (x + 8, y + 4)], fill=GL[2]); d.point((x + 3, y + 8), fill=GL[3])
+                d.line([(x + w // 2, y), (x + w // 2, y + h)], fill=DK); d.line([(x, y + h // 2), (x + w - 1, y + h // 2)], fill=DK)
+                d.rectangle([x - 2, y + h + 1, x + w + 1, y + h + 3], fill=LT); d.line([(x - 2, y + h + 3), (x + w + 1, y + h + 3)], fill=SH)   # sill
+    # central block behind the portico + pediment
+    d.rectangle([104, 124, 216, 250], fill=SH)
+    d.polygon([(96, 150), (160, 112), (224, 150)], fill=BS); d.line([(96, 150), (160, 112)], fill=HI, width=2); d.line([(160, 112), (224, 150)], fill=SH, width=2)
+    d.polygon([(110, 146), (160, 120), (210, 146)], fill=SH); d.polygon([(114, 145), (160, 122), (160, 145)], fill=ST[2][:3] + (255,))   # blank tympanum, recessed
+    d.rectangle([96, 150, 224, 158], fill=LT); d.rectangle([96, 156, 224, 158], fill=SH)                                            # entablature
+    for x in range(100, 222, 6): d.point((x, 152), fill=SH)                                                                         # dentils
+    # six columns: cylinder shading (lit left, shade right), capitals and bases
+    for i, x in enumerate(range(106, 214, 20)):
+        cw = 10
+        for dx in range(cw):
+            c = HI if dx == 1 else LT if dx < 4 else BS if dx < 7 else SH if dx < 9 else DK
+            d.line([(x + dx, 162), (x + dx, 236)], fill=c)
+        for fx in (x + 3, x + 6): d.line([(fx, 164), (fx, 234)], fill=SH if fx > x + 4 else BS)                          # flutes
+        d.rectangle([x - 2, 158, x + cw + 1, 162], fill=LT); d.line([(x - 2, 162), (x + cw + 1, 162)], fill=SH)
+        d.rectangle([x - 2, 236, x + cw + 1, 240], fill=BS); d.line([(x - 2, 240), (x + cw + 1, 240)], fill=SH)
+    # doors in the shade of the portico
+    d.rectangle([150, 196, 170, 240], fill=(70, 48, 34, 255)); d.rectangle([150, 196, 170, 198], fill=DK); d.line([(160, 198), (160, 240)], fill=(46, 30, 22, 255))
+    d.rectangle([152, 186, 168, 194], fill=WARM)                                                                         # transom glow
+    # podium + wide stairs
+    d.rectangle([4, 250, 316, 262], fill=LT); d.rectangle([4, 250, 316, 251], fill=HI); d.rectangle([4, 260, 316, 262], fill=SH)
+    for i in range(6):
+        y = 262 + i * 6; inset = 92 - i * 8
+        d.rectangle([inset, y, Wd - inset, y + 5], fill=LT if i % 2 == 0 else BS); d.line([(inset, y + 5), (Wd - inset, y + 5)], fill=SH)
+    d.rectangle([4, 262, 92, 298], fill=SH); d.rectangle([228, 262, 316, 298], fill=SH)
+    d.rectangle([0, 298, Wd, Hd], fill=(80, 80, 86, 255))
+    return outline(im, 1, (60, 52, 50, 255))
+
 REG = {
     "PIG-01": dict(kind="prop", v=1, fn=lambda t=0.0: piggy("PIG-01", t), title="Piggy bank · classic pink", grid="64x64 standard", scale=6),
     "PIG-02": dict(kind="prop", v=1, fn=lambda t=0.0: piggy("PIG-02", t), title="Piggy bank · lucky gold", grid="64x64 standard", scale=6),
@@ -569,6 +631,7 @@ REG = {
     "BLD-04": dict(kind="building", v=1, fn=deco_tower, title="Art deco tower · lit crown", grid="220x520", scale=1.5),
     "BLD-05": dict(kind="building", v=1, fn=loft, title="SoHo cast-iron loft", grid="220x360 · 72 px floors", scale=2),
     "BLD-06": dict(kind="building", v=1, fn=bodega, title="Corner walk-up + bodega", grid="220x300 · 56 px floors", scale=2),
+    "BLD-08": dict(kind="building", v="2.04", fn=gov_hall, title="Government hall · dome + portico (generic)", grid="320x300 · 56 px storeys", scale=2),
 }
 for _i, _f in enumerate(FLAVORS):
     REG[f"BLD-03-F{_i + 1}"] = dict(kind="building", v="2.02", fn=(lambda t=0.0, n=_i: prewar_v3(n, t)), title=f"BLD-03 · flavor {_i + 1} · {_f[0]}", grid="300x600 · upper floors only · 58 px floors", scale=1.5)

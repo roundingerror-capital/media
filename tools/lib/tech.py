@@ -805,3 +805,95 @@ sprite("TECH-CD", "CD", "Retro", {**SILV, "B": "#7ad8ff", "M": "#ff9ad8", "Y": "
     "...bbccccccbb...",
     ".....bbbbbb.....",
 ], frames=[None, {(5, 1): 'Y', (6, 1): 'B', (7, 1): 'B', (8, 1): 'B', (9, 1): 'B', (10, 1): 'M', (3, 2): 'e', (4, 2): 'Y', (5, 2): 'Y', (6, 2): 'B', (7, 2): 'B', (8, 2): 'B', (9, 2): 'M', (10, 2): 'M', (2, 3): 'e', (3, 3): 'e', (4, 3): 'e', (5, 3): 'Y', (6, 3): 'Y', (7, 3): 'B', (8, 3): 'B', (9, 3): 'M', (10, 3): 'M', (2, 4): 'e', (3, 4): 'e', (4, 4): 'e', (5, 4): 'd', (6, 4): 'Y', (9, 4): 'M', (1, 5): 'e', (2, 5): 'e', (3, 5): 'e', (4, 5): 'd', (2, 6): 'e', (3, 6): 'e', (4, 6): 'd', (11, 10): 'c', (10, 11): 'c', (11, 11): 'c', (12, 11): 'c', (13, 11): 'c', (7, 12): 'B', (8, 12): 'B', (11, 12): 'c', (12, 12): 'c', (13, 12): 'c', (7, 13): 'B', (8, 13): 'B', (12, 13): 'c', (7, 14): 'B', (8, 14): 'B', (9, 14): 'B'}, {(5, 1): 'e', (9, 1): 'Y', (10, 1): 'Y', (3, 2): 'e', (4, 2): 'e', (5, 2): 'e', (6, 2): 'e', (9, 2): 'Y', (10, 2): 'Y', (11, 2): 'B', (12, 2): 'B', (2, 3): 'e', (3, 3): 'e', (4, 3): 'e', (5, 3): 'e', (6, 3): 'e', (9, 3): 'Y', (10, 3): 'B', (11, 3): 'B', (12, 3): 'B', (13, 3): 'B', (2, 4): 'e', (3, 4): 'e', (4, 4): 'e', (5, 4): 'd', (6, 4): 'd', (9, 4): 'Y', (10, 4): 'B', (11, 4): 'B', (12, 4): 'B', (13, 4): 'B', (1, 5): 'e', (2, 5): 'e', (3, 5): 'e', (4, 5): 'd', (11, 5): 'B', (12, 5): 'M', (13, 5): 'M', (14, 5): 'M', (2, 6): 'e', (3, 6): 'e', (4, 6): 'd', (11, 6): 'M', (12, 6): 'M', (13, 6): 'M', (4, 10): 'B', (11, 10): 'c', (3, 11): 'B', (4, 11): 'B', (5, 11): 'B', (10, 11): 'c', (11, 11): 'c', (12, 11): 'c', (13, 11): 'c', (2, 12): 'B', (3, 12): 'B', (4, 12): 'B', (11, 12): 'c', (12, 12): 'c', (13, 12): 'c', (3, 13): 'B', (4, 13): 'B', (12, 13): 'c'}, {(5, 1): 'e', (3, 2): 'e', (4, 2): 'e', (5, 2): 'e', (6, 2): 'e', (2, 3): 'e', (3, 3): 'e', (4, 3): 'e', (5, 3): 'e', (6, 3): 'e', (2, 4): 'e', (3, 4): 'e', (4, 4): 'e', (5, 4): 'd', (6, 4): 'd', (1, 5): 'e', (2, 5): 'e', (3, 5): 'e', (4, 5): 'd', (12, 5): 'Y', (13, 5): 'Y', (14, 5): 'Y', (2, 6): 'e', (3, 6): 'e', (4, 6): 'd', (11, 6): 'Y', (12, 6): 'Y', (13, 6): 'B', (14, 6): 'B', (1, 7): 'B', (2, 7): 'B', (3, 7): 'B', (12, 7): 'B', (13, 7): 'B', (14, 7): 'B', (1, 8): 'B', (2, 8): 'B', (3, 8): 'B', (12, 8): 'B', (13, 8): 'B', (14, 8): 'B', (11, 9): 'M', (12, 9): 'M', (13, 9): 'B', (14, 9): 'B', (11, 10): 'c', (12, 10): 'M', (13, 10): 'M', (14, 10): 'M', (10, 11): 'c', (11, 11): 'c', (12, 11): 'c', (13, 11): 'c', (11, 12): 'c', (12, 12): 'c', (13, 12): 'c', (12, 13): 'c'}], ticks=[3, 3, 3, 3], old=['PROP-123'])
+
+
+# ================================================================== Computers (news-series pieces, 2026-11-21, board B-20261121-073808-penny-e7lu)
+# A generic graphics card: charcoal shroud, two fans (each frame its own blade drawing, 3 poses), lime accent strip,
+# green board edge with gold contacts, silver bracket on the right. No brand, no letters, no digits.
+def _gpu(pose):
+    W, H = 32, 14
+    g = [["."] * W for _ in range(H)]
+    for y in range(0, 10):                                   # shroud body, light from the top-left
+        for x in range(1, 29):
+            g[y][x] = "3"
+    for x in range(1, 29): g[0][x] = "4"                     # lit top edge
+    for y in range(0, 10): g[y][1] = "4"                     # lit left edge
+    for x in range(2, 29): g[9][x] = "2"                     # shadow underside
+    for y in range(1, 10): g[y][28] = "2"
+    g[0][1] = "."; g[9][1] = "2"
+    for x in range(3, 27): g[1][x] = "L" if x < 15 else "k"  # lime accent strip, fades into the shade
+    g[1][3] = "l"; g[1][4] = "l"
+    blades = [  # 3 hand-placed blade poses on a 7x7 hub, '#' = blade, read clockwise
+        ["..##...", "...##..", "#..#..#", "##...##", "#..#..#", "..##...", "...##.."],
+        ["...##..", "#..#...", "##...#.", ".#...#.", ".#...##", "...#..#", "..##..."],
+        [".#..#..", ".##.#..", "...#.##", "##...##", "##.#...", "..#.##.", "..#..#."],
+    ][pose]
+    for cx in (8, 20):
+        for dy in range(-4, 5):                              # fan ring (dark well) 9x9, rounded
+            for dx in range(-4, 5):
+                r2 = dx * dx + dy * dy
+                if r2 <= 20 and 0 <= cx + dx < W:
+                    g[5 + dy - 0][cx + dx] = "1" if r2 > 12 else "2"
+        for dy in range(7):
+            for dx in range(7):
+                if blades[dy][dx] == "#": g[2 + dy][cx - 3 + dx] = "5" if (dx + dy) < 6 else "4"
+        g[5][cx] = "3"; g[4][cx - 1] = g[4][cx - 1] if blades[2][2] == "#" else "2"
+        g[5][cx] = "4"                                       # hub cap glint
+    for x in range(2, 28): g[10][x] = "g"                    # board edge
+    for x in range(3, 27): g[11][x] = "g" if x < 6 or x > 22 else "G"
+    for x in range(7, 22):
+        if x != 13: g[12][x] = "Y" if x % 2 else "y"         # gold contacts, one notch
+    for y in range(0, 14):                                   # bracket
+        g[y][29] = "d"; g[y][30] = "c"; g[y][31] = "b" if y < 11 else "."
+    for y in (3, 6): g[y][30] = "a"                          # vent slots
+    g[13][29] = "c"; g[13][30] = "b"
+    return ["".join(r) for r in g]
+
+sprite("TECH-GPU", "Graphics card", "Computers",
+       {**CHAR, **SILV, "L": LIME["L"], "l": LIME["l"], "k": LIME["k"], "g": "#1f5a3a", "G": "#2f8a52", "y": GOLD["y"], "Y": GOLD["Y"]},
+       _gpu(0), frames=[_gpu(0), _gpu(1), _gpu(2)], ticks=[1, 1, 1])
+
+
+# A wall-mounted screen with a red chart line falling: blank axes, no digits, no labels. The line draws itself
+# down-right over 6 frames, then holds; the last point blinks. Charcoal bezel, short wall bracket.
+_WS_W, _WS_H = 48, 30
+_WS_PATH = [(5, 7), (8, 6), (11, 8), (14, 7), (17, 10), (20, 9), (23, 13), (26, 12), (29, 16), (32, 15), (35, 19), (38, 20), (41, 23)]
+
+def _wallscreen(n, blink=False):
+    W, H = _WS_W, _WS_H
+    g = [["."] * W for _ in range(H)]
+    for y in range(0, 27):
+        for x in range(0, W):
+            g[y][x] = "2"
+    for x in range(1, W - 1): g[0][x] = "4"
+    for y in range(1, 26): g[y][0] = "4"; g[y][W - 1] = "1"
+    for x in range(1, W): g[26][x] = "1"
+    g[0][0] = "."; g[0][W - 1] = "."; g[26][0] = "."
+    for y in range(2, 25):                                   # dark glass
+        for x in range(2, W - 2):
+            g[y][x] = "S"
+    for y in range(3, 24): g[y][4] = "s"                     # y axis
+    for x in range(4, W - 4): g[23][x] = "s"                 # x axis
+    for y in (8, 13, 18):                                    # faint grid, dashed
+        for x in range(6, W - 4, 3): g[y][x] = "s"
+    g[3][3] = "W"; g[4][3] = "W"; g[3][2] = "W"              # glass glint, top-left
+    pts = _WS_PATH[:max(2, n)]
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):             # chunky 2 px line, hand-stepped per segment
+        steps = max(abs(x1 - x0), abs(y1 - y0))
+        for i in range(steps + 1):
+            x = x0 + round((x1 - x0) * i / steps); y = y0 + round((y1 - y0) * i / steps)
+            g[y][x] = "R"; g[y + 1][x] = "r"
+    ex, ey = pts[-1]
+    if not blink:
+        g[ey][ex] = "Q"; g[ey - 1][ex] = "R"; g[ey][ex + 1] = "R"
+    g[27][22] = "3"; g[27][23] = "3"; g[27][24] = "3"; g[27][25] = "3"   # wall bracket
+    g[28][21] = "2"; g[28][22] = "3"; g[28][23] = "3"; g[28][24] = "3"; g[28][25] = "3"; g[28][26] = "2"
+    for x in range(20, 28): g[29][x] = "1"
+    return ["".join(r) for r in g]
+
+sprite("TECH-WALLSCREEN-DROP", "Wall screen, falling chart", "Computers",
+       {**CHAR, **SCR, "R": LED["R"], "r": LED["r"], "Q": "#ffd0c0"},
+       _wallscreen(len(_WS_PATH)),
+       frames=[_wallscreen(3), _wallscreen(5), _wallscreen(7), _wallscreen(9), _wallscreen(11), _wallscreen(13),
+               _wallscreen(13, blink=True), _wallscreen(13)],
+       ticks=[3, 3, 3, 3, 3, 6, 3, 10])
