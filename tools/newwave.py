@@ -130,10 +130,11 @@ def install(D):
 
     def char_layer(img, d, S, t, cast, lines, text_bottom):
         hpx = S.get("_hpx") or (430 if len(cast) < 3 else 380); k = max(3, round(hpx / 60))
+        base = S.get("char_base", BASE)   # 2026-11-21 (the boss: "they could be so much bigger"): a base below the frame = big foreground cast, cut off at the bottom
         xs = S.get("_xs") or D.XS[len(cast)]
         pk = [i for i, sc_ in enumerate(S["scenes"]) if t >= sc_[0]]; slide = pk[-1] if pk else 0
         if (S.get("props") or {}).get(slide):                                    # recipe props (earnings, 2026-11-05): floor lane, never on a face
-            import earn_recipe; earn_recipe.draw_props(img, S["props"][slide], t, [int(W * x) for x in xs], BASE, W, k)
+            import earn_recipe; earn_recipe.draw_props(img, S["props"][slide], t, [int(W * x) for x in xs], base, W, k)
         for i, n in enumerate(cast):
             xc = int(W * xs[i]); flip = FLIP.get(n, False) and xs[i] > 0.5
             talk = [(ts, te, pose) for ts, te, w, _, pose in lines if w == n and ts <= t < te]
@@ -150,11 +151,11 @@ def install(D):
             if (S.get("swaps") or {}).get(n):
                 import earn_recipe; sp = earn_recipe.recolor(sp, n, S["swaps"][n])      # Kit's palette swap from the recipe
             bw, _ = rigs.body(n, "idle", k)
-            d.ellipse([xc - bw * 0.33, BASE - 8, xc + bw * 0.33, BASE + 16], fill="#1a1a1a")
-            img.paste(sp, (xc - sp.width // 2, BASE - sp.height - hop), sp)
+            if base < H - 24: d.ellipse([xc - bw * 0.33, base - 8, xc + bw * 0.33, base + 16], fill="#1a1a1a")
+            img.paste(sp, (xc - sp.width // 2, base - sp.height - hop), sp)
         for ts, te, w, ln, _ in lines:
             if ts <= t < te and w in cast:
-                xc = int(W * xs[cast.index(w)]); y = max(text_bottom + 24, BASE - hpx - 150); D.bubble(d, xc, y, ln)
+                xc = int(W * xs[cast.index(w)]); y = min(max(text_bottom + 24, base - hpx - 150), D.TEXT_FLOOR - 100); D.bubble(d, xc, y, ln)
 
     D.office_bg = office_bg; D.sprite_state = sprite_state; D.char_layer = char_layer
     D.END_CAST.update({"roz": "nod", "kit": "jump"})
