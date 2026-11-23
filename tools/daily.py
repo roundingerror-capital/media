@@ -620,6 +620,7 @@ def fit_mono(txt, width, size, bold=True):
     return f
 
 def build(S, out, cover_jpg, variant="a", workdir="/tmp"):
+    import rigs; rigs.OUTFIT = S.get("outfit")   # spec["outfit"]: "leather_jacket" or {char: name} (tools/outfits.py, Kit 2026-11-23)
     # Per-post switches (Posts card intro/outro, the boss 2026-10-29): spec["intro"] False skips the AI TRADING BOT card,
     # spec["outro"] False skips the end card (a big LIKE + FOLLOW pill holds over the last 2.5 s instead). Default: both on.
     if S.get("loop"):  # T-069: a real loop has no beginning and no end (no cover, teaser, intro card or end pill)
@@ -668,6 +669,7 @@ def build_loop(S, out, cover_jpg, variant="a", workdir="/tmp"):
     music back into frame 1, so the replay is seamless. No end pill: the CTA lives in the caption and the small start pill.
     Write the script so the last line runs into the first (e.g. ends "...so when the bell rings," and restarts on "DING!").
     The custom cover still goes to every network as the thumbnail (publish.cover_url), so the video needn't start on it."""
+    import rigs; rigs.OUTFIT = S.get("outfit")   # spec["outfit"]: "leather_jacket" or {char: name} (tools/outfits.py, Kit 2026-11-23)
     bar = 4 * 60.0 / S["bpm"]; content = max(bar, round(S["end"] / bar) * bar); xf = LOOP_F / FPS
     wav = os.path.join(workdir, os.path.basename(out) + ".wav")
     BEAT.make(wav, content + xf + 0.3, S["bpm"], S["root"], S["seed"], S["mel"], groove=not S.get("music"), cold=0.0, sfx=meme_sfx(S, 0.0))

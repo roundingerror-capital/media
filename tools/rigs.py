@@ -18,6 +18,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ANIM = os.path.join(HERE, "an
 CHARS = {"Theo": "theo", "Penny": "penny", "Ada": "ada", "Kit": "kit", "Roz": "roz", "Boss": "boss", "RealBossHood": "realboss_hood", "RealBoss": "realboss"}
 ANIMS = ["idle", "walk", "talk", "nod", "shakehead", "point", "celebrate", "facepalm", "shrug", "holdsign", "standing"]
 _CACHE = {}
+OUTFIT = None   # outfit for every frame(): a name ("leather_jacket") or {char: name}; set from spec["outfit"] (tools/outfits.py)
+_DRESSED = {}
 PAD = 24   # native px of headroom on the left, right and top: jumps, raised signs and flung arms go past Kit's 64 px grid
            # (penny celebrate reaches x -9, holdsign y -19). Feet (bottom) and the body's centre stay where they were.
 
@@ -89,9 +91,16 @@ def frame_index(ticks, t_ms, loop=True):
     return len(ticks) - 1
 
 
-def frame(ch, an, t, k=1, flip=False, loop=True, t0=0.0):
-    """RGBA frame of character `ch` animation `an` at time t (seconds since the animation started at t0)."""
-    ims, ticks, _ = load(ch, an); im = ims[frame_index(ticks, int((t - t0) * 1000), loop)]
+def frame(ch, an, t, k=1, flip=False, loop=True, t0=0.0, outfit=None):
+    """RGBA frame of character `ch` animation `an` at time t (seconds since the animation started at t0).
+    outfit: an outfits.py name worn on this frame (default: rigs.OUTFIT); desk animations are never dressed."""
+    ims, ticks, _ = load(ch, an); i = frame_index(ticks, int((t - t0) * 1000), loop); im = ims[i]
+    o = outfit if outfit is not None else (OUTFIT.get(ch) if isinstance(OUTFIT, dict) else OUTFIT)
+    if o and not an.startswith("desk"):
+        key = (ch, an, i, o)
+        if key not in _DRESSED:
+            import outfits; _DRESSED[key] = outfits.dress(im, ch, o)
+        im = _DRESSED[key]
     if flip: im = im.transpose(Image.FLIP_LEFT_RIGHT)
     if k != 1: im = im.resize((im.width * k, im.height * k), Image.NEAREST)
     return im
