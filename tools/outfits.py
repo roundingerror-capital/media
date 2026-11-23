@@ -27,19 +27,21 @@ PAD = 24
 # Per character, on the padded native frame of rigs.load(ch, "idle")[0][0] (feet at the bottom row):
 #   band: torso rows (top, bottom) measured on idle frame 0; every other frame is shifted by its own feet line.
 #   xmax: last column that belongs to the body (tails start right of it).  belly: the belly colours (covered by the jacket's front panels).
+#   neck: (shoulder row, neckline bottom row, neckline half-width) - the jacket's top edge sits at the shoulder row at
+#   the sides and scoops down to a round neckline under the chin; cx: body centre column.
 CAST = {
-    "theo":  {"band": (53, 68), "xmax": 99, "belly": {"fff5e3", "f2ecd5", "ead1b0"}},
-    "penny": {"band": (54, 68), "xmax": 99, "belly": {"f0f2f5", "d8cfbc"}},
-    "ada":   {"band": (53, 67), "xmax": 61, "belly": {"9dd8cf", "8cc0ba"}},
-    "kit":   {"band": (52, 67), "xmax": 63, "belly": {"fde6eb"}},
-    "roz":   {"band": (66, 88), "xmax": 99, "belly": {"ebe1ae", "c9b77c"}},
+    "theo":  {"band": (53, 68), "xmax": 99, "belly": {"fff5e3", "f2ecd5", "ead1b0"}, "neck": (51, 56, 10), "cx": 47},
+    "penny": {"band": (54, 68), "xmax": 99, "belly": {"f0f2f5", "d8cfbc"}, "neck": (53, 57, 9), "cx": 47},
+    "ada":   {"band": (53, 67), "xmax": 61, "belly": {"9dd8cf", "8cc0ba"}, "neck": (51, 56, 8), "cx": 46},
+    "kit":   {"band": (52, 67), "xmax": 63, "belly": {"fde6eb"}, "neck": (50, 55, 8), "cx": 51},
+    "roz":   {"band": (66, 88), "xmax": 99, "belly": {"ebe1ae", "c9b77c"}, "neck": (62, 67, 10), "cx": 61},
 }
 FOOT = {c: None for c in CAST}      # idle frame 0 feet row, filled on first use
 
 OUTFITS = {
     # deep outline -> gloss. Cool near-blacks (never pure black), warm-grey zipper metal.
     "leather_jacket": {"out": "0c0c12", "ramp": ["15161d", "1f2029", "2b2d38", "3d4150"], "gloss": "8a90a3",
-                       "zip": ("b8bcc6", "6e7280"), "lapel": "4a4f60"},
+                       "zip": ("b8bcc6", "6e7280"), "lapel": "5a6075", "rib": "474c5c"},
 }
 _CACHE = {}
 
@@ -83,24 +85,32 @@ def _ramp_map(ch):
 
 def dress(im, ch, name="leather_jacket"):
     """Outfit on one NATIVE padded frame (k=1, not flipped), as rigs.load gives it. Returns a new RGBA image.
-    A CLOSED jacket: covers the whole torso and the arms in the band (belly included), sits 1 px proud of the body
-    at the sides, centre zipper with a pull tab, V-neck collar with a shirt notch and lapels, a waistband hem."""
+    A CLOSED jacket: covers the shoulders, torso, belly and the arms below the shoulder line. Its top edge is a
+    round scoop neckline under the chin with a ribbed collar band, the shoulders round off at the corners, it sits
+    1 px proud of the body at the sides, centre zipper with a pull tab, waistband hem, gloss on the lit shoulder."""
     if ch not in CAST or name not in OUTFITS: return im
     O = OUTFITS[name]; c = CAST[ch]; rank = _ramp_map(ch); R = O["ramp"]
     out = im.copy(); src = im.load(); dst = out.load(); W, H = im.size
-    dy = _feet(im) - _idle_feet(ch); y0, y1 = c["band"][0] + dy, c["band"][1] + dy
+    dy = _feet(im) - _idle_feet(ch); y1 = c["band"][1] + dy
+    sh, nk, hw = c["neck"]; sh += dy; nk += dy; cx = c["cx"]
     belly = c["belly"]; X = min(W, c["xmax"] + 1)
     solid = lambda x, y: 0 <= x < X and 0 <= y < H and src[x, y][3] > 0
-    rows = range(max(0, y0), min(H, y1 + 1))
-    mask = {(x, y) for y in rows for x in range(X) if solid(x, y)}
+    def top(x):   # scoop neckline: nk at the centre, rising on a round curve to the shoulder row at +-hw
+        d = abs(x - cx)
+        if d >= hw: return sh
+        return sh + int(round((nk - sh) * (1 - (d / hw) ** 2) ** 0.5))
+    mask = {(x, y) for x in range(X) for y in range(max(0, top(x)), min(H, y1 + 1)) if solid(x, y)}
     if not mask: return out
-    # centre line: middle of the belly on the band's rows (falls back to the middle of the torso)
-    bx = [x for (x, y) in mask if hexof(src[x, y]) in belly]
-    cx = round(sum(bx) / len(bx)) if bx else round(sum(x for x, _ in mask) / len(mask))
-    # 1 px of bulk at the sides: an outline pixel just outside the body on each torso row
+    # round the shoulder corners: drop the top edge by 2 px on the outermost column and 1 px on the next
+    for y in range(sh, sh + 3):
+        xs = sorted(x for (x, yy) in mask if yy == y)
+        if not xs: continue
+        for x, drop in ((xs[0], 2), (xs[-1], 2), (xs[0] + 1, 1), (xs[-1] - 1, 1)):
+            if y < top(x) + drop: mask.discard((x, y))
+    # 1 px of bulk at the sides, below the shoulder curve
     bulk = set()
-    for y in rows:
-        xs = [x for x in range(X) if (x, y) in mask]
+    for y in range(sh + 3, min(H, y1 + 1)):
+        xs = [x for (x, yy) in mask if yy == y]
         if len(xs) > 4:
             for x in (min(xs) - 1, max(xs) + 1):
                 if 0 <= x < X and not solid(x, y): bulk.add((x, y))
@@ -108,47 +118,35 @@ def dress(im, ch, name="leather_jacket"):
     inside = lambda x, y: (x, y) in full
     bel = sorted({hexof(src[x, y]) for (x, y) in mask if hexof(src[x, y]) in belly}, key=lambda h: lum(rgb(h)))
     for (x, y) in full:
-        edge = not (inside(x - 1, y) and inside(x + 1, y) and (inside(x, y - 1) or y == y0) and (inside(x, y + 1) or y == y1))
+        edge = not (inside(x - 1, y) and inside(x + 1, y) and inside(x, y - 1) and (inside(x, y + 1) or y == y1))
         if (x, y) in bulk or edge: col = O["out"]
         else:
             p = src[x, y]; h = hexof(p); l = lum(p)
-            if h in belly: col = R[1 + min(1, bel.index(h) * 2 // max(1, len(bel)))]   # front panels: flat, mid tones
+            if h in belly: col = R[1 + min(1, bel.index(h) * 2 // max(1, len(bel)))]
             elif l < 60: col = O["out"]
             else: col = R[rank.get(h, 2 if l > 128 else 1)]
         dst[x, y] = rgb(col)
-    # front panels: right panel a step darker than the left (light from the top-left)
-    for (x, y) in mask:
+    for (x, y) in mask:   # right front panel a step darker (light from the top-left)
         if x > cx + 1 and hexof(dst[x, y]) in (R[2], R[3]) and hexof(src[x, y]) in belly: dst[x, y] = rgb(R[1])
-    # waistband hem: the bottom two rows of the jacket
+    # ribbed collar band: the row just inside the top edge, all along the neckline and over the shoulders
+    for (x, y) in full:
+        if hexof(dst[x, y]) != O["out"] and not inside(x, y - 2) and inside(x, y - 1) and hexof(dst[x, y - 1]) == O["out"]:
+            dst[x, y] = rgb(O["lapel"] if x <= cx else O["rib"])
+    # waistband hem
     for (x, y) in full:
         if y == y1 and hexof(dst[x, y]) != O["out"]: dst[x, y] = rgb(R[0])
-        if y == y1 - 1 and hexof(dst[x, y]) not in (O["out"],): dst[x, y] = rgb(R[2])
-    # zipper down the centre, pull tab near the top
-    for y in rows:
-        if inside(cx, y) and hexof(dst[cx, y]) != O["out"]: dst[cx, y] = rgb(O["zip"][(y - y0) % 2])
-    if inside(cx + 1, y0 + 4): dst[cx + 1, y0 + 4] = rgb(O["zip"][0]); 
-    if inside(cx + 1, y0 + 5): dst[cx + 1, y0 + 5] = rgb(O["zip"][1])
-    # V-neck: a small shirt notch at the throat, lapels running down and out from it, collar points above the band
-    shirt = (232, 232, 238, 255)
-    for i, half in enumerate((2, 1, 0)):
-        y = y0 + i
-        for x in range(cx - half, cx + half + 1):
-            if inside(x, y): dst[x, y] = shirt
-    for i in range(5):
-        y = y0 + i
-        for x in (cx - 3 - i // 2 - (1 if i == 0 else 0), cx + 3 + i // 2 + (1 if i == 0 else 0)):
-            if inside(x, y) and hexof(dst[x, y]) != O["out"]: dst[x, y] = rgb(O["lapel"] if x < cx else R[3])
-        for x in (cx - 2 - i // 2, cx + 2 + i // 2):
-            if inside(x, y) and i > 0 and hexof(dst[x, y]) != O["out"]: dst[x, y] = rgb(R[0])
-    for x, col in ((cx - 4, O["lapel"]), (cx - 3, O["lapel"]), (cx + 3, R[3]), (cx + 4, R[3])):
-        if 0 <= y0 - 1 < H and 0 <= x < W and src[x, y0 - 1][3]: dst[x, y0 - 1] = rgb(col)
-    for x in (cx - 5, cx + 5):
-        if 0 <= y0 - 1 < H and 0 <= x < W and src[x, y0 - 1][3]: dst[x, y0 - 1] = rgb(O["out"])
-    # gloss: a 1-2 px shine on the lit (top-left) shoulder, never on the right half
-    shine = [(x, y) for y in range(max(0, y0), min(H, y0 + (y1 - y0) // 2)) for x in range(X)
-             if x < cx - 5 and inside(x, y) and hexof(dst[x, y]) in R and not inside(x - 1, y - 1) and inside(x + 1, y + 1)
-             and hexof(dst[x - 1, y]) == O["out"]]
-    for x, y in shine[:3]:
+        if y == y1 - 1 and hexof(dst[x, y]) != O["out"]: dst[x, y] = rgb(R[2])
+    # zipper from the bottom of the collar down, pull tab under the collar
+    zt = nk + 2
+    for y in range(zt, min(H, y1 + 1)):
+        if inside(cx, y) and hexof(dst[cx, y]) != O["out"]: dst[cx, y] = rgb(O["zip"][(y - zt) % 2])
+    for y, z in ((zt, 0), (zt + 1, 1)):
+        if inside(cx + 1, y): dst[cx + 1, y] = rgb(O["zip"][z])
+    # gloss: a 1-2 px shine on the lit (top-left) shoulder, never right of the neckline
+    shine = [(x, y) for y in range(sh, min(H, sh + 6)) for x in range(X)
+             if x < cx - hw and inside(x, y) and hexof(dst[x, y]) in R and inside(x + 1, y + 1)
+             and hexof(dst[x, y - 1]) in (O["out"], O["lapel"]) and hexof(dst[x - 1, y]) == O["out"]]
+    for x, y in shine[:2]:
         dst[x, y] = rgb(O["gloss"])
         if inside(x + 1, y + 1) and hexof(dst[x + 1, y + 1]) in R: dst[x + 1, y + 1] = rgb(R[3])
     return out
