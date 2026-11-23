@@ -2,8 +2,8 @@
 
 An outfit is drawn ON each frame of a rig, so it moves with every animation (idle, walk, talk, nod, point, celebrate,
 facepalm, shrug, holdsign, shakehead, standing). It never scales or rotates a sprite: it repaints that frame's torso and
-arm pixels into the outfit's own 6-tone ramp, keeping the frame's original shading (light from the top-left), and leaves
-the belly showing as the shirt under an open jacket.
+arm pixels into the outfit's own 6-tone ramp, keeping the frame's original shading (light from the top-left), and closes
+it over the belly with a centre zipper.
 
     import outfits
     outfits.names()                                   -> ["leather_jacket"]
@@ -26,7 +26,7 @@ from PIL import Image
 PAD = 24
 # Per character, on the padded native frame of rigs.load(ch, "idle")[0][0] (feet at the bottom row):
 #   band: torso rows (top, bottom) measured on idle frame 0; every other frame is shifted by its own feet line.
-#   xmax: last column that belongs to the body (tails start right of it).  belly: the shirt colours left showing.
+#   xmax: last column that belongs to the body (tails start right of it).  belly: the belly colours (covered by the jacket's front panels).
 CAST = {
     "theo":  {"band": (53, 68), "xmax": 99, "belly": {"fff5e3", "f2ecd5", "ead1b0"}},
     "penny": {"band": (54, 68), "xmax": 99, "belly": {"f0f2f5", "d8cfbc"}},
@@ -82,57 +82,75 @@ def _ramp_map(ch):
 
 
 def dress(im, ch, name="leather_jacket"):
-    """Outfit on one NATIVE padded frame (k=1, not flipped), as rigs.load gives it. Returns a new RGBA image."""
+    """Outfit on one NATIVE padded frame (k=1, not flipped), as rigs.load gives it. Returns a new RGBA image.
+    A CLOSED jacket: covers the whole torso and the arms in the band (belly included), sits 1 px proud of the body
+    at the sides, centre zipper with a pull tab, V-neck collar with a shirt notch and lapels, a waistband hem."""
     if ch not in CAST or name not in OUTFITS: return im
-    O = OUTFITS[name]; c = CAST[ch]; rank = _ramp_map(ch)
+    O = OUTFITS[name]; c = CAST[ch]; rank = _ramp_map(ch); R = O["ramp"]
     out = im.copy(); src = im.load(); dst = out.load(); W, H = im.size
     dy = _feet(im) - _idle_feet(ch); y0, y1 = c["band"][0] + dy, c["band"][1] + dy
-    belly = c["belly"]
-    solid = lambda x, y: 0 <= x < W and 0 <= y < H and src[x, y][3] > 0
-    def is_belly(x, y): return solid(x, y) and hexof(src[x, y]) in belly
-    for y in range(max(0, y0), min(H, y1 + 1)):
-        row = [x for x in range(min(W, c["xmax"] + 1)) if solid(x, y)]
-        if not row: continue
-        bx = [x for x in row if is_belly(x, y)]
-        for x in row:
-            if x in bx: continue
-            p = src[x, y]; l = lum(p)
-            edge = not (solid(x - 1, y) and solid(x + 1, y) and solid(x, y - 1) and solid(x, y + 1))
-            if edge or l < 60: col = O["out"]
-            else: col = O["ramp"][rank.get(hexof(p), 2 if l > 128 else 1)]
-            dst[x, y] = rgb(col)
-        body = [x for x in row if not (x in bx)]
-        if bx:      # open jacket: zipper teeth on the left front edge, a lit lapel on the right one
-            l_edge, r_edge = min(bx) - 1, max(bx) + 1
-            if solid(l_edge, y) and l_edge not in bx: dst[l_edge, y] = rgb(O["zip"][(y - y0) % 2])
-            if solid(r_edge, y) and r_edge not in bx: dst[r_edge, y] = rgb(O["lapel"])
-        elif len(body) > 6:   # closed below the belly: one zipper line down the middle
-            mid = (min(body) + max(body)) // 2
-            if solid(mid, y) and solid(mid - 1, y) and solid(mid + 1, y): dst[mid, y] = rgb(O["zip"][(y - y0) % 2])
-    # gloss: a 1-2 px shine on the lit (top-left) shoulder of each sleeve/side panel, never on the right half
-    jacket = lambda x, y: 0 <= x < W and 0 <= y < H and hexof(dst[x, y]) in O["ramp"]
-    xs = [x for y in range(max(0, y0), min(H, y1 + 1)) for x in range(min(W, c["xmax"] + 1)) if jacket(x, y)]
-    if xs:
-        cx = (min(xs) + max(xs)) / 2; shine = []
-        for y in range(max(0, y0), min(H, y0 + (y1 - y0) // 2)):
-            for x in range(min(W, c["xmax"] + 1)):
-                if x < cx and jacket(x, y) and not jacket(x - 1, y) and not jacket(x, y - 1) and jacket(x + 1, y + 1):
-                    shine.append((x, y))
-        for x, y in shine[:3]:
-            dst[x, y] = rgb(O["gloss"])
-            if jacket(x + 1, y + 1): dst[x + 1, y + 1] = rgb(O["ramp"][3])
-    # collar: the top two band rows get a lit fold at the outer edge of each lapel, and the collar points one row up
-    for yy in (y0, y0 + 1):
-        if not (0 <= yy < H): continue
-        bx = [x for x in range(min(W, c["xmax"] + 1)) if is_belly(x, yy)]
-        if not bx: continue
-        for x in (min(bx) - 2, max(bx) + 2):
-            if solid(x, yy) and hexof(dst[x, yy]) != O["out"]: dst[x, yy] = rgb(O["lapel"])
-    if 0 < y0 < H:
-        bx = [x for x in range(min(W, c["xmax"] + 1)) if is_belly(x, y0)]
-        if bx:
-            for x in (min(bx) - 1, max(bx) + 1):
-                if solid(x, y0 - 1): dst[x, y0 - 1] = rgb(O["ramp"][2])
+    belly = c["belly"]; X = min(W, c["xmax"] + 1)
+    solid = lambda x, y: 0 <= x < X and 0 <= y < H and src[x, y][3] > 0
+    rows = range(max(0, y0), min(H, y1 + 1))
+    mask = {(x, y) for y in rows for x in range(X) if solid(x, y)}
+    if not mask: return out
+    # centre line: middle of the belly on the band's rows (falls back to the middle of the torso)
+    bx = [x for (x, y) in mask if hexof(src[x, y]) in belly]
+    cx = round(sum(bx) / len(bx)) if bx else round(sum(x for x, _ in mask) / len(mask))
+    # 1 px of bulk at the sides: an outline pixel just outside the body on each torso row
+    bulk = set()
+    for y in rows:
+        xs = [x for x in range(X) if (x, y) in mask]
+        if len(xs) > 4:
+            for x in (min(xs) - 1, max(xs) + 1):
+                if 0 <= x < X and not solid(x, y): bulk.add((x, y))
+    full = mask | bulk
+    inside = lambda x, y: (x, y) in full
+    bel = sorted({hexof(src[x, y]) for (x, y) in mask if hexof(src[x, y]) in belly}, key=lambda h: lum(rgb(h)))
+    for (x, y) in full:
+        edge = not (inside(x - 1, y) and inside(x + 1, y) and (inside(x, y - 1) or y == y0) and (inside(x, y + 1) or y == y1))
+        if (x, y) in bulk or edge: col = O["out"]
+        else:
+            p = src[x, y]; h = hexof(p); l = lum(p)
+            if h in belly: col = R[1 + min(1, bel.index(h) * 2 // max(1, len(bel)))]   # front panels: flat, mid tones
+            elif l < 60: col = O["out"]
+            else: col = R[rank.get(h, 2 if l > 128 else 1)]
+        dst[x, y] = rgb(col)
+    # front panels: right panel a step darker than the left (light from the top-left)
+    for (x, y) in mask:
+        if x > cx + 1 and hexof(dst[x, y]) in (R[2], R[3]) and hexof(src[x, y]) in belly: dst[x, y] = rgb(R[1])
+    # waistband hem: the bottom two rows of the jacket
+    for (x, y) in full:
+        if y == y1 and hexof(dst[x, y]) != O["out"]: dst[x, y] = rgb(R[0])
+        if y == y1 - 1 and hexof(dst[x, y]) not in (O["out"],): dst[x, y] = rgb(R[2])
+    # zipper down the centre, pull tab near the top
+    for y in rows:
+        if inside(cx, y) and hexof(dst[cx, y]) != O["out"]: dst[cx, y] = rgb(O["zip"][(y - y0) % 2])
+    if inside(cx + 1, y0 + 4): dst[cx + 1, y0 + 4] = rgb(O["zip"][0]); 
+    if inside(cx + 1, y0 + 5): dst[cx + 1, y0 + 5] = rgb(O["zip"][1])
+    # V-neck: a small shirt notch at the throat, lapels running down and out from it, collar points above the band
+    shirt = (232, 232, 238, 255)
+    for i, half in enumerate((2, 1, 0)):
+        y = y0 + i
+        for x in range(cx - half, cx + half + 1):
+            if inside(x, y): dst[x, y] = shirt
+    for i in range(5):
+        y = y0 + i
+        for x in (cx - 3 - i // 2 - (1 if i == 0 else 0), cx + 3 + i // 2 + (1 if i == 0 else 0)):
+            if inside(x, y) and hexof(dst[x, y]) != O["out"]: dst[x, y] = rgb(O["lapel"] if x < cx else R[3])
+        for x in (cx - 2 - i // 2, cx + 2 + i // 2):
+            if inside(x, y) and i > 0 and hexof(dst[x, y]) != O["out"]: dst[x, y] = rgb(R[0])
+    for x, col in ((cx - 4, O["lapel"]), (cx - 3, O["lapel"]), (cx + 3, R[3]), (cx + 4, R[3])):
+        if 0 <= y0 - 1 < H and 0 <= x < W and src[x, y0 - 1][3]: dst[x, y0 - 1] = rgb(col)
+    for x in (cx - 5, cx + 5):
+        if 0 <= y0 - 1 < H and 0 <= x < W and src[x, y0 - 1][3]: dst[x, y0 - 1] = rgb(O["out"])
+    # gloss: a 1-2 px shine on the lit (top-left) shoulder, never on the right half
+    shine = [(x, y) for y in range(max(0, y0), min(H, y0 + (y1 - y0) // 2)) for x in range(X)
+             if x < cx - 5 and inside(x, y) and hexof(dst[x, y]) in R and not inside(x - 1, y - 1) and inside(x + 1, y + 1)
+             and hexof(dst[x - 1, y]) == O["out"]]
+    for x, y in shine[:3]:
+        dst[x, y] = rgb(O["gloss"])
+        if inside(x + 1, y + 1) and hexof(dst[x + 1, y + 1]) in R: dst[x + 1, y + 1] = rgb(R[3])
     return out
 
 
