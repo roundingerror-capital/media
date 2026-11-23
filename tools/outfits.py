@@ -142,6 +142,7 @@ def dress(im, ch, name="leather_jacket"):
         if inside(cx, y) and hexof(dst[cx, y]) != O["out"]: dst[cx, y] = rgb(O["zip"][(y - zt) % 2])
     for y, z in ((zt, 0), (zt + 1, 1)):
         if inside(cx + 1, y): dst[cx + 1, y] = rgb(O["zip"][z])
+    _hands(im, out, ch, O, full, sh, y1, dy, X)
     # gloss: a 1-2 px shine on the lit (top-left) shoulder, never right of the neckline
     shine = [(x, y) for y in range(sh, min(H, sh + 6)) for x in range(X)
              if x < cx - hw and inside(x, y) and hexof(dst[x, y]) in R and inside(x + 1, y + 1)
@@ -150,6 +151,89 @@ def dress(im, ch, name="leather_jacket"):
         dst[x, y] = rgb(O["gloss"])
         if inside(x + 1, y + 1) and hexof(dst[x + 1, y + 1]) in R: dst[x + 1, y + 1] = rgb(R[3])
     return out
+
+
+ARM = {"theo": 5, "penny": 5, "ada": 6, "kit": 4, "roz": 5}   # arm thickness inside the idle silhouette
+
+
+def _core(ch):
+    """Per row of idle frame 0: the torso's x-range with the arms taken off each side -> {y: (x0, x1)}."""
+    k = ("core", ch)
+    if k not in _CACHE:
+        import rigs
+        im = rigs.load(ch, "idle")[0][0]; px = im.load(); c = CAST[ch]; X = min(im.width, c["xmax"] + 1); a = ARM[ch]
+        core = {}
+        for y in range(im.height):
+            xs = [x for x in range(X) if px[x, y][3]]
+            if xs: core[y] = (min(xs) + a, max(xs) - a)
+        _CACHE[k] = core
+    return _CACHE[k]
+
+
+def _hands(im, out, ch, O, full, sh, y1, dy, X):
+    """Sleeves end in a cuff with the hand coming out of it. Sleeve pixels = jacket pixels outside the torso core;
+    each sleeve's hand is its tip (the pixels farthest from its shoulder), given back its own drawing, and the ring of
+    sleeve just behind the hand becomes a lighter cuff."""
+    src = im.load(); dst = out.load(); core = _core(ch)
+    def in_core(x, y):
+        r = core.get(y - dy); return r is not None and r[0] <= x <= r[1]
+    sleeve = {(x, y) for (x, y) in full if not in_core(x, y) and src[x, y][3]}
+    seen = set(); done = set()
+    for p in sorted(sleeve):
+        if p in seen: continue
+        comp, st = [], [p]; seen.add(p)
+        while st:
+            q = st.pop(); comp.append(q)
+            for d in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n = (q[0] + d[0], q[1] + d[1])
+                if n in sleeve and n not in seen: seen.add(n); st.append(n)
+        if len(comp) < 6: continue
+        cxs = sum(x for x, _ in comp) / len(comp)
+        r = core.get(sh - dy + 2) or (cxs, cxs)
+        shoulder = (r[0] if cxs < (r[0] + r[1]) / 2 else r[1], sh + 2)
+        dist = {q: ((q[0] - shoulder[0]) ** 2 + (q[1] - shoulder[1]) ** 2) ** 0.5 for q in comp}
+        far = max(dist.values())
+        if far < 5: continue
+        tip = max(comp, key=lambda q: (dist[q], -abs(q[1] - shoulder[1])))
+        for q, d in dist.items():                                    # cuff: a lighter band just behind the end
+            if far - 2.6 <= d < far - 0.6 and hexof(dst[q]) != O["out"]: dst[q] = rgb(O["lapel"])
+        vx, vy = tip[0] - shoulder[0], tip[1] - shoulder[1]; n = max(1e-6, (vx * vx + vy * vy) ** 0.5)
+        if PAW.get(ch) is None or vy > abs(vx): continue      # hanging arms get their hands below
+        hx, hy = int(round(tip[0] + 1.6 * vx / n)), int(round(tip[1] + 1.6 * vy / n))
+        _paw(dst, out.size, hx, hy, PAW[ch], 1 if vx > 0 else -1); done.add(-1 if vx < 0 else 1)
+    # hanging arms: the hand comes out of the sleeve at the lower side of the jacket, half over the edge
+    if PAW.get(ch) is None: return
+    hy = y1 - 3; xs = [x for (x, y) in full if y == hy]
+    if not xs: return
+    # an arm raised above the shoulders keeps its own drawn hand: no second hand at the hem on that side
+    for side in (-1, 1):
+        extra = 0
+        for y in range(max(0, sh - 10), sh + 1):
+            r = core.get(y - dy)
+            if r is None: continue
+            lo, hi = r[0] - ARM[ch], r[1] + ARM[ch]
+            for x in range(X):
+                if src[x, y][3] and ((side < 0 and x < lo - 1) or (side > 0 and x > hi + 1)): extra += 1
+        if extra > 3: done.add(side)
+    if -1 not in done: _paw(dst, out.size, min(xs) + 1, hy, PAW[ch], -1)
+    if 1 not in done: _paw(dst, out.size, max(xs) - 1, hy, PAW[ch], 1)
+
+
+# Hands that come out of the cuffs: (outline, shadow, base, light) from each character's own ramp.
+PAW = {"theo": ("802917", "b9773a", "e8b065", "ecbe7b"), "penny": None,  # wings: no hands
+       "ada": ("102e37", "2e8487", "4bb6b2", "9dd8cf"), "kit": ("62213c", "dc8c9c", "f2afb8", "fde6eb"),
+       "roz": ("1a3721", "4b7e43", "8dba74", "b6d597")}
+# 4x4 rounded paw, light top-left. o outline, s shadow, b base, l light; drawn facing right, mirrored for left.
+PAW_STAMP = [".oo.", "olbo", "obso", ".oo."]
+
+
+def _paw(dst, size, cx, cy, cols, facing):
+    W, H = size; m = {"o": cols[0], "s": cols[1], "b": cols[2], "l": cols[3]}
+    for j, row in enumerate(PAW_STAMP):
+        for i, ch_ in enumerate(row):
+            if ch_ == ".": continue
+            x, y = cx - 1 + i, cy - 1 + j
+            if 0 <= x < W and 0 <= y < H: dst[x, y] = rgb(m[ch_])
 
 
 def outfit(sprite, ch, name="leather_jacket", k=None, flip=None):
