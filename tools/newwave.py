@@ -158,7 +158,7 @@ def install(D):
             bb = sp.getbbox(); tops[n] = base - sp.height - hop + (bb[1] if bb else 0)
         for ts, te, w, ln, _ in lines:
             if ts <= t < te and w in cast and ln:                               # 2026-11-21 (the boss: "what's that stuff in the middle?"): no empty bubble
-                xc = int(W * xs[cast.index(w)]); y = min(max(text_bottom + 24, base - hpx - 150), D.TEXT_FLOOR - 100); D.bubble(d, xc, y, ln)
+                xc = int(W * xs[cast.index(w)]); y = (min(base - hpx - 110, H - 400) if S.get("bubble_low") else min(max(text_bottom + 24, base - hpx - 150), D.TEXT_FLOOR - 100)); D.bubble(d, xc, y, ln)  # bubble_low (the boss 2026-11-23): bubbles are flavor, so they may sit by the heads, under the text floor
                 if S.get("bubble_tail") and tops.get(w, 0) - 14 > y + 96:     # the boss 2026-11-21 ("why are the speech bubbles so far?"): the tail runs down to the speaker's head, text stays above the app's caption line
                     hy = tops[w] - 14; d.polygon([(xc - 13, y + 74), (xc + 13, y + 74), (xc + 3, hy), (xc - 3, hy)], fill="#1A1A1A")
                     d.polygon([(xc - 9, y + 70), (xc + 9, y + 70), (xc, hy - 6)], fill=D.INK)
