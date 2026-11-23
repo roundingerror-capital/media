@@ -483,6 +483,13 @@ def office_bg(S, path=None, t=0.0):
         _BG[k] = im
     return _BG[k].copy()
 
+def text_panel(img, y0, y1, a=1.0, alpha=165):
+    """Shaded rounded box behind on-screen text (S["text_panel"]); charts call it for their own area."""
+    if a <= 0.01 or y1 <= y0: return
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(ov).rounded_rectangle([M - 28, y0, W - M + 28, y1], radius=22, fill=(8, 8, 10, int(alpha * a)))
+    img.paste(ov, (0, 0), ov)
+
 def scene_frame(S, t, heads_override=None):
     SHADES_ON.clear()
     for m in S.get("memes", []):
@@ -496,8 +503,11 @@ def scene_frame(S, t, heads_override=None):
     a = 1.0 if k == 0 else fade(t, t0, t0 + 0.3)
     cen = S.get("align") == "center"                       # recipe placement (earnings, 2026-11-05): same text band, centred or left
     def TX(y_, w_): return ((M + w_) // 2, "ms") if cen else (M, "ls")
-    xk, ak = M, "ls"; d.text((xk, 352), kick, font=mono(30, True), fill=blend(LIME, a), anchor=ak)
     f = min((fit(h, W - 2 * M - 8, 160 if len(heads) == 1 else 132, wdth=110, wght=900) for h, _ in heads), key=lambda q: q.size)
+    if S.get("text_panel"):   # the boss 2026-11-23: "a light shaded box behind the words so they become more readable"
+        yb = 362 + int(f.size * 1.05) * len(heads) + (30 + 62 * (len(body) - 1) + 24 if body else 26)
+        text_panel(img, 312, yb, a)
+    xk, ak = M, "ls"; d.text((xk, 352), kick, font=mono(30, True), fill=blend(LIME, a), anchor=ak)
     y = 362 + int(f.size * 1.05)
     for i, (h, c) in enumerate(heads):
         ha = a * fade(t, t0 + i * 0.12, t0 + 0.3 + i * 0.12) if k else (1.0 if t > 0.25 else fade(t, i * 0.06, 0.2 + i * 0.06))

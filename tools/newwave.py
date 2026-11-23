@@ -152,6 +152,15 @@ def install(D):
                 ph = t * S["bpm"] / 60; hop = k * int(round(2 * abs(math.sin(math.pi * ph)))) if not talk else 0
             if (S.get("swaps") or {}).get(n):
                 import earn_recipe; sp = earn_recipe.recolor(sp, n, S["swaps"][n])      # Kit's palette swap from the recipe
+            hold = ((S.get("hold") or {}).get(slide) or {}).get(n)     # the boss 2026-11-23: a held prop moves WITH the character (pasted onto the sprite)
+            if hold:
+                import lib as _lib
+                pr = _lib.get(hold[0], t); sc_ = hold[3] if len(hold) > 3 else k
+                pr = pr.resize((pr.width * sc_, pr.height * sc_), Image.NEAREST); sp = sp.copy()
+                px = int(sp.width * (1 - hold[1] if flip else hold[1])) - pr.width // 2; py = int(sp.height * hold[2]) - pr.height // 2
+                if px < 0 or py < 0 or px + pr.width > sp.width:
+                    pad = max(0, -px, px + pr.width - sp.width); big = Image.new("RGBA", (sp.width + 2 * pad, sp.height), (0, 0, 0, 0)); big.paste(sp, (pad, 0)); sp = big; px += pad
+                sp.alpha_composite(pr.convert("RGBA"), (px, max(0, py)))
             bw, _ = rigs.body(n, "idle", k)
             if base < H - 24: d.ellipse([xc - bw * 0.33, base - 8, xc + bw * 0.33, base + 16], fill="#1a1a1a")
             img.paste(sp, (xc - sp.width // 2, base - sp.height - hop), sp)
