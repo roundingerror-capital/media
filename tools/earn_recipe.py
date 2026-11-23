@@ -17,7 +17,7 @@ ROOMS = ["ROOM-01", "ROOM-02", "ROOM-03", "ROOM-04", "ROOM-06", "ROOM-07", "ROOM
 BOOKENDS = ["OFF-PENNY-01", "OFF-THEO-01", "OFF-ADA-01", "OFF-KIT-01", "OFF-ROZ-01"]   # first and last slide; never the boss's office
 TOD = {"day": None, "dusk": (255, 140, 70, 46), "night": (40, 60, 140, 70)}            # RGBA wash over the room, text band untouched
 CHARTS = ["coaster", "monitor"]   # earn_charts.py styles that clear the meme lane; "cards"/"scoreboard" overlap the twist banner (fix, then add back)
-SWAP_P = 0.35                                                                            # chance each character wears one of Kit's swaps
+SWAP_P = 0.0                                                                             # chance each character wears one of Kit's swaps  # the boss 2026-11-23: never recolor the cast (Ada showed up brown on WDAY)
 
 # Lines the dice may use. Only lines already on approved videos (Roz-cleared in context) are here today.
 ROZ_CLEARED = {
